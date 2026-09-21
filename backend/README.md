@@ -20,7 +20,15 @@ cp .env.example .env   # ggf. anpassen, falls DB/Meilisearch/Ollama nicht auf lo
 
 Für Migrationen und den vollen Stack wird eine laufende Postgres-Instanz mit den Extensions
 `vector` und `pg_trgm` benötigt (siehe `docker-compose.yml`/`init/postgres-extensions.sql`
-im Repo-Root - am einfachsten testet man lokal mit `docker compose up db`).
+im Repo-Root - am einfachsten testet man lokal mit `docker compose up -d db`).
+
+**Wichtig:** `docker-compose.yml` veröffentlicht standardmäßig **keinen** Port für `db`
+(nur `app-api` ist nach außen sichtbar, siehe `docs/Docker-Compose-Entwurf.md`). Für
+Backend-Entwicklung direkt auf dem Host (Alembic/uvicorn/pytest außerhalb von Docker)
+liegt im Repo-Root zusätzlich eine `docker-compose.override.yml`, die Postgres auf
+`localhost:5432` veröffentlicht - Docker Compose lädt sie automatisch mit, kein
+Extra-Flag nötig. Falls stattdessen der volle Stack per Compose läuft, wird sie nicht
+gebraucht (dann läuft alles im selben Docker-Netzwerk).
 
 ```bash
 uv run alembic upgrade head        # Schema anlegen

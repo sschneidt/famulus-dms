@@ -1,0 +1,15 @@
+# Wird von "docker compose" automatisch zusätzlich zu docker-compose.yml geladen -
+# NUR für lokale Entwicklung, nicht für den Produktivbetrieb auf der NAS gedacht/nötig.
+#
+# docker-compose.yml veröffentlicht bewusst nur den app-api-Port nach außen (siehe
+# docs/Docker-Compose-Entwurf.md Abschnitt 1). Für lokale Backend-Entwicklung (Alembic,
+# uvicorn, pytest direkt auf dem Host statt im Container) muss die Datenbank aber vom
+# Host aus erreichbar sein - dafür sorgt dieses Override, ohne die produktionsnahe
+# docker-compose.yml zu verändern.
+#
+# Einfach ignorieren/löschen, falls stattdessen der volle Stack (inkl. app-api/app-worker)
+# per docker compose hochgefahren wird - dann läuft alles ohnehin im selben Docker-Netzwerk.
+services:
+  db:
+    ports:
+      - "5432:5432"
