@@ -1,7 +1,7 @@
 # Anforderungsdokument: HomeDMS
 ### Dokumentenmanagementsystem für Privathaushalte
 
-Stand: 09.09.2026 · Version 0.1 (Ergebnis des Anforderungs-Interviews)
+Stand: 21.09.2026 · Version 0.1 (Ergebnis des Anforderungs-Interviews)
 
 ---
 
@@ -67,6 +67,7 @@ HomeDMS reduziert die Anzahl physischer Papierdokumente in Privathaushalten durc
 - Kombiniertes Ablagemodell: **automatische Ordnerstruktur nach Kategorie/Jahr** (nachvollziehbar, z. B. auch direkt über Synology File Station einsehbar) **plus** freie Tags und Volltextsuche für flexible Filterung.
 - Volltextsuche über OCR-Text mit **Tippfehler-Toleranz** – empfohlen: Meilisearch als leichtgewichtiger Zusatzdienst (Alternative: PostgreSQL + `pg_trgm`, geringere Fehlertoleranz, kein Zusatzdienst).
 - Original-Tracking: Metadatenfeld "Original vorhanden: ja/nein/Aufbewahrungsort" pro Dokument (unabhängig von Terminen, siehe 4.4a).
+- **Löschen (Soft-Delete):** Gelöschte Dokumente landen zunächst 30 Tage lang in einem wiederherstellbaren Papierkorb (`deleted_at`-Zeitstempel statt sofortigem Hard-Delete), erst danach entfernt ein Hintergrund-Job sie endgültig. Vermeidet versehentlichen, endgültigen Datenverlust bei einem Klick.
 
 ### 4.4a Wiedervorlage / Termine (generisches Erinnerungsfeature)
 Verallgemeinerung der ursprünglichen Aufbewahrungsfrist-Erinnerung zu einem frei nutzbaren Termin-Feature, das die Aufbewahrungsfrist als einen Spezialfall miteinschließt.
@@ -136,5 +137,6 @@ Kanäle: In-App-Benachrichtigungscenter, E-Mail (z. B. für fällige Wiedervorla
 - Reverse-Proxy-/TLS-Einrichtung: Empfehlung steht (Synologys eigener Reverse Proxy statt Zusatz-Container, siehe `Docker-Compose-Entwurf.md`); konkrete Domain-/Zertifikats-Schritte auf dem NAS des Nutzers stehen noch aus.
 - Mobiler Foto-Import im Detail: Bibliothek für Kantenerkennung/Perspektivkorrektur, Mehrseiten-Scan-Workflow.
 - Genaues Design des Einrichtungsassistenten (Schrittfolge, Pflicht- vs. optionale Felder, Validierungen).
-- Job-Queue-Technologie ist entschieden (PostgreSQL-basiert, z. B. Procrastinate, kein Redis nötig, siehe `Docker-Compose-Entwurf.md`); konkrete Bibliotheks-/Versions-Wahl steht noch aus.
+- Job-Queue-Technologie ist entschieden und im Backend-Grundgerüst bereits verdrahtet (Procrastinate/PostgreSQL, kein Redis nötig, siehe `Docker-Compose-Entwurf.md` und `backend/homedms/worker.py`).
 - Konkrete Basis-Images/Dockerfiles für `app-api`/`app-worker`, Ressourcen-Limits pro Container und Image-Registry/Verteilung (siehe `Docker-Compose-Entwurf.md`, Abschnitt 6).
+- **Umsetzungsstand:** Implementierung hat begonnen (siehe `backend/README.md` für den aktuellen Stand). Fertig: App-Grundgerüst, vollständiges Datenmodell als SQLAlchemy-Migration, Auth (JWT/Argon2), Einrichtung/Bootstrap, Kategorien-CRUD, Worker-Grundgerüst, Testsuite. Offen: die übrigen ~60 API-Endpunkte (Dokumente/Upload, OCR-Pipeline, Klassifikation, Fristenerkennung, Wiedervorlagen, Benachrichtigungen, KI-Chat-Assistent), Einrichtungsassistent im Detail, Frontend/PWA.
