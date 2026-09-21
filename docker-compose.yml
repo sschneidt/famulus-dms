@@ -1,0 +1,163 @@
+networks:
+  homedms:
+    # Internes Docker-Netzwerk. Nur app-api veröffentlicht einen Port zum NAS-Host.
+    driver: bridge
+
+volumes:
+  pgdata:
+  meilidata:
+  ollama_models:
+
+services:
+  # ---------------------------------------------------------------------------
+  # Datenbank: PostgreSQL inkl. pgvector (Klassifikations-Exemplare) und pg_trgm
+  # (Fallback-Volltextsuche). Basis-Image mit pgvector vorinstalliert.
+  # ---------------------------------------------------------------------------
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    networks: [homedms]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-homedms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?bitte in .env setzen}
+      POSTGRES_DB: ${POSTGRES_DB:-homedms}
+      TZ: ${TZ:-Europe/Berlin}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Legt pg_trgm + vector-Extension beim allerersten Start automatisch an.
+      - ./init/postgres-extensions.sql:/docker-entrypoint-initdb.d/10-extensions.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homedms}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Volltextsuche mit Tippfehler-Toleranz (Anforderungsdokument 4.4).
+  # ---------------------------------------------------------------------------
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    restart: unless-stopped
+    networks: [homedms]
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?bitte in .env setzen}
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_ENV: production
+    volumes:
+      - meilidata:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Lokale KI (Klassifikation Stufe 2, Metadaten-/Fristen-Extraktion, Chat).
+  # Der Server-Prozess läuft dauerhaft, aber sehr leichtgewichtig; das eigentliche
+  # Modell wird nur bei Bedarf ins RAM geladen und nach Inaktivität automatisch
+  # wieder entladen (Ollama keep_alive) – siehe Anforderungsdokument 4.7.
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    networks: [homedms]
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    # Kein GPU-Passthrough vorausgesetzt (Synology-Mittelklasse-NAS ohne dedizierte
+    # GPU/NPU); bei vorhandener Hardware-Beschleunigung hier ergänzen.
+
+  # ---------------------------------------------------------------------------
+  # Einmaliger Init-Job: lädt die konfigurierten Ollama-Modelle beim ersten Start
+  # automatisch herunter (Anforderungsdokument 4.7 "Ollama-Modell wird beim ersten
+  # Start automatisch im Hintergrund geladen") und beendet sich danach.
+  # ---------------------------------------------------------------------------
+  ollama-init:
+    image: ollama/ollama:latest
+    restart: "no"
+    networks: [homedms]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        ollama pull "${OLLAMA_CHAT_MODEL:-llama3.2:3b}" --host http://ollama:11434 &&
+        ollama pull "${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}" --host http://ollama:11434
+
+  # ---------------------------------------------------------------------------
+  # Backend-API (FastAPI). Liefert zusätzlich die gebauten PWA-Frontend-Dateien
+  # aus (ein Container weniger als mit separatem nginx-Frontend-Container).
+  # ---------------------------------------------------------------------------
+  app-api:
+    image: ${APP_IMAGE:-homedms/backend}:${APP_VERSION:-latest}
+    # Für lokale Entwicklung stattdessen: build: ./backend
+    restart: unless-stopped
+    networks: [homedms]
+    depends_on:
+      db:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    environment:
+      APP_ROLE: api
+      DATABASE_URL: postgresql://${POSTGRES_USER:-homedms}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-homedms}
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_KEY: ${MEILI_MASTER_KEY}
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-llama3.2:3b}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+      JWT_SECRET: ${JWT_SECRET:?bitte in .env setzen}
+      TZ: ${TZ:-Europe/Berlin}
+    volumes:
+      - ${DOCUMENTS_PATH:-./data/documents}:/data/documents
+      - ${SCAN_FOLDER_PATH:-./data/scan}:/data/scan:ro
+    ports:
+      # Nur dieser eine Port verlässt den internen Docker-Netzwerk-Bereich.
+      # Synology Reverse Proxy (DSM-Systemsteuerung) zeigt auf diesen Port und
+      # übernimmt TLS/HTTPS (Anforderungsdokument 4.7/5) – kein eigener
+      # Reverse-Proxy-Container im Standard-Setup nötig.
+      - "${APP_HTTP_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Hintergrund-Worker: OCR, Klassifikation, Metadaten-/Fristen-Extraktion,
+  # Wiedervorlage-Wiederholungen, Benachrichtigungs-Versand. Gleiches Image wie
+  # app-api, nur anderer Start-Befehl – kein separates Build/Deployment nötig.
+  # Job-Queue läuft direkt über PostgreSQL (Bibliothek "Procrastinate"), daher
+  # ist kein zusätzlicher Redis-Container erforderlich (löst den offenen Punkt
+  # "Job-Queue-Technologie" aus dem Anforderungsdokument, Abschnitt 7).
+  # ---------------------------------------------------------------------------
+  app-worker:
+    image: ${APP_IMAGE:-homedms/backend}:${APP_VERSION:-latest}
+    restart: unless-stopped
+    networks: [homedms]
+    depends_on:
+      db:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    environment:
+      APP_ROLE: worker
+      DATABASE_URL: postgresql://${POSTGRES_USER:-homedms}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-homedms}
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_KEY: ${MEILI_MASTER_KEY}
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-llama3.2:3b}
+      OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+      AI_CAUTION_LEVEL: ${AI_CAUTION_LEVEL:-normal}
+      JWT_SECRET: ${JWT_SECRET}
+      TZ: ${TZ:-Europe/Berlin}
+    volumes:
+      - ${DOCUMENTS_PATH:-./data/documents}:/data/documents
+      - ${SCAN_FOLDER_PATH:-./data/scan}:/data/scan:ro

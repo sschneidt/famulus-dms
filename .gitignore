@@ -1,0 +1,16 @@
+# Secrets / lokale Konfiguration
+.env
+
+# Python (siehe zusaetzlich backend/.gitignore)
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Lokale Docker-Compose-Datenordner (siehe DOCUMENTS_PATH/SCAN_FOLDER_PATH in .env.example)
+data/
+
+# Editor/OS
+.DS_Store
+.idea/
+.vscode/
