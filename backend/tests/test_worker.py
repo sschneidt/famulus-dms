@@ -1,14 +1,22 @@
-"""Worker-Grundgeruest (homedms/worker.py) - prueft nur die Verkabelung (App-Objekt,
-Platzhalter-Task registriert, DATABASE_URL-Normalisierung fuer psycopg), fuehrt keinen
-Task tatsaechlich gegen eine DB aus (dafuer braucht es einen laufenden Postgres-Container,
-siehe README.md Abschnitt "Tests").
+"""Worker-/Job-Grundgeruest (homedms/jobs.py, homedms/worker.py) - prueft nur die Verkabelung
+(App-Objekt, Tasks registriert, DATABASE_URL-Normalisierung fuer psycopg), fuehrt keinen Task
+tatsaechlich gegen eine DB aus (dafuer braucht es einen laufenden Postgres-Container, siehe
+README.md Abschnitt "Tests"). Die eigentliche OCR-Extraktionslogik ist in tests/test_ocr.py
+abgedeckt.
 """
 from homedms.config import Settings
-from homedms.worker import app, ping
+from homedms.jobs import app
+from homedms.tasks.misc import ping
+from homedms.worker import app as worker_app
 
 
-def test_ping_task_is_registered():
+def test_worker_uses_the_shared_jobs_app():
+    assert worker_app is app
+
+
+def test_expected_tasks_are_registered():
     assert "ping" in app.tasks
+    assert "ocr_document" in app.tasks
 
 
 async def test_ping_task_returns_message():

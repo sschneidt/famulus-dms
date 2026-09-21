@@ -24,6 +24,7 @@ from homedms.api.deps import get_current_user
 from homedms.core.storage import document_file_path, save_upload
 from homedms.core.visibility import is_document_editable, is_document_visible, visible_documents_expr
 from homedms.db import get_db
+from homedms.jobs import app as jobs_app
 from homedms.models.document import ClassificationStatus, Document, DocumentFile, DocumentSource, OriginalPresent
 from homedms.models.tenant import User
 from homedms.schemas.document import DocumentListResponse, DocumentResponse, DocumentUpdateRequest
@@ -185,6 +186,16 @@ async def create_document(
 
     await db.commit()
     await db.refresh(document, attribute_names=["files"])
+
+    # OCR-Job einreihen (homedms/tasks/ocr.py, ausgefuehrt vom app-worker-Prozess). Der
+    # Connector wird hier pro Request kurz geoeffnet/geschlossen statt dauerhaft offen gehalten -
+    # bei dem geplanten Volumen (< 50 Dokumente/Monat, Anforderungsdokument 2) unkritisch; bei
+    # groesserem Durchsatz waere ein beim App-Start einmal geoeffneter Pool effizienter.
+    async with jobs_app.open_async():
+        await jobs_app.configure_task("ocr_document", queue="default").defer_async(
+            document_id=str(document.id)
+        )
+
     return document
 
 

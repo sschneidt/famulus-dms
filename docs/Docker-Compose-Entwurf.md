@@ -50,7 +50,10 @@ Für die geforderte Update-Sicherheit (Anforderungsdokument 4.7: "Daten, Archiv 
 
 ## 6. Offene Punkte für die nächste Iteration
 
-- Konkrete Basis-Images für `app-api`/`app-worker` (Python-Version, Dockerfile-Aufbau, Multi-Stage-Build fürs Frontend).
+- ~~Konkrete Basis-Images für `app-api`/`app-worker`~~ – erledigt: `backend/Dockerfile`
+  (Basis `python:3.12-slim-bookworm`, inkl. Tesseract + Sprachpaketen deu/eng für die
+  OCR-Pipeline) + `backend/docker-entrypoint.sh` (verzweigt nach `APP_ROLE`). Noch offen: ein
+  Multi-Stage-Build-Schritt fürs PWA-Frontend, sobald das existiert (aktuell nur Backend).
 - Ressourcen-Limits (`mem_limit`/`cpus`) als optionale, aber empfohlene Werte pro Container – abhängig vom finalen Synology-Modell des Nutzers.
-- Registry/Verteilung der fertigen Images (eigenes GHCR-Repository vs. lokal bauen) – betrifft, wie einfach `docker compose pull` für Endnutzer tatsächlich ist.
+- Registry/Verteilung der fertigen Images (eigenes GHCR-Repository vs. lokal bauen) – `docker-compose.yml` hat jetzt `build: ./backend` neben `image:`, sodass `docker compose up` bis dahin lokal baut, ohne dass Endnutzer manuell etwas umstellen müssen.
 - Automatisiertes Backup-Hook-Skript, das vor einem Update einen Datenbank-Dump zusätzlich zu Hyper Backup anlegt (zusätzliche Sicherheitsebene, nicht zwingend).

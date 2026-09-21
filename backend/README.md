@@ -90,6 +90,18 @@ bewusst noch nicht getestet - das braucht eine echte Postgres-Verbindung (z. B.
   um (Admin/Owner/`CategoryAccess`/`DocumentAccessOverride`) und wendet sie auf alle
   Dokumente-Endpunkte an (Listen werden gefiltert, direkter Zugriff per ID liefert `403`, siehe
   API-Design 1).
+- **OCR-Pipeline** (`homedms/tasks/ocr.py`, Anforderungsdokument 4.2): Nach jedem Upload wird
+  automatisch ein `ocr_document`-Job eingereiht (Procrastinate/`homedms/jobs.py`), den der
+  `app-worker`-Prozess ausführt. Abgedeckt: PDF mit eingebettetem Text (direkte Extraktion, kein
+  OCR nötig), gescanntes PDF (Rasterung + Tesseract), Bilder (JPG/PNG/TIFF/HEIC direkt per
+  Tesseract), E-Mails (.eml, Klartext-Body). **Noch nicht abgedeckt:** Office-Dokumente
+  (Word/Excel) und Outlook `.msg` - solche Uploads werden erkannt und explizit mit
+  `ocr_status=failed` markiert statt stillschweigend leer zu bleiben.
+- **`backend/Dockerfile` + `docker-entrypoint.sh`:** Ein Image für `app-api`/`app-worker`
+  (unterscheidet sich nur über `APP_ROLE`, siehe Docker-Compose-Entwurf.md Abschnitt 3), inkl.
+  Tesseract + Sprachpaketen (deu+eng). `docker-compose.yml` im Repo-Root nutzt jetzt `build:
+  ./backend`, der volle Stack lässt sich also lokal mit `docker compose up -d` bauen und
+  starten, nicht mehr nur `db` einzeln.
 - **Worker-Grundgerüst:** `homedms/worker.py` mit einer Procrastinate-`App`
   (PostgreSQL-basierte Job-Queue, kein Redis nötig - siehe
   `docs/Docker-Compose-Entwurf.md` Abschnitt 2) und einem Platzhalter-Task (`ping`), der
@@ -103,8 +115,6 @@ Die übrigen Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
 - **Dokumente (Rest):** Mehrseiten-Dateien hinzufügen/entfernen (`POST/DELETE
   /documents/{id}/files*`), Tag-Zuordnung beim Update, Volltextsuche (`q`-Parameter, Meilisearch-
   Anbindung), Scan-Ordner-Import (Agent, siehe Anforderungsdokument 4.1).
-- **OCR-Pipeline** (Hintergrund-Task im Worker, Tesseract) - hochgeladene Dokumente bleiben aktuell
-  dauerhaft im Status `ocr_status=pending`, da noch kein Worker-Task sie aufgreift.
 - **Klassifikation:** zweistufige Pipeline (Stufe 1 Embedding/pgvector, Stufe 2
   Ollama-LLM als Zweitmeinung) inkl. Konfidenz-Schwellen aus `AIModelConfig` und
   Feedback-Loop bei Unsicherheit. `POST /documents/{id}/category` (manuelle Korrektur/Bestätigung)
