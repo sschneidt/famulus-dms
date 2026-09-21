@@ -2,6 +2,7 @@
 import enum
 import uuid
 from datetime import date, datetime
+from pathlib import Path
 
 from sqlalchemy import Boolean, Date, Enum as SAEnum, ForeignKey, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
@@ -132,6 +133,15 @@ class Document(Base, UUIDPKMixin, TimestampMixin):
 
     deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)  # Soft-Delete, Datenmodell 3.5
 
+    # lazy="selectin": im async-Kontext bequemer als lazy-loading (das ausserhalb eines awaited
+    # Kontexts einen MissingGreenlet-Fehler wirft) - bei unserem Volumen (< 50 Dok./Monat) unkritisch.
+    files: Mapped[list["DocumentFile"]] = relationship(
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="DocumentFile.page_number",
+        lazy="selectin",
+    )
+
 
 class DocumentFile(Base, UUIDPKMixin):
     """Physische Seite/Datei eines Dokuments - trennt logisches Dokument von Dateien (Mehrseiten-Scan)."""
@@ -143,6 +153,13 @@ class DocumentFile(Base, UUIDPKMixin):
     page_number: Mapped[int] = mapped_column(default=1)
     mime_type: Mapped[str] = mapped_column(String(100))
     checksum: Mapped[str] = mapped_column(String(128), default="")
+
+    document: Mapped["Document"] = relationship(back_populates="files")
+
+    @property
+    def filename(self) -> str:
+        """Reiner Dateiname fuer die API-Antwort, ohne den vollen Speicherpfad preiszugeben."""
+        return Path(self.file_path).name
 
 
 class DocumentTag(Base):

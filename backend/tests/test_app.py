@@ -25,6 +25,12 @@ def test_expected_api_v1_routes_registered():
         "/api/v1/auth/logout",
         "/api/v1/auth/me",
         "/api/v1/categories",
+        "/api/v1/documents",
+        "/api/v1/documents/needs-review",
+        "/api/v1/documents/trash",
+        "/api/v1/documents/{document_id}",
+        "/api/v1/documents/{document_id}/download",
+        "/api/v1/documents/{document_id}/restore",
     }
     missing = expected - paths
     assert not missing, f"Fehlende Routen: {missing}"

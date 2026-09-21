@@ -112,6 +112,9 @@ services:
       OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-llama3.2:3b}
       OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
       JWT_SECRET: ${JWT_SECRET:?bitte in .env setzen}
+      # Fester Pfad IM Container (siehe volumes unten) - unabhaengig davon, wohin
+      # DOCUMENTS_PATH auf dem Host zeigt.
+      DOCUMENTS_PATH: /data/documents
       TZ: ${TZ:-Europe/Berlin}
     volumes:
       - ${DOCUMENTS_PATH:-./data/documents}:/data/documents
@@ -157,6 +160,7 @@ services:
       OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
       AI_CAUTION_LEVEL: ${AI_CAUTION_LEVEL:-normal}
       JWT_SECRET: ${JWT_SECRET}
+      DOCUMENTS_PATH: /data/documents
       TZ: ${TZ:-Europe/Berlin}
     volumes:
       - ${DOCUMENTS_PATH:-./data/documents}:/data/documents

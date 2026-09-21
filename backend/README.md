@@ -79,6 +79,17 @@ bewusst noch nicht getestet - das braucht eine echte Postgres-Verbindung (z. B.
   `docs/Anforderungsdokument.md` 4.3).
 - **Kategorien:** `GET/POST /api/v1/categories` als Referenz-Pattern für Tenant-gescopte
   CRUD-Endpunkte (weitere Ressourcen folgen nach demselben Muster).
+- **Dokumente (Kernfunktionen):** `GET/POST /api/v1/documents` (Liste mit Pagination/Filtern
+  `category_id`/`status`/`date_from`/`date_to`, sowie Multipart-Upload - deckt Foto-Import und
+  manuellen Upload über denselben Endpunkt ab, siehe Anforderungsdokument 4.1), `GET/PATCH
+  /documents/{id}`, `DELETE /documents/{id}` + `POST /documents/{id}/restore` (Soft-Delete/
+  Papierkorb, Datenmodell 3.5), `GET /documents/trash`, `GET /documents/needs-review`, `GET
+  /documents/{id}/download`. Dateien landen unter `DOCUMENTS_PATH/<tenant>/<jahr>/<dokument-id>/`
+  (`homedms/core/storage.py`).
+- **Sichtbarkeitsmodell:** `homedms/core/visibility.py` setzt die Rechte-Regeln aus Datenmodell 3.6
+  um (Admin/Owner/`CategoryAccess`/`DocumentAccessOverride`) und wendet sie auf alle
+  Dokumente-Endpunkte an (Listen werden gefiltert, direkter Zugriff per ID liefert `403`, siehe
+  API-Design 1).
 - **Worker-Grundgerüst:** `homedms/worker.py` mit einer Procrastinate-`App`
   (PostgreSQL-basierte Job-Queue, kein Redis nötig - siehe
   `docs/Docker-Compose-Entwurf.md` Abschnitt 2) und einem Platzhalter-Task (`ping`), der
@@ -87,14 +98,20 @@ bewusst noch nicht getestet - das braucht eine echte Postgres-Verbindung (z. B.
 
 ## Was noch fehlt (nächste Schritte)
 
-Die übrigen ca. 60 Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
+Die übrigen Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
 
-- **Dokumente:** Upload (App-Foto, manueller Upload, Scan-Ordner-Import), Abruf, Trash/Restore
-  (`/documents/trash`, `/documents/{id}/restore`), Datei-Download.
-- **OCR-Pipeline** (Hintergrund-Task im Worker, Tesseract).
+- **Dokumente (Rest):** Mehrseiten-Dateien hinzufügen/entfernen (`POST/DELETE
+  /documents/{id}/files*`), Tag-Zuordnung beim Update, Volltextsuche (`q`-Parameter, Meilisearch-
+  Anbindung), Scan-Ordner-Import (Agent, siehe Anforderungsdokument 4.1).
+- **OCR-Pipeline** (Hintergrund-Task im Worker, Tesseract) - hochgeladene Dokumente bleiben aktuell
+  dauerhaft im Status `ocr_status=pending`, da noch kein Worker-Task sie aufgreift.
 - **Klassifikation:** zweistufige Pipeline (Stufe 1 Embedding/pgvector, Stufe 2
   Ollama-LLM als Zweitmeinung) inkl. Konfidenz-Schwellen aus `AIModelConfig` und
-  Feedback-Loop bei Unsicherheit.
+  Feedback-Loop bei Unsicherheit. `POST /documents/{id}/category` (manuelle Korrektur/Bestätigung)
+  und `GET /documents/{id}/classification-history` fehlen noch.
+- **Massen-Umkategorisierung** (`POST /documents/bulk-reclassify`) und Zugriffs-Ausnahmen verwalten
+  (`GET/PUT /documents/{id}/access`) - Modelle (`DocumentAccessOverride`) existieren bereits, nur
+  die Endpunkte dafür fehlen noch.
 - **Metadaten-/Fristen-Extraktion** (LLM-Extraktion pro Dokument, Wiedervorlage-Vorschläge).
 - **Wiedervorlagen/Termine** inkl. Wiederholungslogik und Zuweisung an Haushaltsmitglieder.
 - **Aufbewahrungsregeln** (`RetentionRule`).

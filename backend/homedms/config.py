@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     ollama_embedding_model: str = "nomic-embed-text"
     ai_caution_level: str = "normal"  # vorsichtig | normal | mutig, siehe Datenmodell 3.7 AIModelConfig
 
+    # Wo Dokument-Dateien liegen. Im Container immer "/data/documents" (fester Mount-Punkt,
+    # siehe docker-compose.yml); fuer lokale Entwicklung ohne Docker Default relativ zum cwd.
+    documents_path: str = "./data/documents"
+
     jwt_secret: str = "dev-only-change-me"
     jwt_access_token_ttl_minutes: int = 15
     jwt_refresh_token_ttl_days: int = 30
