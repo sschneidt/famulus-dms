@@ -83,11 +83,14 @@ services:
     depends_on:
       ollama:
         condition: service_healthy
+    environment:
+      # Die ollama-CLI hat keinen --host-Parameter; das Ziel kommt ueber OLLAMA_HOST.
+      OLLAMA_HOST: http://ollama:11434
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >
-        ollama pull "${OLLAMA_CHAT_MODEL:-llama3.2:3b}" --host http://ollama:11434 &&
-        ollama pull "${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}" --host http://ollama:11434
+        ollama pull "${OLLAMA_CHAT_MODEL:-llama3.2:3b}" &&
+        ollama pull "${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}"
 
   # ---------------------------------------------------------------------------
   # Backend-API (FastAPI). Liefert zusätzlich die gebauten PWA-Frontend-Dateien
