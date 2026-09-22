@@ -554,7 +554,7 @@ requires-dist = [
     { name = "pgvector", specifier = ">=0.3" },
     { name = "pillow", specifier = ">=10" },
     { name = "pillow-heif", specifier = ">=0.18" },
-    { name = "procrastinate", specifier = ">=3" },
+    { name = "procrastinate", specifier = ">=3.9,<3.10" },
     { name = "psycopg", extras = ["binary", "pool"], specifier = ">=3.1" },
     { name = "pydantic", extras = ["email"], specifier = ">=2.9" },
     { name = "pydantic-settings", specifier = ">=2.5" },

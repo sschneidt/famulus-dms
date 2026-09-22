@@ -2,7 +2,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, Enum as SAEnum, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, Date, Enum as SAEnum, ForeignKey, Numeric, String, Text, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 
 from homedms.models.base import Base, TimestampMixin, UUIDPKMixin
@@ -37,7 +37,7 @@ class Wiedervorlage(Base, UUIDPKMixin, TimestampMixin):
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     reminder_lead_days: Mapped[int] = mapped_column(default=30)
 
-    completed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
 

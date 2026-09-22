@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Enum as SAEnum, ForeignKey, Text
+from sqlalchemy import Enum as SAEnum, ForeignKey, Text, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,4 +28,4 @@ class ChatMessage(Base, UUIDPKMixin):
     content: Mapped[str] = mapped_column(Text)
     tool_calls: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     tool_results: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(server_default="now()")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

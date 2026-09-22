@@ -2,7 +2,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Enum as SAEnum, ForeignKey, String
+from sqlalchemy import Boolean, Enum as SAEnum, ForeignKey, String, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -16,7 +16,7 @@ class ImportSource(Base, UUIDPKMixin):
     type: Mapped[str] = mapped_column(SAEnum("nas_watch_folder", "client_agent", name="import_source_type"))
     config: Mapped[dict] = mapped_column(JSONB, default=dict)  # Pfad bzw. Agent-Token, Poll-Intervall
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    last_scanned_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    last_scanned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Notification(Base, UUIDPKMixin):
@@ -35,7 +35,7 @@ class Notification(Base, UUIDPKMixin):
     status: Mapped[str] = mapped_column(
         SAEnum("unread", "read", "sent", "failed", name="notification_status"), default="unread"
     )
-    created_at: Mapped[datetime] = mapped_column(server_default="now()")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class PushSubscription(Base, UUIDPKMixin):
@@ -44,4 +44,4 @@ class PushSubscription(Base, UUIDPKMixin):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     endpoint: Mapped[str] = mapped_column(String(1000))
     keys: Mapped[dict] = mapped_column(JSONB, default=dict)
-    created_at: Mapped[datetime] = mapped_column(server_default="now()")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

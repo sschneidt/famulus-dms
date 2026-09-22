@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, Enum as SAEnum, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, Enum as SAEnum, ForeignKey, Numeric, String, Text, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from homedms.models.base import Base, UUIDPKMixin
@@ -29,7 +29,7 @@ class CategoryExemplar(Base, UUIDPKMixin):
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
     created_via: Mapped[ExemplarSource] = mapped_column(SAEnum(ExemplarSource, name="exemplar_source"))
     confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(server_default="now()")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ClassificationEvent(Base, UUIDPKMixin):
@@ -46,7 +46,7 @@ class ClassificationEvent(Base, UUIDPKMixin):
     confidence: Mapped[float | None] = mapped_column(Numeric, nullable=True)
     triggered_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(server_default="now()")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class AIModelConfig(Base, UUIDPKMixin):

@@ -47,13 +47,38 @@ Procrastinate/psycopg, siehe `sqlalchemy_database_url`/`procrastinate_database_u
 uv run pytest
 ```
 
-Alle aktuell vorhandenen Tests (`backend/tests/`) laufen **ohne laufende Datenbank** - sie
-prüfen App-Aufbau/Routing, die Sicherheits-Bausteine (Passwort-Hashing, JWT) sowie die
-Worker-Verkabelung (Procrastinate-App, DATABASE_URL-Normalisierung). Endpunkte, die
-tatsächlich eine DB-Session ausführen (`/setup/bootstrap`, `/auth/*`, `/categories`), sind
-bewusst noch nicht getestet - das braucht eine echte Postgres-Verbindung (z. B.
-`docker compose up db` + Alembic-Migration) und folgt in einer späteren Iteration
-(Integrationstests mit `pytest-asyncio` + Test-DB/Testcontainers).
+**Unit-Tests** (`backend/tests/`) laufen ohne Datenbank: App-Aufbau/Routing, Sicherheits-
+Bausteine (Passwort-Hashing, JWT), Sichtbarkeits-SQL, Dateiablage, Worker-Verkabelung und die
+OCR-Extraktion (mit echtem Tesseract, siehe `tests/test_ocr.py`).
+
+**Integrationstests** (`backend/tests/integration/`) laufen gegen eine echte PostgreSQL mit
+`pgvector` + `pg_trgm` und spielen den kompletten Ablauf durch: Ersteinrichtung, Login, Upload,
+OCR-Job in der Queue, Abarbeitung durch den Worker, Sichtbarkeitsregeln, Mandantentrennung,
+Papierkorb und Download. Sie **leeren vorher alle Tabellen** der Zieldatenbank und laufen deshalb
+nur, wenn man sie ausdrücklich einschaltet *und* der Datenbankname auf `_test` endet:
+
+```bash
+# einmalig eine eigene Test-Datenbank im laufenden db-Container anlegen
+docker compose exec db createdb -U homedms homedms_test
+
+# PowerShell
+$env:HOMEDMS_INTEGRATION_TESTS="1"
+$env:DATABASE_URL="postgresql://homedms:<POSTGRES_PASSWORD>@localhost:5432/homedms_test"
+uv run pytest tests/integration
+```
+
+Das Schema legen die Tests selbst per `alembic upgrade head` an - sie prüfen damit also auch die
+Migrationen.
+
+## Migrationen
+
+`alembic/versions/0001_initial.py` ist der eingefrorene Anfangsstand als explizite
+Tabellendefinitionen. **Schema-Änderungen gehören ausschließlich in neue Migrationen**, am
+einfachsten per `uv run alembic revision --autogenerate -m "..."` gegen eine Dev-Datenbank auf
+dem aktuellen Stand, danach das Ergebnis prüfen. `0002` legt das Schema der Job-Queue
+Procrastinate an (feste Kopie, deshalb ist Procrastinate auf 3.9.x gepinnt - beim Anheben der
+Version eine neue Migration mit den Delta-Skripten aus `procrastinate/sql/migrations/`
+ergänzen). `0003` stellt alle Zeitstempel auf "mit Zeitzone" um.
 
 ## Was ist implementiert
 
@@ -62,15 +87,9 @@ bewusst noch nicht getestet - das braucht eine echte Postgres-Verbindung (z. B.
 - **Datenmodell:** alle 20 Tabellen aus `docs/Datenmodell.md` als SQLAlchemy-2.0-Modelle
   (`homedms/models/`), inkl. `pgvector`-Spalte für Klassifikations-Exemplare und
   Soft-Delete (`Document.deleted_at`).
-- **Migrationen:** Alembic ist verkabelt (`alembic/`); die erste Migration (`0001_initial`)
-  erzeugt die Extensions (`vector`, `pg_trgm`) und das komplette Schema über
-  `Base.metadata.create_all()`. Das ist ein bewusster Kompromiss, weil in der
-  Entwicklungsumgebung, in der dieses Grundgerüst entstanden ist, keine laufende
-  Postgres-Instanz verfügbar war, um `alembic revision --autogenerate` gegen eine echte DB
-  laufen zu lassen. **Vor dem ersten produktiven Einsatz:** einmal `alembic upgrade head`
-  gegen eine echte Dev-Datenbank laufen lassen und prüfen, dass das Schema exakt
-  `docs/Datenmodell.md` entspricht. Alle Migrationen danach sollten regulär per
-  `alembic revision --autogenerate -m "..."` gegen eine laufende Dev-DB erzeugt werden.
+- **Migrationen:** Alembic ist verkabelt (`alembic/`), drei Migrationen (Anfangsschema,
+  Job-Queue-Schema, Zeitstempel-Korrektur) - siehe Abschnitt "Migrationen". Sie laufen beim Start
+  des `app-api`-Containers automatisch (`docker-entrypoint.sh`).
 - **Auth:** `POST /api/v1/auth/login`, `/auth/refresh` (mit Rotation der Refresh-Tokens),
   `/auth/logout`, `GET /auth/me` - JWT (Access+Refresh), Argon2-Passwort-Hashing,
   server-seitig widerrufbare Refresh-Tokens (`RefreshToken`-Tabelle).
@@ -136,8 +155,8 @@ Die übrigen Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
 - **Frontend-Ausgabe:** `StaticFiles`-Mount für die gebaute PWA (sobald das Frontend existiert).
 - **Einrichtungsassistent im Detail** (Schrittfolge/Felder über `POST /setup/bootstrap`
   hinaus, siehe `docs/Anforderungsdokument.md` 4.7 - noch offen).
-- **Integrationstests** gegen eine echte Postgres-Instanz (Setup/Bootstrap, Login-Flow,
-  Tenant-Isolation, RLS).
+- **Row-Level-Security** in Postgres als zweite Absicherung der Mandantentrennung (die
+  Trennung auf API-Ebene ist durch die Integrationstests abgedeckt).
 
 ## Bekannter Punkt zur lokalen Entwicklungsumgebung
 

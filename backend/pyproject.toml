@@ -15,7 +15,7 @@ dependencies = [
     "passlib[argon2]>=1.7",
     "pgvector>=0.3",
     "python-multipart>=0.0.9",
-    "procrastinate>=3",
+    "procrastinate>=3.9,<3.10",  # fest wegen kopiertem Schema in alembic/versions/0002 - siehe dort
     "psycopg[binary,pool]>=3.1",  # psycopg[binary] = vorkompiliertes libpq, kein System-libpq-dev noetig
     "pytesseract>=0.3",   # ruft die tesseract-CLI auf - Anforderungsdokument 4.2
     "pillow>=10",

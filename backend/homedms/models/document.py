@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from pathlib import Path
 
-from sqlalchemy import Boolean, Date, Enum as SAEnum, ForeignKey, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, Enum as SAEnum, ForeignKey, Numeric, String, Text, UniqueConstraint, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -131,7 +131,7 @@ class Document(Base, UUIDPKMixin, TimestampMixin):
     )
     original_location: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
-    deleted_at: Mapped[datetime | None] = mapped_column(nullable=True)  # Soft-Delete, Datenmodell 3.5
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # Soft-Delete, Datenmodell 3.5
 
     # lazy="selectin": im async-Kontext bequemer als lazy-loading (das ausserhalb eines awaited
     # Kontexts einen MissingGreenlet-Fehler wirft) - bei unserem Volumen (< 50 Dok./Monat) unkritisch.

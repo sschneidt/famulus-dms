@@ -18,6 +18,12 @@ class UUIDPKMixin:
 
 
 class TimestampMixin:
+    # Die Zeitstempel setzt die Datenbank selbst. eager_defaults=True holt sie per RETURNING
+    # direkt beim INSERT *und* UPDATE zurueck - sonst waere updated_at nach einem UPDATE
+    # "abgelaufen" und wuerde beim Serialisieren der Antwort nachgeladen, was im async-Kontext
+    # mit MissingGreenlet scheitert (gefunden durch tests/integration).
+    __mapper_args__ = {"eager_defaults": True}
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
