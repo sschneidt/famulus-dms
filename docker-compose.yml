@@ -46,7 +46,9 @@ services:
     volumes:
       - meilidata:/meili_data
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:7700/health"]
+      # Normaler GET-Request (kein "wget --spider", das je nach Variante HEAD sendet).
+      # curl ist im offiziellen Meilisearch-Image enthalten, wget -qO- als Rueckfall.
+      test: ["CMD-SHELL", "curl -fsS http://localhost:7700/health || wget -qO- http://localhost:7700/health"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -132,7 +134,8 @@ services:
       # Reverse-Proxy-Container im Standard-Setup nötig.
       - "${APP_HTTP_PORT:-8000}:8000"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      # python:3.12-slim enthaelt weder wget noch curl - Python selbst ist aber da.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=4)"]
       interval: 10s
       timeout: 5s
       retries: 10
