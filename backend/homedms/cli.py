@@ -1,0 +1,100 @@
+"""Verwaltungsbefehle fuer den Betrieb - v. a. fuer den Fall "Admin-Passwort vergessen", der bei
+einer selbst gehosteten Installation ohne E-Mail-Reset sonst nur per SQL zu loesen waere.
+
+Im Container:  docker compose exec app-api python -m homedms.cli users
+               docker compose exec app-api python -m homedms.cli reset-password <email>
+Lokal:         uv run python -m homedms.cli ...
+"""
+import argparse
+import asyncio
+import getpass
+import sys
+from datetime import datetime, timezone
+
+from sqlalchemy import select, update
+
+from homedms.core.security import hash_password
+from homedms.db import async_session_factory, engine
+from homedms.models.tenant import RefreshToken, Tenant, User
+
+MIN_PASSWORD_LENGTH = 8  # wie in schemas/setup.py (BootstrapRequest.admin_password)
+
+
+async def list_users() -> int:
+    async with async_session_factory() as db:
+        rows = (
+            await db.execute(
+                select(Tenant.name, User.email, User.role, User.display_name)
+                .join(Tenant, Tenant.id == User.tenant_id)
+                .order_by(Tenant.name, User.email)
+            )
+        ).all()
+    if not rows:
+        print("Noch keine Nutzer vorhanden - die Ersteinrichtung (POST /api/v1/setup/bootstrap) fehlt.")
+        return 0
+    for tenant_name, email, role, display_name in rows:
+        print(f"{tenant_name:<30} {email:<40} {role.value:<8} {display_name}")
+    return 0
+
+
+async def reset_password(email: str, password: str) -> int:
+    async with async_session_factory() as db:
+        users = (await db.execute(select(User).where(User.email == email))).scalars().all()
+        if not users:
+            print(f"Kein Nutzer mit der E-Mail-Adresse {email} gefunden.", file=sys.stderr)
+            return 1
+        if len(users) > 1:
+            print(f"{email} existiert in mehreren Haushalten - bitte eindeutige Adresse verwenden.", file=sys.stderr)
+            return 1
+        user = users[0]
+        user.password_hash = hash_password(password)
+        # Bestehende Anmeldungen beenden: wer das alte Passwort kannte, soll nicht angemeldet bleiben.
+        await db.execute(
+            update(RefreshToken)
+            .where(RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None))
+            .values(revoked_at=datetime.now(timezone.utc))
+        )
+        await db.commit()
+    print(f"Passwort fuer {email} wurde geaendert. Bestehende Anmeldungen wurden beendet.")
+    return 0
+
+
+def _ask_password() -> str | None:
+    first = getpass.getpass("Neues Passwort: ")
+    if len(first) < MIN_PASSWORD_LENGTH:
+        print(f"Das Passwort muss mindestens {MIN_PASSWORD_LENGTH} Zeichen lang sein.", file=sys.stderr)
+        return None
+    if getpass.getpass("Passwort wiederholen: ") != first:
+        print("Die Passwoerter stimmen nicht ueberein.", file=sys.stderr)
+        return None
+    return first
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="python -m homedms.cli", description="HomeDMS-Verwaltung")
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("users", help="Alle Haushalte und Nutzer auflisten")
+    reset = sub.add_parser("reset-password", help="Passwort eines Nutzers neu setzen")
+    reset.add_argument("email")
+    reset.add_argument("--password", help="Neues Passwort (ohne Angabe wird es sicher abgefragt)")
+    args = parser.parse_args(argv)
+
+    async def run() -> int:
+        try:
+            if args.command == "users":
+                return await list_users()
+            password = args.password if args.password is not None else _ask_password()
+            if password is None:
+                return 1
+            if len(password) < MIN_PASSWORD_LENGTH:
+                print(f"Das Passwort muss mindestens {MIN_PASSWORD_LENGTH} Zeichen lang sein.", file=sys.stderr)
+                return 1
+            return await reset_password(args.email, password)
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(run())
+
+
+if __name__ == "__main__":
+    sys.exit(main())

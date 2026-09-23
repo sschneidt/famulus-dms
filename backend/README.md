@@ -41,6 +41,18 @@ angegeben werden - `homedms.config.Settings` normalisiert intern automatisch auf
 jeweils passenden Treiber (`+asyncpg` für SQLAlchemy/Alembic, reines `postgresql://` für
 Procrastinate/psycopg, siehe `sqlalchemy_database_url`/`procrastinate_database_url`).
 
+## Verwaltung: Nutzer anzeigen, Passwort zurücksetzen
+
+Für den Fall "Admin-Passwort vergessen" (es gibt noch keinen Reset per E-Mail):
+
+```bash
+docker compose exec app-api python -m homedms.cli users
+docker compose exec app-api python -m homedms.cli reset-password <email>
+```
+
+`reset-password` fragt das neue Passwort verdeckt ab (mindestens 8 Zeichen) und beendet alle
+bestehenden Anmeldungen dieses Nutzers. Lokal ohne Docker: `uv run python -m homedms.cli ...`.
+
 ## Tests
 
 ```bash
