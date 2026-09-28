@@ -24,7 +24,8 @@ from homedms.ai.classifier import (
     parse_llm_answer,
     thresholds_for,
 )
-from homedms.ai.ollama import OllamaClient, OllamaError
+from homedms.ai import ollama
+from homedms.ai.ollama import OllamaError
 from homedms.config import get_settings
 from homedms.jobs import app
 from homedms.models.classification import AIModelConfig, CategoryExemplar, ClassificationEvent, ExemplarSource
@@ -36,13 +37,6 @@ from homedms.models.document import (
 )
 
 logger = logging.getLogger("homedms.tasks.classification")
-
-
-def make_client(config: AIModelConfig | None) -> OllamaClient:
-    """Eigene Funktion, damit Tests eine Attrappe einsetzen koennen (tests/integration)."""
-    if config is None:
-        return OllamaClient()
-    return OllamaClient(chat_model=config.chat_model_name, embedding_model=config.embedding_model_name)
 
 
 async def _config_for(db: AsyncSession, tenant_id: uuid.UUID) -> AIModelConfig | None:
@@ -107,7 +101,7 @@ async def classify_document(document_id: str) -> None:
             config.caution_level if config else get_settings().ai_caution_level,
             config.min_exemplars_fast_path if config else 5,
         )
-        client = make_client(config)
+        client = ollama.client_for(config)
 
         def needs_review(stage: str, note: str, confidence: float | None = None) -> None:
             _record(db, document, new_category_id=None, stage=stage, confidence=confidence, note=note)
@@ -188,7 +182,7 @@ async def learn_exemplar(document_id: str, category_id: str, user_id: str | None
             return
         config = await _config_for(db, document.tenant_id)
         try:
-            embedding = await make_client(config).embed(text)
+            embedding = await ollama.client_for(config).embed(text)
         except OllamaError as exc:
             # Kein Datenverlust: die Zuordnung selbst ist gespeichert, nur das Lernbeispiel fehlt.
             logger.warning("Exemplar fuer %s nicht gelernt: %s", document_id, exc)

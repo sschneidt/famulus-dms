@@ -77,3 +77,11 @@ class OllamaClient:
             return json.loads(content)
         except json.JSONDecodeError as exc:
             raise OllamaError(f"Chat-Antwort ist kein gueltiges JSON: {content[:200]}") from exc
+
+
+def client_for(config) -> OllamaClient:
+    """Client passend zur KI-Konfiguration des Haushalts (AIModelConfig oder None = Standardwerte).
+    Zentrale Stelle, damit Tests hier eine Attrappe einsetzen koennen (tests/integration)."""
+    if config is None:
+        return OllamaClient()
+    return OllamaClient(chat_model=config.chat_model_name, embedding_model=config.embedding_model_name)

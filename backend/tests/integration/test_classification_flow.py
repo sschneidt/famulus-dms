@@ -5,61 +5,22 @@ aehnliche Vektoren), das "Sprachmodell" entscheidet nach Stichworten. So laesst 
 Logik rund um das Modell pruefen: Stufe 1/Stufe 2, Feedback-Loop, Lernen aus Bestaetigungen,
 Korrekturen, Ausfall der KI. Wie gut das echte Modell entscheidet, prueft der Smoke-Test.
 """
-import json
-import math
-import re
 import uuid
-import zlib
 
 import httpx
 import pymupdf
 from sqlalchemy import select, text
 
-from homedms.ai.ollama import OllamaClient
+from homedms.ai import ollama
 from homedms.db import async_session_factory
 from homedms.jobs import app as jobs_app
 from homedms.main import app
 from homedms.models.classification import CategoryExemplar
 from homedms.models.document import Category
-from homedms.tasks import classification
+
+from .fake_ollama import FakeOllama
 
 API = "/api/v1"
-DIM = 768
-
-
-def bag_of_words(text_: str) -> list[float]:
-    vec = [0.0] * DIM
-    for token in re.findall(r"\w+", text_.lower()):
-        vec[zlib.crc32(token.encode()) % DIM] += 1.0
-    norm = math.sqrt(sum(v * v for v in vec)) or 1.0
-    return [v / norm for v in vec]
-
-
-class FakeOllama:
-    def __init__(self) -> None:
-        self.embed_calls = 0
-        self.chat_calls = 0
-        self.down = False
-
-    def handler(self, request: httpx.Request) -> httpx.Response:
-        if self.down:
-            raise httpx.ConnectError("Verbindung abgelehnt", request=request)
-        body = json.loads(request.content)
-        if request.url.path == "/api/embed":
-            self.embed_calls += 1
-            return httpx.Response(200, json={"embeddings": [bag_of_words(body["input"])]})
-        if request.url.path == "/api/chat":
-            self.chat_calls += 1
-            assert "Versicherungen" in body["format"]["properties"]["kategorie"]["enum"]
-            doc_text = body["messages"][1]["content"].split('"""')[1]
-            if "Versicherung" in doc_text:
-                answer = {"kategorie": "Versicherungen", "konfidenz": 0.95, "begruendung": "Versicherungsschreiben"}
-            elif "Stadtwerke" in doc_text:
-                answer = {"kategorie": "Wohnen & Nebenkosten", "konfidenz": 0.9, "begruendung": "Energie"}
-            else:
-                answer = {"kategorie": "Sonstiges", "konfidenz": 0.4, "begruendung": "unklar"}
-            return httpx.Response(200, json={"message": {"content": json.dumps(answer)}})
-        return httpx.Response(404)
 
 
 def versicherung(i: int) -> str:
@@ -97,10 +58,7 @@ async def exemplars(document_id: str | None = None) -> list[tuple[str, str]]:
 
 async def test_classification_learns_from_confirmations(clean_database, monkeypatch):
     fake = FakeOllama()
-    monkeypatch.setattr(
-        classification, "make_client",
-        lambda config: OllamaClient(base_url="http://ollama.test", transport=httpx.MockTransport(fake.handler)),
-    )
+    monkeypatch.setattr(ollama, "client_for", fake.client)
 
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
         await client.post(f"{API}/setup/bootstrap", json={
@@ -159,13 +117,13 @@ async def test_classification_learns_from_confirmations(clean_database, monkeypa
         for i in range(2, 6):
             await upload(versicherung(i))
         await run_worker()
-        chat_calls_before = fake.chat_calls
+        classify_calls_before = fake.classify_calls
         d6 = await upload(versicherung(6))
         await run_worker()
         doc = await detail(d6)
         assert doc["classification_stage"] == "embedding", await history(d6)
         assert doc["category_id"] == cats["Versicherungen"] and doc["classification_confidence"] >= 0.85
-        assert fake.chat_calls == chat_calls_before  # Sprachmodell nicht bemueht
+        assert fake.classify_calls == classify_calls_before  # Sprachmodell fuer die Kategorie nicht bemueht
         assert await exemplars(d6) == [("Versicherungen", "auto_high_confidence")]
 
         # --- 5. Korrektur ersetzt das Lernbeispiel, statt falsch weiterzulernen --------------

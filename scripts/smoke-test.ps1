@@ -6,7 +6,7 @@
   Schritte: Stack bauen/starten -> auf die API warten -> Ersteinrichtung bzw. Anmeldung ->
   Profil abrufen -> Test-PDF und Test-Scan hochladen -> auf die Texterkennung warten ->
   erkannten Text pruefen -> automatische Klassifikation abwarten -> eine Kategorie manuell
-  bestaetigen -> Download mit dem Original vergleichen -> Testdokumente in den Papierkorb legen. Am Ende steht eine Uebersicht mit OK/FEHLER je Schritt.
+  bestaetigen -> Metadaten und Fristvorschlaege pruefen -> Download mit dem Original vergleichen -> Testdokumente in den Papierkorb legen. Am Ende steht eine Uebersicht mit OK/FEHLER je Schritt.
 
   Gibt es noch keinen Haushalt, legt das Skript ihn mit den angegebenen Zugangsdaten an.
   Gibt es schon einen, meldet es sich mit ihnen an. Mit -PasswortZuruecksetzen wird das
@@ -274,6 +274,45 @@ if ($ziel) {
     Schreibe-Schritt "Kategorie manuell bestaetigen" $ok $(if ($ok) { "Wohnen & Nebenkosten, $($verlauf.Count) Eintraege im Verlauf" } else { "HTTP $($r.Status): $($r.Text)" })
 } else {
     Schreibe-Schritt "Kategorie manuell bestaetigen" $true "uebersprungen - Kategorie 'Wohnen & Nebenkosten' gibt es nicht (umbenannt?)"
+}
+
+# --- 6c. Metadaten und Fristen (Anforderungsdokument 4.4a) -------------------------------------
+foreach ($t in $testfaelle) {
+    $ende = (Get-Date).AddSeconds($TimeoutSekunden)
+    $detail = $null
+    do {
+        $detail = (Invoke-Api GET "/documents/$($t.Id)" -Token $token).Json
+        if ($detail -and $detail.extraction_status -ne "pending") { break }
+        Start-Sleep -Seconds 3
+    } while ((Get-Date) -lt $ende)
+
+    $status = if ($detail) { $detail.extraction_status } else { "keine Antwort" }
+    if ($status -ne "done") {
+        Schreibe-Schritt "Metadaten $($t.Name)" $false "Status: $status"
+        $t.Hinweis = "Metadaten-Erkennung hat nicht funktioniert. Laeuft Ollama und ist das Chat-Modell geladen? 'docker compose logs app-worker' pruefen."
+        continue
+    }
+    $teile = @()
+    if ($detail.document_date) { $teile += "Datum $($detail.document_date)" }
+    if ($detail.issuer) { $teile += "Absender '$($detail.issuer)'" }
+    if ($null -ne $detail.amount) { $teile += ("Betrag {0:N2} EUR" -f [double]$detail.amount) }
+    $info = if ($teile.Count) { $teile -join ", " } else { "nichts erkannt" }
+    Schreibe-Schritt "Metadaten $($t.Name)" $true $info
+
+    $vorschlaege = @((Invoke-Api GET "/documents/$($t.Id)/wiedervorlagen" -Token $token).Json)
+    $t.Vorschlaege = $vorschlaege
+    $liste = if ($vorschlaege.Count) { ($vorschlaege | ForEach-Object { "$($_.note) am $($_.due_date)" }) -join "; " } else { "keine" }
+    Schreibe-Schritt "Fristvorschlaege $($t.Name)" $true $liste
+}
+
+# Einen Vorschlag probeweise bestaetigen (vorgeschlagen -> offen)
+$erster = @($testfaelle | ForEach-Object { $_.Vorschlaege } | Where-Object { $_ -and $_.status -eq "vorgeschlagen" }) | Select-Object -First 1
+if ($erster) {
+    $r = Invoke-Api POST "/wiedervorlagen/$($erster.id)/confirm" -Token $token
+    $ok = $r.Status -eq 200 -and $r.Json.status -eq "offen"
+    Schreibe-Schritt "Fristvorschlag bestaetigen" $ok $(if ($ok) { "$($erster.note) am $($erster.due_date) ist jetzt offen" } else { "HTTP $($r.Status): $($r.Text)" })
+} else {
+    Schreibe-Schritt "Fristvorschlag bestaetigen" $true "uebersprungen - das Modell hat keine Frist vorgeschlagen"
 }
 
 # --- 7. Download mit dem Original vergleichen ------------------------------------------------

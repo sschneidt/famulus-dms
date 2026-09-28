@@ -1,8 +1,9 @@
 """Schemas fuer /documents/* - siehe docs/API-Design.md Abschnitt 5."""
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from homedms.models.document import (
     ClassificationStage,
@@ -74,6 +75,10 @@ class DocumentUpdateRequest(BaseModel):
     title: str | None = None
     original_present: OriginalPresent | None = None
     original_location: str | None = None
+    # Von der KI erkannte Metadaten korrigieren (null = Feld leeren)
+    document_date: date | None = None
+    issuer: str | None = Field(default=None, max_length=300)
+    amount: Decimal | None = Field(default=None, ge=0, max_digits=12, decimal_places=2)
 
 
 class CategoryAssignRequest(BaseModel):

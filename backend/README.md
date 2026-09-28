@@ -155,6 +155,16 @@ ergänzen). `0003` stellt alle Zeitstempel auf "mit Zeitzone" um.
   Schwellenwerte je nach `AI_CAUTION_LEVEL` (vorsichtig/normal/mutig) in `homedms/ai/classifier.py`.
   Endpunkte: `POST /documents/{id}/category` (manuell zuordnen/bestätigen),
   `GET /documents/{id}/classification-history` (alle Entscheidungen mit Begründung).
+- **Metadaten und Fristen** (Anforderungsdokument 4.4a): `extract_metadata`
+  (`homedms/tasks/extraction.py`) liest nach der Texterkennung per Sprachmodell Dokumentdatum,
+  Absender und Betrag aus (füllt nur leere Felder, Korrekturen per `PATCH /documents/{id}`) und
+  schlägt erkannte Fristen als Wiedervorlagen mit Status `vorgeschlagen` vor. Schutzregeln in
+  `homedms/ai/extraction.py`: Konfidenz ≥ 50 %, die zitierte Textstelle muss im Dokument stehen,
+  vergangene einmalige Termine entfallen, wiederkehrende rücken auf den nächsten Termin, keine
+  Doppel-Vorschläge. Eigener Modell-Aufruf statt kombiniert mit der Klassifikation – kleine
+  Modelle antworten mit einer Aufgabe je Aufruf zuverlässiger.
+- **Wiedervorlagen (Teil 1):** `GET /wiedervorlagen` (Übersicht, Filter `status`, `due_before`),
+  `GET /documents/{id}/wiedervorlagen`, `POST /wiedervorlagen/{id}/confirm` bzw. `/reject`.
 - **`backend/Dockerfile` + `docker-entrypoint.sh`:** Ein Image für `app-api`/`app-worker`
   (unterscheidet sich nur über `APP_ROLE`, siehe Docker-Compose-Entwurf.md Abschnitt 3), inkl.
   Tesseract + Sprachpaketen (deu+eng). `docker-compose.yml` im Repo-Root nutzt jetzt `build:
@@ -173,14 +183,15 @@ Die übrigen Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
 - **Dokumente (Rest):** Mehrseiten-Dateien hinzufügen/entfernen (`POST/DELETE
   /documents/{id}/files*`), Tag-Zuordnung beim Update, Volltextsuche (`q`-Parameter, Meilisearch-
   Anbindung), Scan-Ordner-Import (Agent, siehe Anforderungsdokument 4.1).
-- **Klassifikation (Rest):** Metadaten-Extraktion (Datum, Absender, Betrag) und Fristenerkennung
-  im selben Sprachmodell-Aufruf, KI-Einstellungen per API (`/ai-config`), Kalibrierung der
-  Schwellenwerte an echten Dokumenten, Ablage der Dateien nach Kategorie.
+- **KI (Rest):** KI-Einstellungen per API (`/ai-config`), Kalibrierung der Schwellenwerte an
+  echten Dokumenten, erneute Verarbeitung auf Knopfdruck (z. B. nach einem KI-Ausfall), Ablage
+  der Dateien nach Kategorie.
+- **Wiedervorlagen (Teil 2):** manuell anlegen/ändern/löschen, erledigen mit automatischer
+  Wiederholung, Aufbewahrungsregeln, Erinnerungen über Benachrichtigungen.
 - **Massen-Umkategorisierung** (`POST /documents/bulk-reclassify`) und Zugriffs-Ausnahmen verwalten
   (`GET/PUT /documents/{id}/access`) - Modelle (`DocumentAccessOverride`) existieren bereits, nur
   die Endpunkte dafür fehlen noch.
 - **Metadaten-/Fristen-Extraktion** (LLM-Extraktion pro Dokument, Wiedervorlage-Vorschläge).
-- **Wiedervorlagen/Termine** inkl. Wiederholungslogik und Zuweisung an Haushaltsmitglieder.
 - **Aufbewahrungsregeln** (`RetentionRule`).
 - **Import-Quellen** (Scan-Ordner-Überwachung, Konfiguration).
 - **Benachrichtigungen** (In-App, E-Mail, Web-Push) inkl. `PushSubscription`-Verwaltung.

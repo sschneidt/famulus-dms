@@ -118,7 +118,9 @@ async def ocr_document(document_id: str) -> None:
         finally:
             await db.commit()
 
-    # Naechster Schritt der Kette: Klassifikation (tasks/classification.py). Auch nach
-    # fehlgeschlagener Texterkennung - dann landet das Dokument im Feedback-Loop und kann
-    # manuell zugeordnet werden, statt unbemerkt ohne Kategorie liegen zu bleiben.
+    # Naechste Schritte der Kette: Klassifikation (tasks/classification.py) und Metadaten-/
+    # Fristenerkennung (tasks/extraction.py). Auch nach fehlgeschlagener Texterkennung - dann
+    # landet das Dokument im Feedback-Loop und kann manuell zugeordnet werden, statt unbemerkt
+    # ohne Kategorie liegen zu bleiben.
     await app.configure_task("classify_document").defer_async(document_id=document_id)
+    await app.configure_task("extract_metadata").defer_async(document_id=document_id)
