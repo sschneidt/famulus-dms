@@ -17,15 +17,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir uv
 
 WORKDIR /app
-# Bewusst kein getrenntes "COPY pyproject.toml/uv.lock zuerst" fuer besseres Layer-Caching -
-# haette bei diesem kleinen Projekt kaum Vorteile, macht das Dockerfile aber komplizierter.
-COPY . .
-# Nur die Abhaengigkeiten installieren (feste Download-Adressen aus uv.lock), nicht das Projekt
-# selbst als Paket: das wuerde zusaetzlich das Build-Werkzeug "hatchling" live bei pypi.org
-# nachschlagen - eine unnoetige Fehlerquelle bei wackliger Verbindung. Der Code liegt unter /app
-# und wird ueber PYTHONPATH gefunden.
 ENV UV_HTTP_TIMEOUT=120
+
+# 1) Nur die Abhaengigkeiten - aendern sich selten. Docker verwendet diese Schicht wieder, solange
+#    pyproject.toml und uv.lock gleich bleiben: Code-Aenderungen bauen dann in Sekunden, statt jedes
+#    Mal alle Pakete neu herunterzuladen. Installiert wird ueber die festen Download-Adressen aus
+#    uv.lock, das Projekt selbst NICHT als Paket (sonst wuerde uv das Build-Werkzeug "hatchling"
+#    live bei pypi.org nachschlagen - eine unnoetige Fehlerquelle bei wackliger Verbindung).
+COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project
+
+# 2) Der Code - wird ueber PYTHONPATH gefunden.
+COPY . .
 
 ENV PATH="/app/.venv/bin:${PATH}"
 ENV PYTHONPATH=/app

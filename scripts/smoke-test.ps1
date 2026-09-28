@@ -147,19 +147,23 @@ if ($OhneDocker) {
         Write-Host "  ...     docker $($composeArgs -join ' ') (beim ersten Mal kann das einige Minuten dauern)" -ForegroundColor DarkGray
         # docker schreibt Fortschrittsmeldungen auf stderr - das ist kein Fehler
         $prevPref = $ErrorActionPreference; $ErrorActionPreference = "Continue"
-        $out = & docker @composeArgs 2>&1
+        # Ausgabe live anzeigen (grau), damit man bei langen Builds den Fortschritt sieht
+        $out = New-Object System.Collections.Generic.List[string]
+        & docker @composeArgs 2>&1 | ForEach-Object {
+            $zeile = "$_"
+            $out.Add($zeile)
+            Write-Host "          $zeile" -ForegroundColor DarkGray
+        }
         $rc = $LASTEXITCODE; $ErrorActionPreference = $prevPref
     } finally { Pop-Location }
     Schreibe-Schritt "Stack starten" ($rc -eq 0) $(if ($rc -ne 0) { "docker compose Exit-Code $rc" } else { "" })
     if ($rc -ne 0) {
-        # Zeilen als reinen Text ausgeben - PowerShell 5.1 wuerde stderr-Zeilen sonst als
-        # "NativeCommandError" mit Fehlerkopf darstellen, obwohl es normale Docker-Meldungen sind.
-        Write-Host (($out | ForEach-Object { "$_" }) -join "`n")
-        Beende "Ausgabe von docker compose pruefen (siehe oben). Bei 'timed out' oder 'Connect' war die Internetverbindung beim Bauen gestoert - einfach erneut starten."
+        Beende "Ausgabe von docker compose pruefen (graue Zeilen oben). Bei 'timed out' oder 'Connect' war die Internetverbindung beim Bauen gestoert - einfach erneut starten."
     }
 }
 
 # --- 2. Auf die API warten ----------------------------------------------------------------
+Write-Host "  ...     warte auf die API" -ForegroundColor DarkGray
 $bereit = $false
 $ende = (Get-Date).AddSeconds($TimeoutSekunden)
 while ((Get-Date) -lt $ende) {
@@ -219,6 +223,7 @@ foreach ($t in $testfaelle) {
 }
 if (@($testfaelle | Where-Object { -not $_.Id }).Count -gt 0) { Beende "Upload fehlgeschlagen - 'docker compose logs app-api' zeigt den Grund." }
 
+Write-Host "  ...     warte auf die Texterkennung" -ForegroundColor DarkGray
 # --- 6. Auf die Texterkennung warten und pruefen ----------------------------------------------
 foreach ($t in $testfaelle) {
     $ende = (Get-Date).AddSeconds($TimeoutSekunden)
@@ -241,6 +246,7 @@ foreach ($t in $testfaelle) {
 }
 
 # --- 6b. Automatische Klassifikation (Anforderungsdokument 4.3) -------------------------------
+Write-Host "  ...     warte auf die Klassifikation (das Sprachmodell braucht beim ersten Aufruf etwas laenger)" -ForegroundColor DarkGray
 $kategorien = @{}
 foreach ($k in (Invoke-Api GET "/categories" -Token $token).Json) { $kategorien[$k.id] = $k.name }
 foreach ($t in $testfaelle) {
@@ -282,6 +288,7 @@ if ($ziel) {
 }
 
 # --- 6c. Metadaten und Fristen (Anforderungsdokument 4.4a) -------------------------------------
+Write-Host "  ...     warte auf Metadaten- und Fristenerkennung" -ForegroundColor DarkGray
 foreach ($t in $testfaelle) {
     $ende = (Get-Date).AddSeconds($TimeoutSekunden)
     $detail = $null
