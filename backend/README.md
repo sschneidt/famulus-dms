@@ -144,6 +144,17 @@ ergänzen). `0003` stellt alle Zeitstempel auf "mit Zeitzone" um.
   Tesseract), E-Mails (.eml, Klartext-Body). **Noch nicht abgedeckt:** Office-Dokumente
   (Word/Excel) und Outlook `.msg` - solche Uploads werden erkannt und explizit mit
   `ocr_status=failed` markiert statt stillschweigend leer zu bleiben.
+- **Klassifikation** (Anforderungsdokument 4.3): Nach der Texterkennung ordnet
+  `classify_document` (`homedms/tasks/classification.py`) jedes Dokument automatisch einer
+  Kategorie zu. **Stufe 1** vergleicht den Text per Embedding (`nomic-embed-text`, pgvector) mit
+  bestätigten Beispiel-Dokumenten; ab 5 Beispielen einer Kategorie und eindeutiger Ähnlichkeit
+  entscheidet sie ohne Sprachmodell. Sonst entscheidet **Stufe 2**, das lokale Sprachmodell
+  (Ollama), anhand der Kategorie-Beschreibungen. Ist es unsicher oder nicht erreichbar, landet
+  das Dokument im **Feedback-Loop** (`GET /documents/needs-review`). Jede übernommene oder
+  bestätigte Zuordnung wird sofort ein neues Lernbeispiel; Korrekturen ersetzen es.
+  Schwellenwerte je nach `AI_CAUTION_LEVEL` (vorsichtig/normal/mutig) in `homedms/ai/classifier.py`.
+  Endpunkte: `POST /documents/{id}/category` (manuell zuordnen/bestätigen),
+  `GET /documents/{id}/classification-history` (alle Entscheidungen mit Begründung).
 - **`backend/Dockerfile` + `docker-entrypoint.sh`:** Ein Image für `app-api`/`app-worker`
   (unterscheidet sich nur über `APP_ROLE`, siehe Docker-Compose-Entwurf.md Abschnitt 3), inkl.
   Tesseract + Sprachpaketen (deu+eng). `docker-compose.yml` im Repo-Root nutzt jetzt `build:
@@ -162,10 +173,9 @@ Die übrigen Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
 - **Dokumente (Rest):** Mehrseiten-Dateien hinzufügen/entfernen (`POST/DELETE
   /documents/{id}/files*`), Tag-Zuordnung beim Update, Volltextsuche (`q`-Parameter, Meilisearch-
   Anbindung), Scan-Ordner-Import (Agent, siehe Anforderungsdokument 4.1).
-- **Klassifikation:** zweistufige Pipeline (Stufe 1 Embedding/pgvector, Stufe 2
-  Ollama-LLM als Zweitmeinung) inkl. Konfidenz-Schwellen aus `AIModelConfig` und
-  Feedback-Loop bei Unsicherheit. `POST /documents/{id}/category` (manuelle Korrektur/Bestätigung)
-  und `GET /documents/{id}/classification-history` fehlen noch.
+- **Klassifikation (Rest):** Metadaten-Extraktion (Datum, Absender, Betrag) und Fristenerkennung
+  im selben Sprachmodell-Aufruf, KI-Einstellungen per API (`/ai-config`), Kalibrierung der
+  Schwellenwerte an echten Dokumenten, Ablage der Dateien nach Kategorie.
 - **Massen-Umkategorisierung** (`POST /documents/bulk-reclassify`) und Zugriffs-Ausnahmen verwalten
   (`GET/PUT /documents/{id}/access`) - Modelle (`DocumentAccessOverride`) existieren bereits, nur
   die Endpunkte dafür fehlen noch.

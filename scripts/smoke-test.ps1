@@ -5,8 +5,8 @@
 .DESCRIPTION
   Schritte: Stack bauen/starten -> auf die API warten -> Ersteinrichtung bzw. Anmeldung ->
   Profil abrufen -> Test-PDF und Test-Scan hochladen -> auf die Texterkennung warten ->
-  erkannten Text pruefen -> Download mit dem Original vergleichen -> Testdokumente in den
-  Papierkorb legen. Am Ende steht eine Uebersicht mit OK/FEHLER je Schritt.
+  erkannten Text pruefen -> automatische Klassifikation abwarten -> eine Kategorie manuell
+  bestaetigen -> Download mit dem Original vergleichen -> Testdokumente in den Papierkorb legen. Am Ende steht eine Uebersicht mit OK/FEHLER je Schritt.
 
   Gibt es noch keinen Haushalt, legt das Skript ihn mit den angegebenen Zugangsdaten an.
   Gibt es schon einen, meldet es sich mit ihnen an. Mit -PasswortZuruecksetzen wird das
@@ -30,7 +30,7 @@ param(
     [switch]$OhneBuild,
     [switch]$OhneDocker,
     [switch]$DokumenteBehalten,
-    [int]$TimeoutSekunden = 180
+    [int]$TimeoutSekunden = 300
 )
 
 $ErrorActionPreference = "Stop"
@@ -233,6 +233,47 @@ foreach ($t in $testfaelle) {
     $gefunden = $detail.ocr_text -like "*$($t.Stichwort)*"
     $auszug = (($detail.ocr_text -split "`n" | Where-Object { $_.Trim() }) | Select-Object -First 2) -join " | "
     Schreibe-Schritt "Erkannter Text $($t.Name)" $gefunden $(if ($gefunden) { $auszug } else { "'$($t.Stichwort)' nicht gefunden: $auszug" })
+}
+
+# --- 6b. Automatische Klassifikation (Anforderungsdokument 4.3) -------------------------------
+$kategorien = @{}
+foreach ($k in (Invoke-Api GET "/categories" -Token $token).Json) { $kategorien[$k.id] = $k.name }
+foreach ($t in $testfaelle) {
+    $ende = (Get-Date).AddSeconds($TimeoutSekunden)
+    $detail = $null
+    do {
+        $detail = (Invoke-Api GET "/documents/$($t.Id)" -Token $token).Json
+        if ($detail -and $detail.classification_status -ne "pending") { break }
+        Start-Sleep -Seconds 3
+    } while ((Get-Date) -lt $ende)
+
+    $status = if ($detail) { $detail.classification_status } else { "keine Antwort" }
+    $letzte = @((Invoke-Api GET "/documents/$($t.Id)/classification-history" -Token $token).Json) | Select-Object -Last 1
+    $notiz = if ($letzte) { $letzte.note } else { "" }
+    if ($status -eq "auto_assigned") {
+        $stufe = if ($detail.classification_stage -eq "llm") { "Sprachmodell" } else { "Beispielvergleich" }
+        $prozent = [math]::Round([double]$detail.classification_confidence * 100)
+        Schreibe-Schritt "Klassifikation $($t.Name)" $true "$($kategorien[$detail.category_id]) - $stufe, $prozent %"
+    } elseif ($status -eq "needs_review" -and $notiz -notlike "*nicht verfuegbar*") {
+        # Auch das ist ein korrektes Ergebnis: die KI war sich nicht sicher genug.
+        Schreibe-Schritt "Klassifikation $($t.Name)" $true "zur Pruefung: $notiz"
+    } else {
+        Schreibe-Schritt "Klassifikation $($t.Name)" $false "Status: $status $notiz"
+        $t.Hinweis = "Klassifikation hat nicht funktioniert. Laeuft Ollama und sind die Modelle geladen? " +
+                     "'docker compose logs ollama-init' und 'docker compose logs app-worker' pruefen."
+    }
+}
+
+# Feedback-Loop: Kategorie fuer die PDF manuell bestaetigen/zuordnen
+$pdf = $testfaelle[0]
+$ziel = ($kategorien.GetEnumerator() | Where-Object { $_.Value -eq "Wohnen & Nebenkosten" } | Select-Object -First 1).Key
+if ($ziel) {
+    $r = Invoke-Api POST "/documents/$($pdf.Id)/category" @{ category_id = $ziel } -Token $token
+    $verlauf = @((Invoke-Api GET "/documents/$($pdf.Id)/classification-history" -Token $token).Json)
+    $ok = $r.Status -eq 200 -and $r.Json.classification_status -eq "confirmed" -and $verlauf.Count -ge 2
+    Schreibe-Schritt "Kategorie manuell bestaetigen" $ok $(if ($ok) { "Wohnen & Nebenkosten, $($verlauf.Count) Eintraege im Verlauf" } else { "HTTP $($r.Status): $($r.Text)" })
+} else {
+    Schreibe-Schritt "Kategorie manuell bestaetigen" $true "uebersprungen - Kategorie 'Wohnen & Nebenkosten' gibt es nicht (umbenannt?)"
 }
 
 # --- 7. Download mit dem Original vergleichen ------------------------------------------------

@@ -21,6 +21,7 @@ dependencies = [
     "pillow>=10",
     "pymupdf>=1.24",      # PDF-Textextraktion + Rasterung fuer OCR, keine System-Poppler-Abhaengigkeit
     "pillow-heif>=0.18",  # HEIC-Fotos vom Handy (Anforderungsdokument 4.1)
+    "httpx>=0.27",        # Aufrufe an Ollama (homedms/ai/ollama.py)
 ]
 
 [project.optional-dependencies]

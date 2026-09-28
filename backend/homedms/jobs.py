@@ -19,3 +19,4 @@ app = App(connector=PsycopgConnector(conninfo=settings.procrastinate_database_ur
 
 from homedms.tasks import misc as _misc  # noqa: E402,F401  (registriert 'ping')
 from homedms.tasks import ocr as _ocr  # noqa: E402,F401  (registriert 'ocr_document')
+from homedms.tasks import classification as _classification  # noqa: E402,F401  (classify_document, learn_exemplar)

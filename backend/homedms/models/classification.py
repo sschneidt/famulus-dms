@@ -25,7 +25,10 @@ class CategoryExemplar(Base, UUIDPKMixin):
     __tablename__ = "category_exemplars"
 
     category_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("categories.id", ondelete="CASCADE"), index=True)
-    document_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("documents.id"), nullable=True)
+    # CASCADE: wird ein Dokument endgueltig geloescht, verschwindet auch das daraus abgeleitete Exemplar
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), nullable=True, index=True
+    )
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
     created_via: Mapped[ExemplarSource] = mapped_column(SAEnum(ExemplarSource, name="exemplar_source"))
     confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)

@@ -74,3 +74,22 @@ class DocumentUpdateRequest(BaseModel):
     title: str | None = None
     original_present: OriginalPresent | None = None
     original_location: str | None = None
+
+
+class CategoryAssignRequest(BaseModel):
+    """POST /documents/{id}/category - manuelle Zuordnung bzw. Bestaetigung (Feedback-Loop)."""
+
+    category_id: uuid.UUID
+
+
+class ClassificationEventResponse(BaseModel):
+    id: uuid.UUID
+    previous_category_id: uuid.UUID | None
+    new_category_id: uuid.UUID | None
+    stage: str  # embedding | llm | manual | chat
+    confidence: float | None
+    note: str | None
+    triggered_by_user_id: uuid.UUID | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

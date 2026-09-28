@@ -25,9 +25,22 @@ from homedms.core.storage import document_file_path, save_upload
 from homedms.core.visibility import is_document_editable, is_document_visible, visible_documents_expr
 from homedms.db import get_db
 from homedms.jobs import app as jobs_app
-from homedms.models.document import ClassificationStatus, Document, DocumentFile, DocumentSource, OriginalPresent
+from homedms.models.classification import ClassificationEvent
+from homedms.models.document import (
+    Category,
+    CategoryAccess,
+    ClassificationStage,
+    ClassificationStatus,
+    Document,
+    DocumentFile,
+    DocumentSource,
+    OriginalPresent,
+)
+from homedms.models.tenant import UserRole
 from homedms.models.tenant import User
 from homedms.schemas.document import (
+    CategoryAssignRequest,
+    ClassificationEventResponse,
     DocumentDetailResponse,
     DocumentListResponse,
     DocumentResponse,
@@ -271,3 +284,62 @@ async def download_document(
         media_type=first_file.mime_type,
         filename=first_file.filename,
     )
+
+
+@router.post("/{document_id}/category", response_model=DocumentDetailResponse)
+async def assign_category(
+    document_id: uuid.UUID,
+    payload: CategoryAssignRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Document:
+    """Kategorie manuell setzen oder einen KI-Vorschlag bestaetigen (Feedback-Loop,
+    Anforderungsdokument 4.3). Das Dokument wird danach nie mehr automatisch umkategorisiert und
+    dient als neues Lernbeispiel fuer die Klassifikation."""
+    document = await _get_editable_document(db, user, document_id)
+    if document.deleted_at is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Dokument liegt im Papierkorb - erst wiederherstellen")
+
+    category = await db.get(Category, payload.category_id)
+    if category is None or category.tenant_id != user.tenant_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kategorie nicht gefunden")
+    if category.is_restricted and user.role != UserRole.admin:
+        allowed = await db.scalar(
+            select(CategoryAccess.can_edit).where(
+                CategoryAccess.category_id == category.id, CategoryAccess.user_id == user.id
+            )
+        )
+        if not allowed:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Keine Berechtigung fuer diese Kategorie")
+
+    note = "Kategorie bestaetigt" if document.category_id == category.id else "Kategorie manuell zugeordnet"
+    db.add(ClassificationEvent(
+        document_id=document.id, previous_category_id=document.category_id, new_category_id=category.id,
+        stage="manual", confidence=None, triggered_by_user_id=user.id, note=note,
+    ))
+    document.category_id = category.id
+    document.classification_status = ClassificationStatus.confirmed
+    document.classification_stage = ClassificationStage.manual
+    document.classification_confidence = None
+    await db.commit()
+
+    # Lernbeispiel im Hintergrund anlegen - braucht das Embedding-Modell und soll die Antwort
+    # nicht verzoegern.
+    async with jobs_app.open_async():
+        await jobs_app.configure_task("learn_exemplar").defer_async(
+            document_id=str(document.id), category_id=str(category.id), user_id=str(user.id)
+        )
+    return document
+
+
+@router.get("/{document_id}/classification-history", response_model=list[ClassificationEventResponse])
+async def classification_history(
+    document_id: uuid.UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> list[ClassificationEvent]:
+    await _get_visible_document(db, user, document_id)
+    result = await db.execute(
+        select(ClassificationEvent)
+        .where(ClassificationEvent.document_id == document_id)
+        .order_by(ClassificationEvent.created_at, ClassificationEvent.id)
+    )
+    return list(result.scalars().all())

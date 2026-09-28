@@ -47,11 +47,12 @@ async def bootstrap(payload: BootstrapRequest, db: AsyncSession = Depends(get_db
     )
     db.add(admin)
 
-    for name in DEFAULT_CATEGORIES:
+    for name, description in DEFAULT_CATEGORIES:
         db.add(
             Category(
                 tenant_id=tenant.id,
                 name=name,
+                description=description,
                 is_system_default=True,
                 is_restricted=False,
             )
