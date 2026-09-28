@@ -92,6 +92,11 @@ async def test_document_lifecycle(clean_database):
             status = await db.scalar(text("SELECT status::text FROM procrastinate_jobs"))
         assert status == "succeeded"
 
+        # Detailansicht liefert den erkannten Text mit, die Liste bewusst nicht
+        detail = (await client.get(f"{API}/documents/{doc_id}", headers=admin)).json()
+        assert detail["ocr_status"] == "done" and "Rechnung Nr 4711" in detail["ocr_text"]
+        assert "ocr_text" not in (await client.get(f"{API}/documents", headers=admin)).json()["items"][0]
+
         # --- Download liefert die Originaldatei ----------------------------------------
         resp = await client.get(f"{API}/documents/{doc_id}/download", headers=admin)
         assert resp.status_code == 200 and resp.content == pdf

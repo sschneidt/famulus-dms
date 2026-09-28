@@ -41,6 +41,22 @@ angegeben werden - `homedms.config.Settings` normalisiert intern automatisch auf
 jeweils passenden Treiber (`+asyncpg` für SQLAlchemy/Alembic, reines `postgresql://` für
 Procrastinate/psycopg, siehe `sqlalchemy_database_url`/`procrastinate_database_url`).
 
+## Smoke-Test: kompletter Ablauf mit einem Befehl (Windows)
+
+Startet den Stack und prüft automatisch Anmeldung, Upload, Texterkennung (PDF und Scan),
+Download und Papierkorb - mit einer OK/FEHLER-Übersicht am Ende. Aus dem Repo-Root:
+
+```
+.\scripts\smoke-test.cmd -Email du@example.com -Password "DeinPasswort123"
+```
+
+- Gibt es noch keinen Haushalt, legt das Skript ihn mit diesen Zugangsdaten an.
+- Passwort vergessen: zusätzlich `-PasswortZuruecksetzen` angeben, dann wird es vorher gesetzt.
+- `-OhneBuild` spart den Image-Neubau, `-DokumenteBehalten` lässt die Testdokumente stehen
+  (sonst landen sie im Papierkorb), `-TimeoutSekunden 300` für langsame Rechner/NAS.
+- Die `.cmd`-Datei ruft `scripts/smoke-test.ps1` auf und umgeht dabei die
+  PowerShell-Ausführungsrichtlinie nur für diesen einen Aufruf.
+
 ## Verwaltung: Nutzer anzeigen, Passwort zurücksetzen
 
 Für den Fall "Admin-Passwort vergessen" (es gibt noch keinen Reset per E-Mail):

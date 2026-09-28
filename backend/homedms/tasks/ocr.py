@@ -12,7 +12,7 @@ Noch NICHT abgedeckt (siehe backend/README.md "Was noch fehlt"): Office-Dokument
 (Word/Excel) und Outlook .msg (proprietaeres Format, eigene Bibliothek noetig). Solche Dateien
 werden erkannt und explizit mit ocr_status=failed markiert statt stillschweigend leer zu bleiben.
 
-Sprachen: siehe TESSERACT_LANG - fest "deu+eng" (Anforderungsdokument 4.2: Primaersprachen).
+Sprachen: Einstellung OCR_LANGUAGES (Standard "deu+eng", Anforderungsdokument 4.2: Primaersprachen).
 Damit das im Container tatsaechlich funktioniert, muessen dort die Tesseract-Sprachpakete
 tesseract-ocr-deu und tesseract-ocr-eng installiert sein (Dockerfile ist noch offen, siehe
 docs/Docker-Compose-Entwurf.md Abschnitt 6 "Offene Punkte") - in dieser Entwicklungsumgebung
@@ -27,6 +27,7 @@ import pymupdf  # PyMuPDF - neuer Modulname, "fitz" ist deprecated
 import pytesseract
 from PIL import Image
 
+from homedms.config import get_settings
 from homedms.jobs import app
 from homedms.models.document import Document, OcrStatus
 
@@ -39,7 +40,7 @@ except ImportError:  # pragma: no cover - optionale Abhaengigkeit, siehe pyproje
 
 logger = logging.getLogger("homedms.tasks.ocr")
 
-TESSERACT_LANG = "deu+eng"
+TESSERACT_LANG = get_settings().ocr_languages  # Standard "deu+eng", siehe config.py
 MIN_EMBEDDED_TEXT_CHARS = 20  # darunter gilt eine PDF als "nur Bild" (Scan), nicht als "digital"
 UNSUPPORTED_SUFFIXES = {".doc", ".docx", ".xls", ".xlsx", ".msg"}
 

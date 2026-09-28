@@ -52,6 +52,14 @@ class DocumentResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class DocumentDetailResponse(DocumentResponse):
+    """Detailansicht (GET /documents/{id}) - zusaetzlich mit dem erkannten Text. In Listen bewusst
+    nicht enthalten, weil der Text pro Dokument sehr lang sein kann."""
+
+    ocr_text: str
+    ocr_language: str
+
+
 class DocumentListResponse(BaseModel):
     items: list[DocumentResponse]
     page: int

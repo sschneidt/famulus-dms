@@ -27,7 +27,12 @@ from homedms.db import get_db
 from homedms.jobs import app as jobs_app
 from homedms.models.document import ClassificationStatus, Document, DocumentFile, DocumentSource, OriginalPresent
 from homedms.models.tenant import User
-from homedms.schemas.document import DocumentListResponse, DocumentResponse, DocumentUpdateRequest
+from homedms.schemas.document import (
+    DocumentDetailResponse,
+    DocumentListResponse,
+    DocumentResponse,
+    DocumentUpdateRequest,
+)
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -199,7 +204,7 @@ async def create_document(
     return document
 
 
-@router.get("/{document_id}", response_model=DocumentResponse)
+@router.get("/{document_id}", response_model=DocumentDetailResponse)
 async def get_document(
     document_id: uuid.UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> Document:

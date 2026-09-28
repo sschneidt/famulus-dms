@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     ollama_url: str = "http://localhost:11434"
     ollama_chat_model: str = "llama3.2:3b"
     ollama_embedding_model: str = "nomic-embed-text"
+    # Tesseract-Sprachpakete fuer die Texterkennung (Anforderungsdokument 4.2), "+"-getrennt.
+    # Weitere Sprachen: Paket im Dockerfile ergaenzen (tesseract-ocr-<code>) und hier anhaengen.
+    ocr_languages: str = "deu+eng"
+
     ai_caution_level: str = "normal"  # vorsichtig | normal | mutig, siehe Datenmodell 3.7 AIModelConfig
 
     # Wo Dokument-Dateien liegen. Im Container immer "/data/documents" (fester Mount-Punkt,
