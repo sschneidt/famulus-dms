@@ -20,9 +20,15 @@ WORKDIR /app
 # Bewusst kein getrenntes "COPY pyproject.toml/uv.lock zuerst" fuer besseres Layer-Caching -
 # haette bei diesem kleinen Projekt kaum Vorteile, macht das Dockerfile aber komplizierter.
 COPY . .
-RUN uv sync --frozen
+# Nur die Abhaengigkeiten installieren (feste Download-Adressen aus uv.lock), nicht das Projekt
+# selbst als Paket: das wuerde zusaetzlich das Build-Werkzeug "hatchling" live bei pypi.org
+# nachschlagen - eine unnoetige Fehlerquelle bei wackliger Verbindung. Der Code liegt unter /app
+# und wird ueber PYTHONPATH gefunden.
+ENV UV_HTTP_TIMEOUT=120
+RUN uv sync --frozen --no-install-project
 
 ENV PATH="/app/.venv/bin:${PATH}"
+ENV PYTHONPATH=/app
 ENV APP_ROLE=api
 
 RUN chmod +x docker-entrypoint.sh

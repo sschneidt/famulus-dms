@@ -151,7 +151,12 @@ if ($OhneDocker) {
         $rc = $LASTEXITCODE; $ErrorActionPreference = $prevPref
     } finally { Pop-Location }
     Schreibe-Schritt "Stack starten" ($rc -eq 0) $(if ($rc -ne 0) { "docker compose Exit-Code $rc" } else { "" })
-    if ($rc -ne 0) { Write-Host ($out | Out-String); Beende "Ausgabe von docker compose pruefen (siehe oben)." }
+    if ($rc -ne 0) {
+        # Zeilen als reinen Text ausgeben - PowerShell 5.1 wuerde stderr-Zeilen sonst als
+        # "NativeCommandError" mit Fehlerkopf darstellen, obwohl es normale Docker-Meldungen sind.
+        Write-Host (($out | ForEach-Object { "$_" }) -join "`n")
+        Beende "Ausgabe von docker compose pruefen (siehe oben). Bei 'timed out' oder 'Connect' war die Internetverbindung beim Bauen gestoert - einfach erneut starten."
+    }
 }
 
 # --- 2. Auf die API warten ----------------------------------------------------------------
