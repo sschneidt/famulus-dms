@@ -21,11 +21,17 @@
 .EXAMPLE
   .\scripts\smoke-test.cmd -OhneBuild -DokumenteBehalten
 #>
+# PositionalBinding=$false: unbekannte Angaben wie "--build" fuehren zu einer klaren Fehlermeldung,
+# statt stillschweigend ignoriert (oder versehentlich als E-Mail-Adresse verwendet) zu werden.
+[CmdletBinding(PositionalBinding = $false)]
 param(
     [string]$Email,
+    # -Passwort und -Kennwort funktionieren ebenfalls (frueher landete -Passwort beim Schalter unten)
+    [Alias("Passwort", "Kennwort")]
     [string]$Password,
     [string]$Haushalt = "Mein Haushalt",
     [string]$BaseUrl = "http://localhost:8000",
+    [Alias("ResetPassword")]
     [switch]$PasswortZuruecksetzen,
     [switch]$OhneBuild,
     [switch]$OhneDocker,
