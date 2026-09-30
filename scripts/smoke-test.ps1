@@ -183,6 +183,16 @@ while ((Get-Date) -lt $ende) {
 Schreibe-Schritt "API erreichbar" $bereit $(if (-not $bereit) { "$BaseUrl/health antwortet nicht" } else { "" })
 if (-not $bereit) { Beende "Mit 'docker compose ps' und 'docker compose logs app-api' nachsehen. Laeuft evtl. noch ein lokaler uvicorn auf Port 8000?" }
 
+# Weboberflaeche: "/" und eine App-Adresse (z. B. nach Neuladen) muessen die App liefern
+$webOk = $false; $webDetail = ""
+try {
+    $start = Invoke-WebRequest -Uri "$BaseUrl/" -UseBasicParsing -TimeoutSec 10
+    $tief = Invoke-WebRequest -Uri "$BaseUrl/termine" -UseBasicParsing -TimeoutSec 10
+    $webOk = ([int]$start.StatusCode -eq 200) -and ($start.Content -match '<div id="root">') -and ($tief.Content -match '<div id="root">')
+    if (-not $webOk) { $webDetail = "Antwort enthaelt die App nicht - Image mit --build neu bauen" }
+} catch { $webDetail = "$($_.Exception.Message)" }
+Schreibe-Schritt "Weboberflaeche" $webOk $(if ($webOk) { "$BaseUrl im Browser oeffnen" } else { $webDetail })
+
 # --- 3. Ersteinrichtung bzw. Passwort ------------------------------------------------------
 $status = Invoke-Api GET "/setup/status"
 if ($status.Status -ne 200) { Schreibe-Schritt "Einrichtungsstatus" $false "HTTP $($status.Status)"; Beende $status.Text }

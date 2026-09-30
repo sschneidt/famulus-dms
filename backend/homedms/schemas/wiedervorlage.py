@@ -23,6 +23,9 @@ class WiedervorlageResponse(BaseModel):
     completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    # Nur in der haushaltsweiten Uebersicht gefuellt - damit die Oberflaeche nicht fuer jeden
+    # Termin einzeln das Dokument nachladen muss.
+    document_title: str | None = None
 
     model_config = {"from_attributes": True}
 

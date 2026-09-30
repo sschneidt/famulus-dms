@@ -1,7 +1,20 @@
 # Ein Image fuer beide Rollen (api/worker), siehe docs/Docker-Compose-Entwurf.md Abschnitt 3 -
-# der Start-Befehl unterscheidet sich nur ueber APP_ROLE (docker-entrypoint.sh). Kein
-# Multi-Stage-Build noetig, solange es noch kein PWA-Frontend zum Bauen gibt (README "Was noch
-# fehlt").
+# der Start-Befehl unterscheidet sich nur ueber APP_ROLE (docker-entrypoint.sh).
+#
+# Build-Kontext ist das Repo-Wurzelverzeichnis (docker-compose.yml: context: .), damit auch die
+# Weboberflaeche (frontend/) mitgebaut werden kann. Was NICHT ins Image darf (data/, .env, .git,
+# node_modules ...), regelt die .dockerignore im Wurzelverzeichnis.
+
+# --- Stufe 1: Weboberflaeche bauen (Node wird nur hier gebraucht, nicht im fertigen Image) -------
+FROM node:22-bookworm-slim AS frontend
+WORKDIR /frontend
+# Abhaengigkeiten zuerst (eigene Schicht, bleibt gecacht solange package-lock.json gleich ist)
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY frontend/ ./
+RUN npm run build
+
+# --- Stufe 2: Backend -----------------------------------------------------------------------
 FROM python:3.12-slim-bookworm
 
 # Tesseract + Sprachpakete (Anforderungsdokument 4.2: Primaersprachen Deutsch + Englisch,
@@ -24,11 +37,15 @@ ENV UV_HTTP_TIMEOUT=120
 #    Mal alle Pakete neu herunterzuladen. Installiert wird ueber die festen Download-Adressen aus
 #    uv.lock, das Projekt selbst NICHT als Paket (sonst wuerde uv das Build-Werkzeug "hatchling"
 #    live bei pypi.org nachschlagen - eine unnoetige Fehlerquelle bei wackliger Verbindung).
-COPY pyproject.toml uv.lock ./
+COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-install-project
 
 # 2) Der Code - wird ueber PYTHONPATH gefunden.
-COPY . .
+COPY backend/ ./
+
+# 3) Die gebaute Weboberflaeche - FastAPI liefert sie unter / aus (homedms/frontend.py).
+COPY --from=frontend /frontend/dist /app/frontend
+ENV FRONTEND_DIST=/app/frontend
 
 ENV PATH="/app/.venv/bin:${PATH}"
 ENV PYTHONPATH=/app

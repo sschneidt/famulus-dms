@@ -57,14 +57,15 @@ async def list_wiedervorlagen(
     if due_before:
         conditions.append(Wiedervorlage.due_date <= due_before)
 
-    base = select(Wiedervorlage).join(Document, Document.id == Wiedervorlage.document_id).where(*conditions)
+    base = select(Wiedervorlage, Document.title).join(Document, Document.id == Wiedervorlage.document_id).where(*conditions)
     total = await db.scalar(select(func.count()).select_from(base.subquery()))
-    items = (
+    rows = (
         await db.execute(
             base.order_by(Wiedervorlage.due_date, Wiedervorlage.id).offset((page - 1) * page_size).limit(page_size)
         )
-    ).scalars().all()
-    return WiedervorlageListResponse(items=list(items), page=page, page_size=page_size, total=total or 0)
+    ).all()
+    items = [WiedervorlageResponse.model_validate(wv).model_copy(update={"document_title": title}) for wv, title in rows]
+    return WiedervorlageListResponse(items=items, page=page, page_size=page_size, total=total or 0)
 
 
 @router.get("/documents/{document_id}/wiedervorlagen", response_model=list[WiedervorlageResponse])

@@ -8,6 +8,17 @@ Beide Rollen nutzen **dasselbe Image/denselben Code**, gesteuert über die Umgeb
 `APP_ROLE` (`api` startet `uvicorn homedms.main:app`, `worker` startet `python -m homedms.worker`)
 - siehe `docker-compose.yml` im Repo-Root.
 
+## Weboberfläche
+
+Die Oberfläche liegt in `../frontend` (React + Mantine, installierbar als App auf Handy und
+Desktop). Das Docker-Image baut sie mit (mehrstufiges `Dockerfile`, Build-Kontext ist das
+Repo-Wurzelverzeichnis) und dieses Backend liefert sie unter `/` aus (`homedms/frontend.py`):
+nach `docker compose up -d --build` einfach `http://<nas>:8000` im Browser öffnen.
+
+Ohne Docker sucht das Backend den Build unter `FRONTEND_DIST` (Standard `../frontend/dist`,
+also nach `npm run build` im Frontend-Ordner). Fehlt er, läuft nur die API. Für die
+Frontend-Entwicklung mit Live-Reload siehe `../frontend/README.md`.
+
 ## Lokale Entwicklung
 
 Paketverwaltung über [`uv`](https://docs.astral.sh/uv/).
@@ -199,8 +210,6 @@ Die übrigen Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
 - **Massen-Umkategorisierung** (`POST /documents/bulk-reclassify`) und Zugriffs-Ausnahmen verwalten
   (`GET/PUT /documents/{id}/access`) - Modelle (`DocumentAccessOverride`) existieren bereits, nur
   die Endpunkte dafür fehlen noch.
-- **Metadaten-/Fristen-Extraktion** (LLM-Extraktion pro Dokument, Wiedervorlage-Vorschläge).
-- **Aufbewahrungsregeln** (`RetentionRule`).
 - **Import-Quellen** (Scan-Ordner-Überwachung, Konfiguration).
 - **Benachrichtigungen** (In-App, E-Mail, Web-Push) inkl. `PushSubscription`-Verwaltung.
 - **KI-Chat-Assistent** (`ChatSession`/`ChatMessage`, Bibliotheks-weite Fragen +
@@ -209,7 +218,6 @@ Die übrigen Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
   Einrichtungsassistenten).
 - **Rechte-Feinsteuerung:** `CategoryAccess`/`DocumentAccessOverride` sind im Datenmodell
   vorhanden, aber noch nicht in den Endpunkten/der Zugriffsprüfung verdrahtet.
-- **Frontend-Ausgabe:** `StaticFiles`-Mount für die gebaute PWA (sobald das Frontend existiert).
 - **Einrichtungsassistent im Detail** (Schrittfolge/Felder über `POST /setup/bootstrap`
   hinaus, siehe `docs/Anforderungsdokument.md` 4.7 - noch offen).
 - **Row-Level-Security** in Postgres als zweite Absicherung der Mandantentrennung (die

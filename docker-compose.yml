@@ -103,7 +103,9 @@ services:
     # Baut lokal aus backend/Dockerfile, falls "image" noch nicht existiert/gepullt werden kann -
     # sobald es eine Registry gibt (Docker-Compose-Entwurf.md Abschnitt 6, offener Punkt), reicht
     # "docker compose pull", ohne diese Zeile entfernen zu muessen.
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     restart: unless-stopped
     networks: [homedms]
     depends_on:
@@ -150,7 +152,9 @@ services:
   # ---------------------------------------------------------------------------
   app-worker:
     image: ${APP_IMAGE:-homedms/backend}:${APP_VERSION:-latest}
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     restart: unless-stopped
     networks: [homedms]
     depends_on:

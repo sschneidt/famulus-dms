@@ -1,0 +1,32 @@
+# Build-Kontext fuer backend/Dockerfile ist das Repo-Wurzelverzeichnis (docker-compose.yml).
+# Alles hier Aufgefuehrte wird NICHT an Docker uebertragen - wichtig vor allem fuer
+# Dokumente und Geheimnisse.
+
+# Eigene Dokumente, Scan-Ordner und Geheimnisse - duerfen nie ins Image
+data/
+**/data/documents
+.env
+**/.env
+!**/.env.example
+
+# Versionsverwaltung, Dokumentation, Hilfsskripte
+.git
+.gitignore
+docs/
+scripts/
+docker-compose*.yml
+init/
+
+# Werden im Image frisch erzeugt
+**/node_modules
+**/dist
+**/dev-dist
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+
+# Tests gehoeren nicht ins Betriebs-Image
+backend/tests/
+frontend/src/**/*.test.ts
+frontend/src/**/*.test.tsx

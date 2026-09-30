@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # siehe docker-compose.yml); fuer lokale Entwicklung ohne Docker Default relativ zum cwd.
     documents_path: str = "./data/documents"
 
+    # Gebaute Weboberflaeche (frontend/dist). Im Docker-Image fest "/app/frontend"; fehlt der
+    # Ordner (z. B. bei reiner Backend-Entwicklung), laeuft nur die API.
+    frontend_dist: str = "../frontend/dist"
+
     jwt_secret: str = "dev-only-change-me"
     jwt_access_token_ttl_minutes: int = 15
     jwt_refresh_token_ttl_days: int = 30
