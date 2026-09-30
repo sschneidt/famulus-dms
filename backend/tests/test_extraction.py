@@ -6,6 +6,9 @@ import pytest
 
 from homedms.ai.extraction import (
     date_in_text,
+    dates_in,
+    explicit_deadline,
+    relative_deadline,
     MAX_DEADLINES,
     add_months,
     build_prompt,
@@ -88,8 +91,9 @@ def test_slightly_different_quote_is_accepted():
 
 
 def test_past_one_off_deadline_is_discarded():
-    r = parse_extraction(answer(frist(datum="2026-08-01")), DOC, TODAY)
-    assert r.deadlines == [] and "Vergangenheit" in r.discarded[0]
+    mahnung = "Mahnung\nBitte zahlbar bis 01.08.2026 begleichen."
+    r = parse_extraction(answer(frist(datum="2026-08-01", textstelle="zahlbar bis 01.08.2026")), mahnung, TODAY)
+    assert r.deadlines == [] and any("Vergangenheit" in x for x in r.discarded)
 
 
 def test_past_recurring_deadline_rolls_forward():
@@ -153,6 +157,58 @@ def test_document_date_is_not_confused_with_similar_numbers():
     assert not date_in_text(date(2026, 9, 1), "Kundennummer 101.09.20265")
 
 
-def test_prompt_explains_notice_period_and_forbids_todays_date():
+def test_prompt_forbids_todays_date_and_contains_no_example_dates():
     _, user, _ = build_prompt("Text", TODAY)
-    assert "nicht der 31.12" in user and "Niemals das heutige Datum" in user
+    assert "Niemals das heutige Datum" in user and "LETZTE Tag" in user
+    # Beispieldaten im Prompt hat das Modell abgeschrieben - deshalb keine mehr ausser "heute"
+    assert [d for _, d in dates_in(user.split("Dokumenttext")[0])] == [TODAY]
+
+
+def test_model_date_is_replaced_by_date_in_quote():
+    # Befund echtes Modell: "zahlbar bis 15.10.2026" wurde als 30.09. vorgeschlagen
+    r = parse_extraction(answer(frist(datum="2026-09-30")), DOC, TODAY)
+    [d] = r.deadlines
+    assert d.due_date == date(2026, 10, 15)
+    assert r.corrected == ["Zahlungsfrist: 2026-09-30 -> 2026-10-15 (Datum aus der Textstelle)"]
+
+
+def test_notice_period_to_year_end_is_computed():
+    # Befund echtes Modell: "3 Monate zum Jahresende" wurde als 31.12. vorgeschlagen
+    brief = "Versicherung Muster AG\nKuendigungsfrist: 3 Monate zum Jahresende"
+    f = frist(datum="2026-12-31", bezeichnung="Kuendigungsfrist", textstelle="Kuendigungsfrist: 3 Monate zum Jahresende")
+    [d] = parse_extraction(answer(f), brief, TODAY).deadlines
+    assert d.due_date == date(2026, 9, 30)
+    assert (d.recurrence, d.interval_months) == ("yearly", 12)  # gilt jedes Jahr wieder
+    [d] = parse_extraction(answer(f), brief, date(2026, 10, 1)).deadlines
+    assert d.due_date == date(2027, 9, 30)  # dieses Jahr verpasst -> naechstes Jahr
+
+
+@pytest.mark.parametrize("snippet,today_,expected,period", [
+    ("Der Vertrag kann mit einer Frist von 3 Monaten zum Jahresende gekuendigt werden", date(2026, 3, 1), date(2026, 9, 30), 12),
+    ("3 Monate zum Ende des Kalenderjahres", date(2026, 3, 1), date(2026, 9, 30), 12),
+    ("Kuendigung mit sechs Wochen Frist zum Quartalsende", date(2026, 9, 30), date(2026, 11, 19), 3),
+    ("kuendbar mit einem Monat zum Monatsende", date(2026, 9, 30), date(2026, 9, 30), 1),
+    ("kuendbar mit einem Monat zum Monatsende", date(2026, 10, 1), date(2026, 10, 31), 1),
+    ("12 Monate zum Jahresende", date(2026, 3, 1), date(2026, 12, 31), 12),
+])
+def test_relative_deadline(snippet, today_, expected, period):
+    assert relative_deadline(snippet, today_) == (expected, period)
+
+
+def test_relative_deadline_ignores_unrelated_text():
+    assert relative_deadline("Die Laufzeit betraegt 24 Monate.", TODAY) is None
+    assert relative_deadline("zahlbar innerhalb von 14 Tagen", TODAY) is None
+
+
+@pytest.mark.parametrize("snippet,expected", [
+    ("zahlbar bis 15.10.2026", date(2026, 10, 15)),
+    ("Rechnung vom 01.09.2026, zahlbar bis 15.10.2026", date(2026, 10, 15)),
+    ("Rechnung vom 01.09.2026, zahlbar bis spätestens 15.10.26", date(2026, 10, 15)),
+    ("faellig am 1. Oktober 2026", date(2026, 10, 1)),
+    ("Termin 2026-11-02", date(2026, 11, 2)),
+    ("zwischen 01.10.2026 und 15.10.2026", None),  # mehrdeutig -> Modell entscheidet
+    ("innerhalb von 14 Tagen", None),
+])
+def test_explicit_deadline(snippet, expected):
+    assert explicit_deadline(snippet) == expected
+

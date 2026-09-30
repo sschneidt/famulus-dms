@@ -218,9 +218,15 @@ $me = Invoke-Api GET "/auth/me" -Token $token
 Schreibe-Schritt "Profil abrufen" ($me.Status -eq 200) $(if ($me.Status -eq 200) { "Rolle: $($me.Json.role)" } else { "HTTP $($me.Status)" })
 
 # --- 5. Hochladen -----------------------------------------------------------------------------
+# Erwartete Fristen der Testdokumente, passend zum heutigen Tag:
+# - Rechnung: "zahlbar bis 15.10.2026" - danach liegt sie in der Vergangenheit und entfaellt
+# - Brief: "Kuendigungsfrist: 3 Monate zum Jahresende" -> 30.09. dieses bzw. naechsten Jahres
+$heute = (Get-Date).Date
+$zahlungsfrist = if ($heute -le [datetime]"2026-10-15") { "2026-10-15" } else { $null }
+$kuendigungsJahr = if ($heute -le (Get-Date -Year $heute.Year -Month 9 -Day 30).Date) { $heute.Year } else { $heute.Year + 1 }
 $testfaelle = @(
-    @{ Name = "PDF (digital)"; Datei = (Join-Path $TestDaten "rechnung-digital.pdf"); Mime = "application/pdf"; Stichwort = "HOMEDMS-4711" },
-    @{ Name = "Scan (Bild, OCR)"; Datei = (Join-Path $TestDaten "brief-scan.png"); Mime = "image/png"; Stichwort = "HOMEDMS-0815" }
+    @{ Name = "PDF (digital)"; Datei = (Join-Path $TestDaten "rechnung-digital.pdf"); Mime = "application/pdf"; Stichwort = "HOMEDMS-4711"; ErwarteteFrist = $zahlungsfrist },
+    @{ Name = "Scan (Bild, OCR)"; Datei = (Join-Path $TestDaten "brief-scan.png"); Mime = "image/png"; Stichwort = "HOMEDMS-0815"; ErwarteteFrist = "$kuendigungsJahr-09-30" }
 )
 foreach ($t in $testfaelle) {
     $u = Upload-Datei $t.Datei $t.Mime "Smoke-Test $($t.Name)" $token
@@ -317,10 +323,18 @@ foreach ($t in $testfaelle) {
     $info = if ($teile.Count) { $teile -join ", " } else { "nichts erkannt" }
     Schreibe-Schritt "Metadaten $($t.Name)" $true $info
 
-    $vorschlaege = @((Invoke-Api GET "/documents/$($t.Id)/wiedervorlagen" -Token $token).Json)
+    $vorschlaege = @((Invoke-Api GET "/documents/$($t.Id)/wiedervorlagen" -Token $token).Json | Where-Object { $_ })
     $t.Vorschlaege = $vorschlaege
     $liste = if ($vorschlaege.Count) { ($vorschlaege | ForEach-Object { "$($_.note) am $($_.due_date)" }) -join "; " } else { "keine" }
-    Schreibe-Schritt "Fristvorschlaege $($t.Name)" $true $liste
+    if (-not $t.ErwarteteFrist) {
+        Schreibe-Schritt "Fristvorschlaege $($t.Name)" $true $liste
+    } elseif ($vorschlaege.Count -eq 0) {
+        # Keine Frist gefunden ist ein Qualitaetsmangel des Modells, kein Programmfehler
+        Schreibe-Schritt "Fristvorschlaege $($t.Name)" $true "keine erkannt (erwartet: $($t.ErwarteteFrist))"
+    } else {
+        $treffer = @($vorschlaege | Where-Object { $_.due_date -eq $t.ErwarteteFrist }).Count -gt 0
+        Schreibe-Schritt "Fristvorschlaege $($t.Name)" $treffer $(if ($treffer) { $liste } else { "$liste - erwartet: $($t.ErwarteteFrist)" })
+    }
 }
 
 # Einen Vorschlag probeweise bestaetigen (vorgeschlagen -> offen)

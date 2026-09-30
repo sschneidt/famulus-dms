@@ -64,6 +64,8 @@ async def extract_metadata(document_id: str) -> None:
         result = parse_extraction(raw, text, today())
         for discarded in result.discarded:
             logger.info("Dokument %s - Frist verworfen: %s", document_id, discarded)
+        for corrected in result.corrected:
+            logger.info("Dokument %s - Frist korrigiert: %s", document_id, corrected)
 
         if document.document_date is None:
             document.document_date = result.document_date

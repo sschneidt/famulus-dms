@@ -45,10 +45,9 @@ Aufgaben:
    Zahlungsaufforderungen, sonst "".
 4. fristen: Termine, zu denen der Empfaenger etwas tun muss oder kann (z. B. Zahlungsfrist,
    Kuendigungsfrist, Widerspruchsfrist, Vertragsende, Pruef- oder Wartungstermin). Je Frist:
-   - datum: der LETZTE Tag, an dem der Empfaenger handeln muss, als JJJJ-MM-TT. Relative Angaben
-     selbst ausrechnen, ausgehend vom Dokumentdatum bzw. heutigen Datum. Beispiel: "Kuendigung mit
-     3 Monaten Frist zum Jahresende" -> die Kuendigung muss 3 Monate VOR dem 31.12. eingehen, also
-     ist datum der 30.09. - nicht der 31.12. Ebenso "14 Tage vor Vertragsende" -> 14 Tage davor.
+   - datum: der LETZTE Tag, an dem der Empfaenger handeln muss, als JJJJ-MM-TT. Steht im Text ein
+     Datum, genau dieses nehmen. Relative Angaben selbst ausrechnen (bei einer Kuendigungsfrist
+     "zum" einem Termin liegt der letzte Tag entsprechend VOR diesem Termin).
    - bezeichnung: kurz, z. B. "Kuendigungsfrist"
    - konfidenz: Zahl von 0 bis 1
    - textstelle: der Satz aus dem Dokument, aus dem die Frist stammt, woertlich zitiert
@@ -173,6 +172,90 @@ def add_months(d: date, months: int) -> date:
     return date(year, month, min(d.day, monthrange(year, month)[1]))
 
 
+# --- Datum aus der Textstelle statt Rechenergebnis des Modells -------------------------------
+# Erfahrung mit llama3.2:3b: Das Modell uebernimmt gern Beispiel- oder Tagesdaten aus dem Prompt,
+# statt das Datum aus dem Text zu nehmen, und rechnet relative Fristen falsch. Beides laesst sich aus
+# der zitierten Textstelle zuverlaessig ohne Modell bestimmen.
+
+_MONTH_NAMES = {name: num for num, names in MONATE.items() for name in names}
+_DATE_PATTERNS = [
+    re.compile(r"(?<![\d.])(\d{1,2})\.\s?(\d{1,2})\.\s?(\d{4}|\d{2})(?!\d)"),  # 15.10.2026 / 15.10.26
+    re.compile(r"(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)"),  # 2026-10-15
+    re.compile(r"(?<!\d)(\d{1,2})\.?\s?(" + "|".join(sorted(map(re.escape, _MONTH_NAMES), key=len, reverse=True))
+               + r")\.?\s?(\d{4})(?!\d)"),  # 15. Oktober 2026
+]
+
+
+def dates_in(text: str) -> list[tuple[int, date]]:
+    """Alle ausgeschriebenen Daten im Text mit ihrer Position (fuer die Wahl "Datum nach 'bis'")."""
+    t = text.lower()
+    found: dict[int, date] = {}
+    for i, pattern in enumerate(_DATE_PATTERNS):
+        for m in pattern.finditer(t):
+            a, b, c = m.groups()
+            if i == 0:
+                day, month, year = int(a), int(b), int(c)
+                year += 2000 if year < 100 else 0
+            elif i == 1:
+                year, month, day = int(a), int(b), int(c)
+            else:
+                day, month, year = int(a), _MONTH_NAMES[b], int(c)
+            try:
+                found.setdefault(m.start(), date(year, month, day))
+            except ValueError:
+                continue
+    return sorted(found.items())
+
+
+def explicit_deadline(snippet: str) -> date | None:
+    """Das Datum, das die Textstelle ausdruecklich nennt - bei mehreren das nach "bis"/"zum"/..."""
+    found = dates_in(snippet)
+    if len(found) == 1:
+        return found[0][1]
+    for pos, d in found:
+        if re.search(r"(bis|bis zum|bis spaetestens|bis spätestens|spaetestens|spätestens|zum|am|faellig am|fällig am)\s*$",
+                     snippet[:pos].lower().strip()):
+            return d
+    return None
+
+
+_NUMBER_WORDS = {"ein": 1, "einen": 1, "einem": 1, "einer": 1, "zwei": 2, "drei": 3, "vier": 4, "fuenf": 5,
+                 "fünf": 5, "sechs": 6, "acht": 8, "neun": 9, "zehn": 10, "zwoelf": 12, "zwölf": 12}
+_RELATIVE = re.compile(
+    r"(\d{1,2}|" + "|".join(_NUMBER_WORDS) + r")\s+(monat|monaten|monate|woche|wochen)\b[^.;]{0,40}?"
+    r"\b(?:zum|zu[mr]?|vor dem|vor)\s+(?:ende\s+(?:des|eines)\s+)?"
+    r"(jahresende|kalenderjahres|kalenderjahr|jahres|quartalsende|quartals|kalenderquartals|monatsende|monats)\b"
+)
+_PERIOD = {"jahresende": 12, "kalenderjahres": 12, "kalenderjahr": 12, "jahres": 12,
+           "quartalsende": 3, "quartals": 3, "kalenderquartals": 3, "monatsende": 1, "monats": 1}
+
+
+def relative_deadline(snippet: str, today: date) -> tuple[date, int] | None:
+    """Standardfristen wie "3 Monate zum Jahresende" oder "6 Wochen zum Quartalsende" selbst
+    ausrechnen: letzter Tag, an dem man noch handeln kann, fuer das naechste noch erreichbare
+    Periodenende. Liefert (Datum, Periodenlaenge in Monaten) - die Frist wiederholt sich jede Periode."""
+    m = _RELATIVE.search(snippet.lower())
+    if not m:
+        return None
+    amount_raw, unit, period_raw = m.groups()
+    amount = int(amount_raw) if amount_raw.isdigit() else _NUMBER_WORDS[amount_raw]
+    period = _PERIOD[period_raw]
+    # Periodenenden ab dem aktuellen Monat durchgehen, bis die Frist noch nicht verstrichen ist
+    for offset in range(0, 12 * 3 + 1):
+        probe = add_months(date(today.year, today.month, 1), offset)
+        if probe.month % period != 0:
+            continue
+        period_end = date(probe.year, probe.month, monthrange(probe.year, probe.month)[1])
+        if unit.startswith("monat"):
+            deadline = add_months(period_end, -amount)
+            deadline = date(deadline.year, deadline.month, monthrange(deadline.year, deadline.month)[1])
+        else:
+            deadline = period_end - timedelta(weeks=amount)
+        if deadline >= today:
+            return deadline, period
+    return None
+
+
 @dataclass(frozen=True)
 class DeadlineProposal:
     due_date: date
@@ -190,6 +273,7 @@ class ExtractionResult:
     amount: Decimal | None = None
     deadlines: list[DeadlineProposal] = field(default_factory=list)
     discarded: list[str] = field(default_factory=list)  # Begruendungen fuer Log/Nachvollziehbarkeit
+    corrected: list[str] = field(default_factory=list)  # Daten, die aus der Textstelle korrigiert wurden
 
 
 def parse_extraction(answer: dict[str, Any], document_text: str, today: date) -> ExtractionResult:
@@ -225,6 +309,18 @@ def parse_extraction(answer: dict[str, Any], document_text: str, today: date) ->
         if not quote_supported(snippet, document_text):
             result.discarded.append(f"{label}: Textstelle steht nicht im Dokument")
             continue
+        explicit = explicit_deadline(snippet)
+        relative = None if explicit else relative_deadline(snippet, today)
+        if explicit and explicit != due:
+            result.corrected.append(f"{label}: {due.isoformat()} -> {explicit.isoformat()} (Datum aus der Textstelle)")
+            due = explicit
+        elif relative:
+            rel_due, period = relative
+            if rel_due != due:
+                result.corrected.append(f"{label}: {due.isoformat()} -> {rel_due.isoformat()} (Frist aus der Textstelle berechnet)")
+            due = rel_due
+            if recurrence == "none":  # "zum Jahresende" & Co. gilt jede Periode wieder
+                recurrence, interval = {12: ("yearly", 12), 3: ("custom_months", 3), 1: ("monthly", 1)}[period]
         if due < today:
             if interval is None:
                 result.discarded.append(f"{label}: {due.isoformat()} liegt in der Vergangenheit")
