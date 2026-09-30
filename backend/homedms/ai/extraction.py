@@ -38,14 +38,17 @@ def build_prompt(text: str, today: date, max_chars: int = 6000) -> tuple[str, st
     user = f"""Heutiges Datum: {today.isoformat()}
 
 Aufgaben:
-1. dokumentdatum: Datum des Dokuments (Rechnungs- oder Briefdatum) als JJJJ-MM-TT, sonst "".
+1. dokumentdatum: Datum des Dokuments (Rechnungs- oder Briefdatum) als JJJJ-MM-TT - nur wenn es
+   im Text steht, sonst "". Niemals das heutige Datum einsetzen.
 2. absender: Firma, Behoerde oder Person, von der das Dokument stammt, sonst "".
 3. betrag: Gesamtbetrag in Euro als Zahl mit Punkt (z. B. "42.00"), nur bei Rechnungen oder
    Zahlungsaufforderungen, sonst "".
 4. fristen: Termine, zu denen der Empfaenger etwas tun muss oder kann (z. B. Zahlungsfrist,
    Kuendigungsfrist, Widerspruchsfrist, Vertragsende, Pruef- oder Wartungstermin). Je Frist:
-   - datum: konkretes Datum JJJJ-MM-TT. Relative Angaben (z. B. "3 Monate zum Jahresende",
-     "innerhalb von 14 Tagen") selbst ausrechnen, ausgehend vom Dokumentdatum bzw. heutigen Datum.
+   - datum: der LETZTE Tag, an dem der Empfaenger handeln muss, als JJJJ-MM-TT. Relative Angaben
+     selbst ausrechnen, ausgehend vom Dokumentdatum bzw. heutigen Datum. Beispiel: "Kuendigung mit
+     3 Monaten Frist zum Jahresende" -> die Kuendigung muss 3 Monate VOR dem 31.12. eingehen, also
+     ist datum der 30.09. - nicht der 31.12. Ebenso "14 Tage vor Vertragsende" -> 14 Tage davor.
    - bezeichnung: kurz, z. B. "Kuendigungsfrist"
    - konfidenz: Zahl von 0 bis 1
    - textstelle: der Satz aus dem Dokument, aus dem die Frist stammt, woertlich zitiert
@@ -115,6 +118,31 @@ def parse_amount(value: Any) -> Decimal | None:
     return amount if Decimal("0") <= amount < Decimal("100000000") else None
 
 
+MONATE = {
+    1: ("januar", "jan"), 2: ("februar", "feb"), 3: ("maerz", "märz", "mrz", "mär"), 4: ("april", "apr"),
+    5: ("mai",), 6: ("juni", "jun"), 7: ("juli", "jul"), 8: ("august", "aug"),
+    9: ("september", "sep", "sept"), 10: ("oktober", "okt"), 11: ("november", "nov"), 12: ("dezember", "dez"),
+}
+
+
+def date_in_text(d: date, text: str) -> bool:
+    """Steht das Datum in irgendeiner ueblichen Schreibweise im Text? Schutz dagegen, dass das Modell
+    ein Datum erfindet (z. B. das heutige, das es als Rechenhilfe mitbekommt)."""
+    t = re.sub(r"\s+", " ", text.lower())
+    day, mon, yr = d.day, d.month, d.year
+    numeric = {
+        f"{day:02d}.{mon:02d}.{yr}", f"{day}.{mon}.{yr}", f"{day:02d}.{mon:02d}.{yr % 100:02d}",
+        f"{day}.{mon}.{yr % 100:02d}", d.isoformat(), f"{day:02d}/{mon:02d}/{yr}", f"{day}/{mon}/{yr}",
+    }
+    for candidate in numeric:
+        if re.search(rf"(?<![\d.]){re.escape(candidate)}(?![\d])", t):
+            return True
+    for name in MONATE[mon]:
+        if re.search(rf"(?<!\d)0?{day}\.? ?{re.escape(name)}\.? ?{yr}(?!\d)", t):
+            return True
+    return False
+
+
 def _confidence(value: Any) -> float:
     try:
         c = float(value)
@@ -169,7 +197,10 @@ def parse_extraction(answer: dict[str, Any], document_text: str, today: date) ->
 
     doc_date = parse_date(answer.get("dokumentdatum"))
     if doc_date and date(1950, 1, 1) <= doc_date <= today + timedelta(days=365):
-        result.document_date = doc_date
+        if date_in_text(doc_date, document_text):
+            result.document_date = doc_date
+        else:
+            result.discarded.append(f"Dokumentdatum {doc_date.isoformat()} steht nicht im Text")
     issuer = str(answer.get("absender") or "").strip()
     result.issuer = issuer[:300] or None
     result.amount = parse_amount(answer.get("betrag"))

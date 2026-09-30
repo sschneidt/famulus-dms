@@ -5,6 +5,7 @@ from decimal import Decimal
 import pytest
 
 from homedms.ai.extraction import (
+    date_in_text,
     MAX_DEADLINES,
     add_months,
     build_prompt,
@@ -127,3 +128,31 @@ def test_prompt_contains_today_and_text():
     system, user, schema = build_prompt("Rechnung " * 5000, TODAY, max_chars=200)
     assert "2026-09-28" in user and len(user) < 3000
     assert schema["properties"]["fristen"]["items"]["properties"]["wiederholung"]["enum"][0] == "keine"
+
+
+# --- Nachtraege nach dem ersten Test mit dem echten Modell (llama3.2:3b) ----------------------
+
+def test_invented_document_date_is_discarded():
+    # Brief ohne Datum - das Modell setzte das heutige Datum ein
+    brief = "Versicherung Muster AG\nVertragsnummer HOMEDMS-0815\nKuendigungsfrist: 3 Monate zum Jahresende"
+    r = parse_extraction(answer(dokumentdatum="2026-09-28"), brief, TODAY)
+    assert r.document_date is None and "steht nicht im Text" in r.discarded[0]
+
+
+@pytest.mark.parametrize("schreibweise", [
+    "01.09.2026", "1.9.2026", "01.09.26", "2026-09-01", "01/09/2026",
+    "1. September 2026", "01. Sept. 2026", "1 September 2026", "1.  september   2026",
+])
+def test_document_date_is_found_in_common_notations(schreibweise):
+    text = f"Stadtwerke\nMusterstadt, den {schreibweise}\nRechnung"
+    assert date_in_text(date(2026, 9, 1), text)
+
+
+def test_document_date_is_not_confused_with_similar_numbers():
+    assert not date_in_text(date(2026, 9, 1), "Rechnung vom 11.09.2026")
+    assert not date_in_text(date(2026, 9, 1), "Kundennummer 101.09.20265")
+
+
+def test_prompt_explains_notice_period_and_forbids_todays_date():
+    _, user, _ = build_prompt("Text", TODAY)
+    assert "nicht der 31.12" in user and "Niemals das heutige Datum" in user
