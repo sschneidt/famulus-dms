@@ -27,6 +27,7 @@ from homedms.ai.classifier import (
 from homedms.ai import ollama
 from homedms.ai.ollama import OllamaError
 from homedms.config import get_settings
+from homedms.core.retention import sync_retention
 from homedms.jobs import app
 from homedms.models.classification import AIModelConfig, CategoryExemplar, ClassificationEvent, ExemplarSource
 from homedms.models.document import (
@@ -133,6 +134,7 @@ async def classify_document(document_id: str) -> None:
             document.classification_stage = ClassificationStage.embedding
             document.classification_confidence = stage1.similarity
             await _replace_exemplar(db, document, stage1.category_id, embedding, ExemplarSource.auto_high_confidence)
+            await sync_retention(db, document)
             await db.commit()
             return
 
@@ -158,6 +160,7 @@ async def classify_document(document_id: str) -> None:
             document.classification_stage = ClassificationStage.llm
             document.classification_confidence = answer.confidence
             await _replace_exemplar(db, document, answer.category_id, embedding, ExemplarSource.llm_confirmed)
+            await sync_retention(db, document)
         else:
             vorschlag = f"Vorschlag '{answer.category_name}'" if answer.category_name else "Keine passende Kategorie"
             needs_review(

@@ -21,6 +21,7 @@ from sqlalchemy import select
 from homedms.ai import ollama
 from homedms.ai.extraction import build_prompt, parse_extraction
 from homedms.ai.ollama import OllamaError
+from homedms.core.retention import sync_retention
 from homedms.jobs import app
 from homedms.models.classification import AIModelConfig
 from homedms.models.document import Document, ExtractionStatus
@@ -92,5 +93,6 @@ async def extract_metadata(document_id: str) -> None:
                     assigned_user_id=document.owner_user_id,  # Anforderungsdokument 4.4a: Default Owner
                 ))
 
+        await sync_retention(db, document)
         document.extraction_status = ExtractionStatus.done
         await db.commit()

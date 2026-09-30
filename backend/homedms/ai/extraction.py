@@ -15,6 +15,8 @@ from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
+from homedms.core.dates import add_months  # noqa: F401  (auch fuer bestehende Importe)
+
 MIN_DEADLINE_CONFIDENCE = 0.5  # Anforderungsdokument 4.4a: darunter wird ein Fund verworfen
 MAX_DEADLINES = 5
 MIN_QUOTE_OVERLAP = 0.6  # Anteil der Woerter aus "textstelle", die im Dokument vorkommen muessen
@@ -166,11 +168,6 @@ def quote_supported(quote: str, document_text: str) -> bool:
     return sum(w in doc_words for w in words) / len(words) >= MIN_QUOTE_OVERLAP
 
 
-def add_months(d: date, months: int) -> date:
-    y, m = divmod(d.month - 1 + months, 12)
-    year, month = d.year + y, m + 1
-    return date(year, month, min(d.day, monthrange(year, month)[1]))
-
 
 # --- Datum aus der Textstelle statt Rechenergebnis des Modells -------------------------------
 # Erfahrung mit llama3.2:3b: Das Modell uebernimmt gern Beispiel- oder Tagesdaten aus dem Prompt,
@@ -256,6 +253,28 @@ def relative_deadline(snippet: str, today: date) -> tuple[date, int] | None:
     return None
 
 
+_CANONICAL_LABELS = [  # (Stichworte, einheitliche Bezeichnung) - erste passende gewinnt
+    (("kuendig", "kündig"), "Kündigungsfrist"),
+    (("widerspruch", "einspruch"), "Widerspruchsfrist"),
+    (("zahlbar", "zahlung", "faellig", "fällig", "ueberweis", "überweis"), "Zahlungsfrist"),
+    (("vertragsende", "laufzeitende", "ablauf des vertrag"), "Vertragsende"),
+    (("tuev", "tüv", "hauptuntersuchung"), "TÜV-Termin"),
+    (("wartung", "pruefung", "prüfung"), "Prüftermin"),
+]
+
+
+def normalize_label(label: str, snippet: str) -> str:
+    """Einheitliche Bezeichnungen statt Textschnipseln: Das Modell liefert mal "Zahlungsfrist", mal
+    "zahlbar bis". Zuerst zaehlt die Bezeichnung selbst; nur wenn sie wie ein Satzfragment aussieht
+    (klein geschrieben), wird zusaetzlich die Textstelle herangezogen."""
+    for source in (label, snippet if label[:1].islower() else ""):
+        lowered = source.lower()
+        for keywords, canonical in _CANONICAL_LABELS:
+            if any(k in lowered for k in keywords):
+                return canonical
+    return label[:1].upper() + label[1:]
+
+
 @dataclass(frozen=True)
 class DeadlineProposal:
     due_date: date
@@ -294,7 +313,8 @@ def parse_extraction(answer: dict[str, Any], document_text: str, today: date) ->
     for raw in fristen if isinstance(fristen, list) else []:
         if not isinstance(raw, dict):
             continue
-        label = (str(raw.get("bezeichnung") or "").strip() or "Frist")[:200]
+        snippet_raw = str(raw.get("textstelle") or "").strip()
+        label = normalize_label((str(raw.get("bezeichnung") or "").strip() or "Frist")[:200], snippet_raw)
         due = parse_date(raw.get("datum"))
         confidence = _confidence(raw.get("konfidenz"))
         snippet = str(raw.get("textstelle") or "").strip()[:1000]

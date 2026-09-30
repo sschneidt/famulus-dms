@@ -74,7 +74,7 @@ class FakeOllama:
         m_due = re.search(r"zahlbar bis (\d{2})\.(\d{2})\.(\d{4})", doc)
         if m_due:
             d, mo, y = m_due.groups()
-            fristen.append({"datum": f"{y}-{mo}-{d}", "bezeichnung": "Zahlungsfrist", "konfidenz": 0.9,
+            fristen.append({"datum": f"{y}-{mo}-{d}", "bezeichnung": "zahlbar bis", "konfidenz": 0.9,  # wie llama3.2:3b
                             "textstelle": m_due.group(0), "wiederholung": "keine"})
         return {
             "dokumentdatum": f"{m_date.group(3)}-{m_date.group(2)}-{m_date.group(1)}" if m_date else "",

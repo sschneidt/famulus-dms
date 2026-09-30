@@ -163,8 +163,16 @@ ergänzen). `0003` stellt alle Zeitstempel auf "mit Zeitzone" um.
   vergangene einmalige Termine entfallen, wiederkehrende rücken auf den nächsten Termin, keine
   Doppel-Vorschläge. Eigener Modell-Aufruf statt kombiniert mit der Klassifikation – kleine
   Modelle antworten mit einer Aufgabe je Aufruf zuverlässiger.
-- **Wiedervorlagen (Teil 1):** `GET /wiedervorlagen` (Übersicht, Filter `status`, `due_before`),
-  `GET /documents/{id}/wiedervorlagen`, `POST /wiedervorlagen/{id}/confirm` bzw. `/reject`.
+- **Wiedervorlagen** (Anforderungsdokument 4.4a): `GET /wiedervorlagen` (Übersicht, Filter
+  `status`, `due_before`), `GET/POST /documents/{id}/wiedervorlagen`, `PATCH`/`DELETE
+  /wiedervorlagen/{id}` (KI-Vorschläge lassen sich vor dem Bestätigen korrigieren),
+  `POST .../confirm`, `/reject`, `/complete`. Beim Erledigen einer wiederkehrenden Wiedervorlage
+  entsteht sofort der nächste Termin; wurde zu spät erledigt, der nächste in der Zukunft (keine
+  Reihe verpasster Termine). Regeln in `homedms/core/wiedervorlage.py`.
+- **Aufbewahrungsregeln** (`/retention-rules`, nur Admin, eine je Kategorie): erzeugen automatisch
+  eine Wiedervorlage "Aufbewahrungsfrist endet", sobald ein Dokument Kategorie und Datum hat, und
+  passen sie an, wenn sich Kategorie, Dokumentdatum oder Regel ändern (`homedms/core/retention.py`).
+  Bewusst ohne vorbelegte Regeln – welche Fristen gelten, entscheidet der Haushalt.
 - **`backend/Dockerfile` + `docker-entrypoint.sh`:** Ein Image für `app-api`/`app-worker`
   (unterscheidet sich nur über `APP_ROLE`, siehe Docker-Compose-Entwurf.md Abschnitt 3), inkl.
   Tesseract + Sprachpaketen (deu+eng). `docker-compose.yml` im Repo-Root nutzt jetzt `build:
@@ -186,8 +194,8 @@ Die übrigen Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
 - **KI (Rest):** KI-Einstellungen per API (`/ai-config`), Kalibrierung der Schwellenwerte an
   echten Dokumenten, erneute Verarbeitung auf Knopfdruck (z. B. nach einem KI-Ausfall), Ablage
   der Dateien nach Kategorie.
-- **Wiedervorlagen (Teil 2):** manuell anlegen/ändern/löschen, erledigen mit automatischer
-  Wiederholung, Aufbewahrungsregeln, Erinnerungen über Benachrichtigungen.
+- **Erinnerungen:** fällige Wiedervorlagen (`reminder_lead_days` vorher) über Benachrichtigungen
+  melden (In-App, E-Mail, Web-Push) - siehe Benachrichtigungen.
 - **Massen-Umkategorisierung** (`POST /documents/bulk-reclassify`) und Zugriffs-Ausnahmen verwalten
   (`GET/PUT /documents/{id}/access`) - Modelle (`DocumentAccessOverride`) existieren bereits, nur
   die Endpunkte dafür fehlen noch.

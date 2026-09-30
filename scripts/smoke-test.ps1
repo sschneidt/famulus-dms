@@ -6,7 +6,8 @@
   Schritte: Stack bauen/starten -> auf die API warten -> Ersteinrichtung bzw. Anmeldung ->
   Profil abrufen -> Test-PDF und Test-Scan hochladen -> auf die Texterkennung warten ->
   erkannten Text pruefen -> automatische Klassifikation abwarten -> eine Kategorie manuell
-  bestaetigen -> Metadaten und Fristvorschlaege pruefen -> Download mit dem Original vergleichen -> Testdokumente in den Papierkorb legen. Am Ende steht eine Uebersicht mit OK/FEHLER je Schritt.
+  bestaetigen -> Metadaten und Fristvorschlaege pruefen -> wiederkehrende Wiedervorlage
+  erledigen -> Download mit dem Original vergleichen -> Testdokumente in den Papierkorb legen. Am Ende steht eine Uebersicht mit OK/FEHLER je Schritt.
 
   Gibt es noch keinen Haushalt, legt das Skript ihn mit den angegebenen Zugangsdaten an.
   Gibt es schon einen, meldet es sich mit ihnen an. Mit -PasswortZuruecksetzen wird das
@@ -345,6 +346,22 @@ if ($erster) {
     Schreibe-Schritt "Fristvorschlag bestaetigen" $ok $(if ($ok) { "$($erster.note) am $($erster.due_date) ist jetzt offen" } else { "HTTP $($r.Status): $($r.Text)" })
 } else {
     Schreibe-Schritt "Fristvorschlag bestaetigen" $true "uebersprungen - das Modell hat keine Frist vorgeschlagen"
+}
+
+# --- 6d. Wiedervorlage mit Wiederholung erledigen -> Folgetermin ------------------------------
+$heuteText = (Get-Date).Date.ToString("yyyy-MM-dd")
+$erwartetText = (Get-Date).Date.AddYears(1).ToString("yyyy-MM-dd")
+$neu = Invoke-Api POST "/documents/$($testfaelle[0].Id)/wiedervorlagen" @{
+    due_date = $heuteText; note = "Smoke-Test: jaehrliche Wiedervorlage"; recurrence = "yearly"
+} -Token $token
+if ($neu.Status -ne 201) {
+    Schreibe-Schritt "Wiedervorlage erledigen" $false "Anlegen: HTTP $($neu.Status): $($neu.Text)"
+} else {
+    $r = Invoke-Api POST "/wiedervorlagen/$($neu.Json.id)/complete" -Token $token
+    $ok = $r.Status -eq 200 -and $r.Json.completed.status -eq "erledigt" -and $r.Json.next.due_date -eq $erwartetText
+    $detail = if ($ok) { "Folgetermin am $erwartetText angelegt" } else { "HTTP $($r.Status), Folgetermin: $($r.Json.next.due_date) (erwartet $erwartetText)" }
+    Schreibe-Schritt "Wiedervorlage erledigen" $ok $detail
+    if ($r.Json.next.id) { Invoke-Api DELETE "/wiedervorlagen/$($r.Json.next.id)" -Token $token | Out-Null }  # aufraeumen
 }
 
 # --- 7. Download mit dem Original vergleichen ------------------------------------------------

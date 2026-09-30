@@ -21,6 +21,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from homedms.api.deps import get_current_user
+from homedms.core.retention import sync_retention
 from homedms.core.storage import document_file_path, save_upload
 from homedms.core.visibility import is_document_editable, is_document_visible, visible_documents_expr
 from homedms.db import get_db
@@ -242,6 +243,8 @@ async def update_document(
     updates = payload.model_dump(exclude_unset=True)
     for field, value in updates.items():
         setattr(document, field, value)
+    if "document_date" in updates:
+        await sync_retention(db, document)  # Aufbewahrungsfrist haengt am Dokumentdatum
 
     await db.commit()
     await db.refresh(document, attribute_names=["files"])
@@ -321,6 +324,7 @@ async def assign_category(
     document.classification_status = ClassificationStatus.confirmed
     document.classification_stage = ClassificationStage.manual
     document.classification_confidence = None
+    await sync_retention(db, document)
     await db.commit()
 
     # Lernbeispiel im Hintergrund anlegen - braucht das Embedding-Modell und soll die Antwort
