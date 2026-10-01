@@ -16,7 +16,7 @@ unerheblich.
 """
 import logging
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
 from sqlalchemy import select
 
@@ -24,6 +24,7 @@ from homedms.ai import ollama
 from homedms.ai.extraction import build_prompt, parse_extraction
 from homedms.ai.ollama import OllamaError
 from homedms.core.naming import refresh_title
+from homedms.core.payments import assumed_paid, is_payment, mark_paid
 from homedms.core.properties import property_for
 from homedms.core.retention import sync_retention
 from homedms.jobs import app
@@ -93,7 +94,26 @@ async def extract_metadata(document_id: str) -> None:
             ).limit(1)
         )
         if existing_ai is None:
+            for d in result.past_payments:
+                if assumed_paid(d.due_date, today()):
+                    # Eingescannte, laengst faellige Rechnung: als bezahlt annehmen, Frist nur dokumentieren
+                    if document.payment_status is None:
+                        await mark_paid(db, document, None, today=today(), assumed=True)
+                    status, completed_at = "erledigt", datetime.now(timezone.utc)
+                else:
+                    # Kuerzlich verstrichen: als ueberfaelliger Vorschlag zeigen - "schon bezahlt?"
+                    if document.payment_status is None:
+                        document.payment_status = "offen"
+                    status, completed_at = "vorgeschlagen", None
+                db.add(Wiedervorlage(
+                    tenant_id=document.tenant_id, document_id=document.id, due_date=d.due_date,
+                    note=d.label, type="custom", source="ai_suggested", status=status, completed_at=completed_at,
+                    confidence=d.confidence, source_snippet=d.snippet, recurrence="none",
+                    assigned_user_id=document.owner_user_id,
+                ))
             for d in result.deadlines:
+                if is_payment(d.label) and document.payment_status is None:
+                    document.payment_status = "offen"
                 db.add(Wiedervorlage(
                     tenant_id=document.tenant_id, document_id=document.id,
                     due_date=d.due_date, note=d.label, type="custom", source="ai_suggested",

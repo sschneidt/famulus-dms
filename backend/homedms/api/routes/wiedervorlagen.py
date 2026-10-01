@@ -8,7 +8,7 @@ Rechte richten sich nach dem zugehoerigen Dokument (homedms/core/visibility.py):
 Dokument sehen darf; bestaetigen/verwerfen, wer es bearbeiten darf.
 """
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -17,11 +17,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from homedms.api.deps import get_current_user
 from homedms.core.visibility import is_document_editable, is_document_visible, visible_documents_expr
 from homedms.db import get_db
-from homedms.core.wiedervorlage import EDITABLE_STATUSES, next_due
+from homedms.core.payments import complete, is_payment
+from homedms.core.wiedervorlage import EDITABLE_STATUSES
 from homedms.models.document import Document
 from homedms.models.tenant import User
 from homedms.models.wiedervorlage import Wiedervorlage
 from homedms.schemas.wiedervorlage import (
+    WiedervorlageCompleteRequest,
     WiedervorlageCompleteResponse,
     WiedervorlageCreate,
     WiedervorlageListResponse,
@@ -193,30 +195,25 @@ async def update_wiedervorlage(
 
 @router.post("/wiedervorlagen/{wiedervorlage_id}/complete", response_model=WiedervorlageCompleteResponse)
 async def complete_wiedervorlage(
-    wiedervorlage_id: uuid.UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    wiedervorlage_id: uuid.UUID, payload: WiedervorlageCompleteRequest | None = None,
+    user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db),
 ) -> WiedervorlageCompleteResponse:
     """Als erledigt markieren. Bei Wiederholung wird sofort der naechste Termin angelegt - wurde
-    zu spaet erledigt, der naechste in der Zukunft (keine Reihe verpasster Termine)."""
+    zu spaet erledigt, der naechste in der Zukunft (keine Reihe verpasster Termine).
+    Zahlungsfrist erledigt = Rechnung bezahlt (paid_on, Standard heute)."""
     wv = await _get_editable(db, user, wiedervorlage_id)
     if wv.status != "offen":
         hint = " - Vorschlaege zuerst bestaetigen" if wv.status == "vorgeschlagen" else ""
         raise HTTPException(status.HTTP_409_CONFLICT, f"Nur offene Wiedervorlagen koennen erledigt werden (Status: {wv.status}){hint}")
 
-    wv.status = "erledigt"
-    wv.completed_at = datetime.now(timezone.utc)
-    wv.completed_by_user_id = user.id
-
-    follow_up = None
-    due = next_due(wv.due_date, wv.recurrence, wv.recurrence_interval_months, today())
-    if due is not None:
-        follow_up = Wiedervorlage(
-            tenant_id=wv.tenant_id, document_id=wv.document_id, due_date=due, note=wv.note, type=wv.type,
-            source=wv.source, status="offen", confidence=wv.confidence, source_snippet=wv.source_snippet,
-            recurrence=wv.recurrence, recurrence_interval_months=wv.recurrence_interval_months,
-            assigned_user_id=wv.assigned_user_id, created_by_user_id=wv.created_by_user_id,
-            reminder_lead_days=wv.reminder_lead_days,
-        )
+    follow_up = complete(wv, user.id, today())
+    if follow_up is not None:
         db.add(follow_up)
+    if is_payment(wv.note):
+        document = await db.get(Document, wv.document_id)
+        document.payment_status = "bezahlt"
+        document.paid_on = (payload.paid_on if payload else None) or today()
+        document.paid_assumed = False
     await db.commit()
     return WiedervorlageCompleteResponse(
         completed=WiedervorlageResponse.model_validate(wv),

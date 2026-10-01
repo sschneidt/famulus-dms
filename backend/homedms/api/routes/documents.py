@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from homedms.api.deps import get_current_user
 from homedms.core import meili
 from homedms.core.naming import refresh_title
+from homedms.core.payments import mark_paid
 from homedms.core.search import has_hit, like_pattern, search_terms, segments_from_marked, snippet_for_terms
 from homedms.core.retention import sync_retention
 from homedms.core.storage import document_file_path, save_upload
@@ -58,6 +59,12 @@ from homedms.schemas.document import (
 )
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+
+
+def today() -> date:
+    """Eigene Funktion, damit Tests ein festes Datum setzen koennen."""
+    return date.today()
+
 logger = logging.getLogger("homedms.api.documents")
 
 
@@ -98,6 +105,7 @@ async def list_documents(
     date_from: date | None = None,
     date_to: date | None = None,
     q: str | None = Query(None, max_length=200, description="Volltextsuche (Titel, Betreff, Absender, Objekt, Text)"),
+    payment_status: str | None = Query(None, pattern="^(offen|bezahlt)$", description="Zahlungsstatus"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> DocumentListResponse:
@@ -114,6 +122,8 @@ async def list_documents(
         conditions.append(Document.document_date >= date_from)
     if date_to is not None:
         conditions.append(Document.document_date <= date_to)
+    if payment_status is not None:
+        conditions.append(Document.payment_status == payment_status)
 
     if q and q.strip():
         return await _search(db, user, q.strip(), conditions, category_id, page, page_size)
@@ -321,6 +331,18 @@ async def update_document(
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Objekt nicht gefunden")
     if updates.get("title_locked") is None:
         updates.pop("title_locked", None)
+    payment = updates.pop("payment_status", "unset")
+    paid_on = updates.pop("paid_on", None)
+    if payment == "bezahlt":
+        await mark_paid(db, document, paid_on or today(), today=today(), user_id=user.id)
+    elif payment == "offen":
+        document.payment_status, document.paid_on, document.paid_assumed = "offen", None, False
+    elif payment is None:
+        document.payment_status, document.paid_on, document.paid_assumed = None, None, False
+    elif paid_on is not None:  # nur Zahlungsdatum korrigieren
+        if document.payment_status != "bezahlt":
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Zahlungsdatum nur bei bezahlten Dokumenten")
+        document.paid_on, document.paid_assumed = paid_on, False
     for field, value in updates.items():
         setattr(document, field, value)
     refresh_title(document)  # nur wenn nicht gesperrt: "Betreff – Absender" nachziehen

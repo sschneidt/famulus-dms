@@ -90,10 +90,12 @@ def test_slightly_different_quote_is_accepted():
     assert not quote_supported("", DOC) and not quote_supported("zahlbar", DOC)
 
 
-def test_past_one_off_deadline_is_discarded():
+def test_past_one_off_payment_deadline_is_no_proposal_but_kept_for_payment_status():
+    """Keine neue Frist vorschlagen - aber fuer den Zahlungsstatus merken (core/payments.py)."""
     mahnung = "Mahnung\nBitte zahlbar bis 01.08.2026 begleichen."
     r = parse_extraction(answer(frist(datum="2026-08-01", textstelle="zahlbar bis 01.08.2026")), mahnung, TODAY)
-    assert r.deadlines == [] and any("Vergangenheit" in x for x in r.discarded)
+    assert r.deadlines == []
+    assert [d.due_date for d in r.past_payments] == [date(2026, 8, 1)]
 
 
 def test_past_recurring_deadline_rolls_forward():
@@ -240,3 +242,23 @@ def test_parse_extraction_betreff_und_adresse():
     result = parse_extraction({**answer, "betreff": "Vertrag Fitnessstudio"}, WASSER, _date(2026, 9, 30))
     assert result.subject is None
     assert any("Betreff" in d for d in result.discarded)
+
+
+def test_verstrichene_zahlungsfrist_wird_fuer_den_zahlungsstatus_gemerkt():
+    from datetime import date as _date
+
+    text = "Stadtwerke\nStromrechnung\nBetrag 42 EUR zahlbar bis 15.03.2026. Kündigung bis 01.01.2026 möglich."
+    answer = {
+        "dokumentdatum": "", "absender": "Stadtwerke", "betreff": "", "betrag": "",
+        "objektadresse": {"strasse": "", "plz": "", "ort": ""},
+        "fristen": [
+            {"datum": "2026-03-15", "bezeichnung": "zahlbar bis", "konfidenz": 0.9,
+             "textstelle": "Betrag 42 EUR zahlbar bis 15.03.2026", "wiederholung": "keine"},
+            {"datum": "2026-01-01", "bezeichnung": "Kündigung", "konfidenz": 0.9,
+             "textstelle": "Kündigung bis 01.01.2026 möglich", "wiederholung": "keine"},
+        ],
+    }
+    result = parse_extraction(answer, text, _date(2026, 9, 30))
+    assert result.deadlines == []
+    assert [(d.label, d.due_date) for d in result.past_payments] == [("Zahlungsfrist", _date(2026, 3, 15))]
+    assert any("Vergangenheit" in d for d in result.discarded)  # die Kündigungsfrist bleibt verworfen

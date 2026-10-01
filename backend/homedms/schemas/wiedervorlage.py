@@ -70,6 +70,12 @@ class WiedervorlageUpdate(BaseModel):
     reminder_lead_days: int | None = Field(default=None, ge=0, le=3650)
 
 
+class WiedervorlageCompleteRequest(BaseModel):
+    """Optional beim Erledigen einer Zahlungsfrist: Datum der Zahlung (Standard: heute)."""
+
+    paid_on: date | None = None
+
+
 class WiedervorlageCompleteResponse(BaseModel):
     completed: WiedervorlageResponse
     next: WiedervorlageResponse | None  # automatisch angelegter Folgetermin bei Wiederholung

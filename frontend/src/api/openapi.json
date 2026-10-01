@@ -430,6 +430,25 @@
               "title": "Q"
             },
             "description": "Volltextsuche (Titel, Betreff, Absender, Objekt, Text)"
+          },
+          {
+            "name": "payment_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(offen|bezahlt)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Zahlungsstatus",
+              "title": "Payment Status"
+            },
+            "description": "Zahlungsstatus"
           }
         ],
         "responses": {
@@ -1427,7 +1446,7 @@
           "wiedervorlagen"
         ],
         "summary": "Complete Wiedervorlage",
-        "description": "Als erledigt markieren. Bei Wiederholung wird sofort der naechste Termin angelegt - wurde\nzu spaet erledigt, der naechste in der Zukunft (keine Reihe verpasster Termine).",
+        "description": "Als erledigt markieren. Bei Wiederholung wird sofort der naechste Termin angelegt - wurde\nzu spaet erledigt, der naechste in der Zukunft (keine Reihe verpasster Termine).\nZahlungsfrist erledigt = Rechnung bezahlt (paid_on, Standard heute).",
         "operationId": "complete_wiedervorlage_api_v1_wiedervorlagen__wiedervorlage_id__complete_post",
         "security": [
           {
@@ -1446,6 +1465,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/WiedervorlageCompleteRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2255,6 +2291,34 @@
             ],
             "title": "Original Location"
           },
+          "payment_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Status"
+          },
+          "paid_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid On"
+          },
+          "paid_assumed": {
+            "type": "boolean",
+            "title": "Paid Assumed",
+            "default": false
+          },
           "deleted_at": {
             "anyOf": [
               {
@@ -2536,6 +2600,34 @@
             ],
             "title": "Original Location"
           },
+          "payment_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Status"
+          },
+          "paid_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid On"
+          },
+          "paid_assumed": {
+            "type": "boolean",
+            "title": "Paid Assumed",
+            "default": false
+          },
           "deleted_at": {
             "anyOf": [
               {
@@ -2663,6 +2755,33 @@
               }
             ],
             "title": "Property Id"
+          },
+          "payment_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "offen",
+                  "bezahlt"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Status"
+          },
+          "paid_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid On"
           },
           "original_present": {
             "anyOf": [
@@ -3131,6 +3250,25 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WiedervorlageCompleteRequest": {
+        "properties": {
+          "paid_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid On"
+          }
+        },
+        "type": "object",
+        "title": "WiedervorlageCompleteRequest",
+        "description": "Optional beim Erledigen einer Zahlungsfrist: Datum der Zahlung (Standard: heute)."
       },
       "WiedervorlageCompleteResponse": {
         "properties": {

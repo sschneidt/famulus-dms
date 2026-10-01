@@ -24,6 +24,7 @@ export interface DocumentFilters {
   category_id?: string;
   status?: "pending" | "auto_assigned" | "needs_review" | "confirmed";
   q?: string;
+  payment_status?: "offen" | "bezahlt";
 }
 
 // --- Lesen ---------------------------------------------------------------------------------
@@ -174,14 +175,22 @@ export function useWiedervorlageAction() {
     mutationFn: ({
       id,
       action,
+      paidOn,
     }: {
       id: string;
       action: WvAction;
+      /** nur bei Zahlungsfristen: Datum der Zahlung */
+      paidOn?: string;
     }): Promise<Schemas["WiedervorlageResponse"] | Schemas["WiedervorlageCompleteResponse"]> => {
       const params = { params: { path: { wiedervorlage_id: id } } };
       if (action === "confirm") return call(api.POST("/api/v1/wiedervorlagen/{wiedervorlage_id}/confirm", params));
       if (action === "reject") return call(api.POST("/api/v1/wiedervorlagen/{wiedervorlage_id}/reject", params));
-      return call(api.POST("/api/v1/wiedervorlagen/{wiedervorlage_id}/complete", params));
+      return call(
+        api.POST("/api/v1/wiedervorlagen/{wiedervorlage_id}/complete", {
+          ...params,
+          body: paidOn ? { paid_on: paidOn } : undefined,
+        }),
+      );
     },
     onSuccess: invalidate,
   });
@@ -282,4 +291,27 @@ export function useDeleteProperty() {
   return usePropertyMutation((id: string) =>
     call(api.DELETE("/api/v1/properties/{property_id}", { params: { path: { property_id: id } } })),
   );
+}
+
+/** Zahlungsstatus eines Dokuments setzen ("bezahlt" erledigt offene Zahlungsfristen mit). */
+export function useSetPayment() {
+  const invalidate = useInvalidateAll();
+  return useMutation({
+    mutationFn: ({
+      documentId,
+      status,
+      paidOn,
+    }: {
+      documentId: string;
+      status: "offen" | "bezahlt" | null;
+      paidOn?: string;
+    }) =>
+      call(
+        api.PATCH("/api/v1/documents/{document_id}", {
+          params: { path: { document_id: documentId } },
+          body: { payment_status: status, ...(paidOn ? { paid_on: paidOn } : {}) },
+        }),
+      ),
+    onSuccess: invalidate,
+  });
 }

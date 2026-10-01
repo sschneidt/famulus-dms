@@ -9,6 +9,7 @@ import { CategoryPanel } from "../components/detail/CategoryPanel";
 import { HistoryPanel } from "../components/detail/HistoryPanel";
 import { MetadataPanel } from "../components/detail/MetadataPanel";
 import { OcrTextPanel } from "../components/detail/OcrTextPanel";
+import { PaymentPanel } from "../components/detail/PaymentPanel";
 import { WiedervorlagenPanel } from "../components/detail/WiedervorlagenPanel";
 import { DocumentPreview } from "../components/DocumentPreview";
 import { downloadDocument } from "../lib/download";
@@ -47,6 +48,7 @@ export function DocumentDetailPage() {
     <Stack>
       <CategoryPanel doc={doc} readOnly={readOnly} />
       <MetadataPanel doc={doc} readOnly={readOnly} />
+      <PaymentPanel doc={doc} readOnly={readOnly} />
       <WiedervorlagenPanel doc={doc} readOnly={readOnly} />
     </Stack>
   );

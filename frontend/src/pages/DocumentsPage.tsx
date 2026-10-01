@@ -1,6 +1,7 @@
 import {
   Alert,
   Anchor,
+  Badge,
   Button,
   Card,
   Center,
@@ -30,10 +31,22 @@ import { formatAmount, formatDate } from "../lib/format";
 
 const PAGE_SIZE = 25;
 const STATUS_OPTIONS = [
-  { value: "needs_review", label: "zu prüfen" },
-  { value: "auto_assigned", label: "automatisch eingeordnet" },
-  { value: "confirmed", label: "bestätigt" },
-  { value: "pending", label: "wird verarbeitet" },
+  {
+    group: "Einordnung",
+    items: [
+      { value: "needs_review", label: "zu prüfen" },
+      { value: "auto_assigned", label: "automatisch eingeordnet" },
+      { value: "confirmed", label: "bestätigt" },
+      { value: "pending", label: "wird verarbeitet" },
+    ],
+  },
+  {
+    group: "Zahlung",
+    items: [
+      { value: "zahlung:offen", label: "unbezahlt" },
+      { value: "zahlung:bezahlt", label: "bezahlt" },
+    ],
+  },
 ];
 
 export function DocumentsPage() {
@@ -55,11 +68,15 @@ export function DocumentsPage() {
     setParams(next, { replace: true });
   }, [search, params, setParams]);
 
+  const statusParam = params.get("status");
   const filters: DocumentFilters = {
     page: Math.max(1, Number(params.get("seite")) || 1),
     page_size: PAGE_SIZE,
     category_id: params.get("kategorie") ?? undefined,
-    status: (params.get("status") as DocumentFilters["status"]) ?? undefined,
+    status: statusParam && !statusParam.startsWith("zahlung:") ? (statusParam as DocumentFilters["status"]) : undefined,
+    payment_status: statusParam?.startsWith("zahlung:")
+      ? (statusParam.slice(8) as DocumentFilters["payment_status"])
+      : undefined,
     q: params.get("suche") || undefined,
   };
   const documents = useDocuments(filters);
@@ -73,7 +90,7 @@ export function DocumentsPage() {
   }
 
   const totalPages = documents.data ? Math.max(1, Math.ceil(documents.data.total / PAGE_SIZE)) : 1;
-  const hasFilter = Boolean(filters.category_id || filters.status || filters.q);
+  const hasFilter = Boolean(filters.category_id || statusParam || filters.q);
 
   return (
     <Stack>
@@ -115,7 +132,7 @@ export function DocumentsPage() {
           <Select
             placeholder="Jeder Status"
             data={STATUS_OPTIONS}
-            value={filters.status ?? null}
+            value={statusParam}
             onChange={(v) => setFilter("status", v)}
             clearable
             aria-label="Status"
@@ -213,6 +230,7 @@ function DocumentTable({ items }: { items: DocumentItem[] }) {
               </Table.Td>
               <Table.Td ta="right" style={{ whiteSpace: "nowrap" }}>
                 {formatAmount(doc.amount)}
+                <PaymentBadge doc={doc} />
               </Table.Td>
               <Table.Td>
                 <DocumentStatusBadge doc={doc} />
@@ -245,9 +263,12 @@ function DocumentCards({ items }: { items: DocumentItem[] }) {
                 <DocumentStatusBadge doc={doc} />
               </Group>
               {doc.amount !== null && (
-                <Text size="sm" fw={500} style={{ whiteSpace: "nowrap" }}>
-                  {formatAmount(doc.amount)}
-                </Text>
+                <Stack gap={0} align="flex-end">
+                  <Text size="sm" fw={500} style={{ whiteSpace: "nowrap" }}>
+                    {formatAmount(doc.amount)}
+                  </Text>
+                  <PaymentBadge doc={doc} />
+                </Stack>
               )}
             </Group>
           </Card>
@@ -278,4 +299,22 @@ function EmptyState({ onUpload, onCamera }: { onUpload(): void; onCamera(): void
       </Stack>
     </Card>
   );
+}
+
+function PaymentBadge({ doc }: { doc: DocumentItem }) {
+  if (doc.payment_status === "offen") {
+    return (
+      <Badge size="xs" color="orange" variant="light" display="block" ml="auto" w="fit-content" mt={2}>
+        unbezahlt
+      </Badge>
+    );
+  }
+  if (doc.payment_status === "bezahlt") {
+    return (
+      <Badge size="xs" color="green" variant="light" display="block" ml="auto" w="fit-content" mt={2}>
+        bezahlt
+      </Badge>
+    );
+  }
+  return null;
 }

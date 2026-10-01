@@ -3,7 +3,9 @@ import { modals } from "@mantine/modals";
 import { IconCheck, IconDots, IconEdit, IconFileText, IconRepeat, IconTrash, IconX } from "@tabler/icons-react";
 import { Link } from "react-router";
 import type { Wiedervorlage } from "../api/client";
-import { useDeleteWiedervorlage, useWiedervorlageAction } from "../api/queries";
+import { useDeleteWiedervorlage, useSetPayment, useWiedervorlageAction } from "../api/queries";
+import { isPaymentNote } from "../lib/payments";
+import { PaidButton } from "./PaidButton";
 import { formatDate, formatDateTime, formatPercent, recurrenceText, relativeDue, sourceLabels } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
 
@@ -21,14 +23,17 @@ export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
   const due = relativeDue(wv.due_date);
   const active = wv.status === "offen" || wv.status === "vorgeschlagen";
   const overdue = active && due.overdue;
-  const busy = action.isPending || remove.isPending;
+  const setPayment = useSetPayment();
+  const payment = isPaymentNote(wv.note);
+  const busy = action.isPending || remove.isPending || setPayment.isPending;
 
-  async function run(kind: "confirm" | "reject" | "complete") {
+  async function run(kind: "confirm" | "reject" | "complete", paidOn?: string) {
     try {
-      const result = await action.mutateAsync({ id: wv.id, action: kind });
+      const result = await action.mutateAsync({ id: wv.id, action: kind, paidOn });
       if (kind === "complete") {
         const next = (result as { next?: Wiedervorlage | null }).next;
-        notifySuccess(next ? `Erledigt – nächster Termin am ${formatDate(next.due_date)}` : "Erledigt");
+        const done = paidOn ? `Bezahlt am ${formatDate(paidOn)}` : "Erledigt";
+        notifySuccess(next ? `${done} – nächster Termin am ${formatDate(next.due_date)}` : done);
       } else {
         notifySuccess(kind === "confirm" ? "Termin übernommen" : "Vorschlag verworfen");
       }
@@ -153,6 +158,22 @@ export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
                 Anpassen
               </Button>
             )}
+            {payment && (
+              <PaidButton
+                label="Schon bezahlt"
+                variant="default"
+                color="gray"
+                loading={setPayment.isPending}
+                onConfirm={async (paidOn) => {
+                  try {
+                    await setPayment.mutateAsync({ documentId: wv.document_id, status: "bezahlt", paidOn });
+                    notifySuccess(`Bezahlt am ${formatDate(paidOn)}`);
+                  } catch (e) {
+                    notifyError(e);
+                  }
+                }}
+              />
+            )}
             <Button
               size="xs"
               variant="subtle"
@@ -165,7 +186,17 @@ export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
             </Button>
           </Group>
         )}
-        {wv.status === "offen" && (
+        {wv.status === "offen" && payment && (
+          <Group gap="xs">
+            <PaidButton
+              label="Bezahlt"
+              variant={overdue ? "filled" : "light"}
+              loading={action.isPending}
+              onConfirm={(paidOn) => run("complete", paidOn)}
+            />
+          </Group>
+        )}
+        {wv.status === "offen" && !payment && (
           <Group gap="xs">
             <Button
               size="xs"

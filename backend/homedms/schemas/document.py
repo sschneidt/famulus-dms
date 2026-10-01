@@ -3,6 +3,8 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from homedms.models.document import (
@@ -56,6 +58,10 @@ class DocumentResponse(BaseModel):
     original_present: OriginalPresent
     original_location: str | None
 
+    payment_status: str | None = None  # None (keine Rechnung) | offen | bezahlt
+    paid_on: date | None = None
+    paid_assumed: bool = False  # automatisch angenommen: Frist lag beim Einlesen > 3 Monate zurueck
+
     deleted_at: datetime | None
     created_at: datetime
     updated_at: datetime
@@ -91,6 +97,10 @@ class DocumentUpdateRequest(BaseModel):
     title_locked: bool | None = None
     subject: str | None = Field(default=None, max_length=300)
     property_id: uuid.UUID | None = None  # Objekt (Haus/Wohnung); null = keinem Objekt zugeordnet
+    # Zahlung: "bezahlt" (paid_on = Zahlungsdatum, Standard heute) erledigt offene Zahlungsfristen;
+    # "offen" setzt zurueck; null = keine Rechnung
+    payment_status: Literal["offen", "bezahlt"] | None = None
+    paid_on: date | None = None
     original_present: OriginalPresent | None = None
     original_location: str | None = None
     # Von der KI erkannte Metadaten korrigieren (null = Feld leeren)

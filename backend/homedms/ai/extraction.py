@@ -18,6 +18,7 @@ from typing import Any
 from homedms.core.dates import add_months  # noqa: F401  (auch fuer bestehende Importe)
 from homedms.core.addresses import Address, parse_address
 from homedms.core.naming import clean_subject
+from homedms.core.payments import is_payment
 
 MIN_DEADLINE_CONFIDENCE = 0.5  # Anforderungsdokument 4.4a: darunter wird ein Fund verworfen
 MAX_DEADLINES = 5
@@ -320,6 +321,7 @@ class ExtractionResult:
     address: Address | None = None
     amount: Decimal | None = None
     deadlines: list[DeadlineProposal] = field(default_factory=list)
+    past_payments: list[DeadlineProposal] = field(default_factory=list)  # bereits verstrichene Zahlungsfristen
     discarded: list[str] = field(default_factory=list)  # Begruendungen fuer Log/Nachvollziehbarkeit
     corrected: list[str] = field(default_factory=list)  # Daten, die aus der Textstelle korrigiert wurden
 
@@ -379,6 +381,13 @@ def parse_extraction(answer: dict[str, Any], document_text: str, today: date) ->
             if recurrence == "none":  # "zum Jahresende" & Co. gilt jede Periode wieder
                 recurrence, interval = {12: ("yearly", 12), 3: ("custom_months", 3), 1: ("monthly", 1)}[period]
         if due < today:
+            if interval is None and is_payment(label):
+                # Verstrichene Zahlungsfrist: wichtig fuer den Zahlungsstatus (core/payments.py) -
+                # lange her = wohl bezahlt, kuerzlich = nachfragen
+                if (due, label.lower()) not in seen:
+                    seen.add((due, label.lower()))
+                    result.past_payments.append(DeadlineProposal(due, label, confidence, snippet, "none", None))
+                continue
             if interval is None:
                 result.discarded.append(f"{label}: {due.isoformat()} liegt in der Vergangenheit")
                 continue
