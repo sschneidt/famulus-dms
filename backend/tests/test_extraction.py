@@ -212,3 +212,31 @@ def test_relative_deadline_ignores_unrelated_text():
 def test_explicit_deadline(snippet, expected):
     assert explicit_deadline(snippet) == expected
 
+
+
+# --- Betreff (Grundlage fuer Titel und Dateiname) ---------------------------------------------
+from homedms.ai.extraction import subject_supported  # noqa: E402
+
+WASSER = "Sanitär Müller GmbH\nRechnung vom 12.09.2026\nReparatur des Wasserschadens im Bad"
+
+
+def test_betreff_muss_zum_text_passen():
+    assert subject_supported("Rechnung Wasserschaden-Reparatur", WASSER)  # Wortstamm reicht
+    assert not subject_supported("Kündigungsbestätigung Mobilfunk", WASSER)  # abgeschrieben/erfunden
+    assert not subject_supported("", WASSER)
+    assert not subject_supported("12 34", WASSER)
+
+
+def test_parse_extraction_betreff_und_adresse():
+    from datetime import date as _date
+
+    answer = {
+        "dokumentdatum": "2026-09-12", "absender": "Sanitär Müller GmbH", "betreff": '"Rechnung Wasserschaden"',
+        "betrag": "", "fristen": [], "objektadresse": {"strasse": "", "plz": "", "ort": ""},
+    }
+    result = parse_extraction(answer, WASSER, _date(2026, 9, 30))
+    assert result.subject == "Rechnung Wasserschaden"
+    assert result.address is None
+    result = parse_extraction({**answer, "betreff": "Vertrag Fitnessstudio"}, WASSER, _date(2026, 9, 30))
+    assert result.subject is None
+    assert any("Betreff" in d for d in result.discarded)

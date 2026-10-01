@@ -3,6 +3,7 @@ einer selbst gehosteten Installation ohne E-Mail-Reset sonst nur per SQL zu loes
 
 Im Container:  docker compose exec app-api python -m homedms.cli users
                docker compose exec app-api python -m homedms.cli reset-password <email>
+               docker compose exec app-api python -m homedms.cli refile
 Lokal:         uv run python -m homedms.cli ...
 """
 import argparse
@@ -59,6 +60,23 @@ async def reset_password(email: str, password: str) -> int:
     return 0
 
 
+async def refile_all() -> int:
+    """Ablage fuer alle Dokumente einreihen (der Worker verschiebt/benennt dann bei Bedarf).
+    Laeuft auch automatisch beim Start des API-Containers (docker-entrypoint.sh) - so landen
+    Dateien aus aelteren Versionen ohne weiteres Zutun in der Ordnerstruktur."""
+    from homedms.jobs import app as jobs_app
+    from homedms.models.document import Document
+    from homedms.tasks.filing import defer_filing
+
+    async with async_session_factory() as db:
+        ids = (await db.execute(select(Document.id))).scalars().all()
+    async with jobs_app.open_async():
+        for document_id in ids:
+            await defer_filing(document_id)
+    print(f"Ablage fuer {len(ids)} Dokument(e) eingereiht - der Worker erledigt den Rest.")
+    return 0
+
+
 def _ask_password() -> str | None:
     first = getpass.getpass("Neues Passwort: ")
     if len(first) < MIN_PASSWORD_LENGTH:
@@ -77,12 +95,15 @@ def main(argv: list[str] | None = None) -> int:
     reset = sub.add_parser("reset-password", help="Passwort eines Nutzers neu setzen")
     reset.add_argument("email")
     reset.add_argument("--password", help="Neues Passwort (ohne Angabe wird es sicher abgefragt)")
+    sub.add_parser("refile", help="Alle Dateien nach Kategorie/Jahr ablegen und sprechend benennen")
     args = parser.parse_args(argv)
 
     async def run() -> int:
         try:
             if args.command == "users":
                 return await list_users()
+            if args.command == "refile":
+                return await refile_all()
             password = args.password if args.password is not None else _ask_password()
             if password is None:
                 return 1

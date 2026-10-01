@@ -10,14 +10,31 @@ export const me: Me = {
 };
 
 export const categories: Category[] = [
-  { id: "c-rech", name: "Rechnungen", description: "", is_restricted: false, is_system_default: true },
-  { id: "c-vers", name: "Versicherungen", description: "", is_restricted: false, is_system_default: true },
+  {
+    id: "c-rech",
+    name: "Rechnungen",
+    description: "",
+    is_restricted: false,
+    is_system_default: true,
+    property_mode: "none",
+  },
+  {
+    id: "c-vers",
+    name: "Versicherungen",
+    description: "",
+    is_restricted: false,
+    is_system_default: true,
+    property_mode: "none",
+  },
 ];
 
 export function doc(overrides: Partial<DocumentItem> = {}): DocumentItem {
   return {
     id: "d1",
     title: "Stromrechnung September",
+    title_locked: false,
+    subject: "Stromrechnung September",
+    property_id: null,
     category_id: "c-rech",
     owner_user_id: "u1",
     source: "upload",
@@ -34,7 +51,15 @@ export function doc(overrides: Partial<DocumentItem> = {}): DocumentItem {
     deleted_at: null,
     created_at: "2026-09-28T10:00:00Z",
     updated_at: "2026-09-28T10:01:00Z",
-    files: [{ id: "f1", page_number: 1, mime_type: "application/pdf", filename: "strom.pdf" }],
+    files: [
+      {
+        id: "f1",
+        page_number: 1,
+        mime_type: "application/pdf",
+        filename: "strom.pdf",
+        path: "Familie Muster/Rechnungen/2026/strom.pdf",
+      },
+    ],
     ...overrides,
   };
 }

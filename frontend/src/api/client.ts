@@ -16,6 +16,7 @@ export type DocumentDetail = Schemas["DocumentDetailResponse"];
 export type Category = Schemas["CategoryResponse"];
 export type Wiedervorlage = Schemas["WiedervorlageResponse"];
 export type Me = Schemas["MeResponse"];
+export type Property = Schemas["PropertyResponse"];
 
 const ACCESS_KEY = "homedms.accessToken";
 const REFRESH_KEY = "homedms.refreshToken";

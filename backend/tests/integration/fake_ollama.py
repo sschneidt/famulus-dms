@@ -56,6 +56,9 @@ class FakeOllama:
 
     @staticmethod
     def _classify(doc: str) -> dict:
+        if "Wasserschaden" in doc:
+            return {"dokumentart": "Rechnung", "bezug": "Wohnung", "kategorie": "Haus & Reparaturen",
+                    "konfidenz": 0.9, "begruendung": "Handwerker"}
         if "Versicherung" in doc:
             return {"kategorie": "Versicherungen", "konfidenz": 0.95, "begruendung": "Versicherungsschreiben"}
         if "Stadtwerke" in doc:
@@ -79,6 +82,16 @@ class FakeOllama:
         return {
             "dokumentdatum": f"{m_date.group(3)}-{m_date.group(2)}-{m_date.group(1)}" if m_date else "",
             "absender": first_line,
+            "betreff": ("Rechnung Wasserschaden-Reparatur" if "Wasserschaden" in doc
+                        else "Stromrechnung" if "Stromrechnung" in doc
+                        else "Kuendigungsbestaetigung Mobilfunk"),  # letzteres erfunden -> muss verworfen werden
             "betrag": m_amount.group(1) if m_amount else "",
+            # Objektadresse: "Seeweg" in beiden Schreibweisen; sonst die Absenderadresse aus dem
+            # Briefkopf (typischer Fehler kleiner Modelle) - die muss das System verwerfen.
+            "objektadresse": (
+                {"strasse": m_obj.group(1), "plz": m_obj.group(2), "ort": m_obj.group(3)}
+                if (m_obj := re.search(r"Objekt: (Seeweg [^,]+), (\d{5}) (\w+)", doc))
+                else {"strasse": "Industriestrasse 3", "plz": "70565", "ort": "Stuttgart"}
+            ),
             "fristen": fristen,
         }

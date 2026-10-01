@@ -71,7 +71,7 @@ async def test_metadata_and_deadline_proposals(clean_database, monkeypatch):
 
         overview = (await client.get(f"{API}/wiedervorlagen?status=vorgeschlagen", headers=auth)).json()
         assert overview["total"] == 1 and overview["items"][0]["id"] == wv["id"]
-        assert overview["items"][0]["document_title"] == "dok.pdf"  # Uebersicht nennt das Dokument
+        assert overview["items"][0]["document_title"] == "Stromrechnung – Stadtwerke Musterstadt GmbH"  # automatischer Titel
 
         # --- 2. Bestaetigen: vorgeschlagen -> offen, danach nicht nochmal ------------------
         r = await client.post(f"{API}/wiedervorlagen/{wv['id']}/confirm", headers=auth)

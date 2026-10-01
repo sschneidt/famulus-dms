@@ -11,7 +11,7 @@ from homedms.core.security import hash_password
 from homedms.db import get_db
 from homedms.models.document import Category
 from homedms.models.tenant import Tenant, User, UserRole
-from homedms.schemas.setup import DEFAULT_CATEGORIES, BootstrapRequest, BootstrapResponse
+from homedms.schemas.setup import DEFAULT_CATEGORIES, PROPERTY_MODES, BootstrapRequest, BootstrapResponse
 
 router = APIRouter(prefix="/setup", tags=["setup"])
 
@@ -55,6 +55,7 @@ async def bootstrap(payload: BootstrapRequest, db: AsyncSession = Depends(get_db
                 description=description,
                 is_system_default=True,
                 is_restricted=False,
+                property_mode=PROPERTY_MODES.get(name, "none"),
             )
         )
 

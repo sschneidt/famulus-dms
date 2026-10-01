@@ -15,6 +15,7 @@ export const keys = {
   trash: ["documents", "trash"] as const,
   wiedervorlagen: (filters: object) => ["wiedervorlagen", filters] as const,
   retentionRules: ["retention-rules"] as const,
+  properties: ["properties"] as const,
 };
 
 export interface DocumentFilters {
@@ -103,6 +104,14 @@ export function useRetentionRules(enabled: boolean) {
   });
 }
 
+export function useProperties() {
+  return useQuery({
+    queryKey: keys.properties,
+    queryFn: () => call(api.GET("/api/v1/properties")),
+    staleTime: 30_000,
+  });
+}
+
 // --- Aendern -------------------------------------------------------------------------------
 
 function useInvalidateAll() {
@@ -112,6 +121,7 @@ function useInvalidateAll() {
       qc.invalidateQueries({ queryKey: ["documents"] }),
       qc.invalidateQueries({ queryKey: ["document"] }),
       qc.invalidateQueries({ queryKey: ["wiedervorlagen"] }),
+      qc.invalidateQueries({ queryKey: ["properties"] }),
     ]);
 }
 
@@ -230,4 +240,45 @@ export function useDeleteRetentionRule() {
       call(api.DELETE("/api/v1/retention-rules/{rule_id}", { params: { path: { rule_id: id } } })),
     onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: keys.retentionRules }), invalidate()]),
   });
+}
+
+export function useReprocessDocument() {
+  const invalidate = useInvalidateAll();
+  return useMutation({
+    mutationFn: (id: string) =>
+      call(api.POST("/api/v1/documents/{document_id}/reprocess", { params: { path: { document_id: id } } })),
+    onSuccess: invalidate,
+  });
+}
+
+function usePropertyMutation<T>(fn: (vars: T) => Promise<unknown>) {
+  const qc = useQueryClient();
+  const invalidate = useInvalidateAll();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: keys.properties }), invalidate()]),
+  });
+}
+
+export function useRenameProperty() {
+  return usePropertyMutation(({ id, name }: { id: string; name: string }) =>
+    call(api.PATCH("/api/v1/properties/{property_id}", { params: { path: { property_id: id } }, body: { name } })),
+  );
+}
+
+export function useMergeProperty() {
+  return usePropertyMutation(({ id, intoId }: { id: string; intoId: string }) =>
+    call(
+      api.POST("/api/v1/properties/{property_id}/merge", {
+        params: { path: { property_id: id } },
+        body: { into_id: intoId },
+      }),
+    ),
+  );
+}
+
+export function useDeleteProperty() {
+  return usePropertyMutation((id: string) =>
+    call(api.DELETE("/api/v1/properties/{property_id}", { params: { path: { property_id: id } } })),
+  );
 }

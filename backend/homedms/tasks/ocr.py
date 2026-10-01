@@ -124,3 +124,7 @@ async def ocr_document(document_id: str) -> None:
     # ohne Kategorie liegen zu bleiben.
     await app.configure_task("classify_document").defer_async(document_id=document_id)
     await app.configure_task("extract_metadata").defer_async(document_id=document_id)
+    # Ablage erst jetzt: waehrend der Texterkennung wird die Datei gelesen und darf nicht wandern.
+    from homedms.tasks.filing import defer_filing
+
+    await defer_filing(document_id)

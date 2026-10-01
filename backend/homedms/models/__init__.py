@@ -8,6 +8,7 @@ from homedms.models.document import (
     DocumentAccessOverride,
     DocumentFile,
     DocumentTag,
+    Property,
     Tag,
 )
 from homedms.models.classification import AIModelConfig, CategoryExemplar, ClassificationEvent
@@ -23,6 +24,7 @@ __all__ = [
     "Category",
     "CategoryAccess",
     "Tag",
+    "Property",
     "Document",
     "DocumentFile",
     "DocumentTag",

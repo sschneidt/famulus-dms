@@ -1,17 +1,36 @@
-import { Button, Group, NumberInput, Paper, SegmentedControl, Stack, Text, TextInput, Title } from "@mantine/core";
+import {
+  ActionIcon,
+  Badge,
+  Button,
+  Code,
+  CopyButton,
+  Group,
+  NumberInput,
+  Paper,
+  SegmentedControl,
+  Select,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+  Tooltip,
+} from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
+import { IconCheck, IconCopy, IconFolder, IconWand } from "@tabler/icons-react";
 import { useEffect } from "react";
 import type { DocumentDetail, Schemas } from "../../api/client";
-import { useUpdateDocument } from "../../api/queries";
+import { useProperties, useUpdateDocument } from "../../api/queries";
 import { notifyError, notifySuccess } from "../../lib/notify";
 import { ExtractionHint } from "../StatusBadge";
 
 interface Values {
   title: string;
+  subject: string;
   document_date: string | null;
   issuer: string;
   amount: number | string;
+  property_id: string | null;
   original_present: Schemas["OriginalPresent"];
   original_location: string;
 }
@@ -19,17 +38,23 @@ interface Values {
 function valuesOf(doc: DocumentDetail): Values {
   return {
     title: doc.title,
+    subject: doc.subject ?? "",
     document_date: doc.document_date,
     issuer: doc.issuer ?? "",
     amount: doc.amount ?? "",
+    property_id: doc.property_id ?? null,
     original_present: doc.original_present,
     original_location: doc.original_location ?? "",
   };
 }
 
-/** Titel, Datum, Aussteller, Betrag und Papier-Original. Leere Felder fuellt die KI automatisch. */
+/**
+ * Titel, Betreff, Datum, Aussteller, Betrag, Objekt und Papier-Original. Leere Felder fuellt die KI.
+ * Der Titel entsteht automatisch aus "Betreff – Absender", bis man ihn selbst aendert.
+ */
 export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; readOnly?: boolean }) {
   const update = useUpdateDocument(doc.id);
+  const properties = useProperties();
   const form = useForm<Values>({
     initialValues: valuesOf(doc),
     validate: {
@@ -45,24 +70,43 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
       form.resetDirty(valuesOf(doc));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc.updated_at]);
+  }, [doc.updated_at, doc.files[0]?.path]);
 
   const submit = form.onSubmit(async (values) => {
+    // Nur geaenderte Felder schicken - ein mitgeschickter Titel wuerde sonst als "selbst vergeben" gelten
+    const body: Schemas["DocumentUpdateRequest"] = {};
+    if (form.isDirty("title")) body.title = values.title.trim();
+    if (form.isDirty("subject")) body.subject = values.subject.trim() || null;
+    if (form.isDirty("document_date")) body.document_date = values.document_date || null;
+    if (form.isDirty("issuer")) body.issuer = values.issuer.trim() || null;
+    if (form.isDirty("amount")) body.amount = values.amount === "" ? null : Number(values.amount);
+    if (form.isDirty("property_id")) body.property_id = values.property_id;
+    if (form.isDirty("original_present") || form.isDirty("original_location")) {
+      body.original_present = values.original_present;
+      body.original_location = values.original_present === "ja" ? values.original_location.trim() || null : null;
+    }
     try {
-      await update.mutateAsync({
-        title: values.title.trim(),
-        document_date: values.document_date || null,
-        issuer: values.issuer.trim() || null,
-        amount: values.amount === "" ? null : Number(values.amount),
-        original_present: values.original_present,
-        original_location: values.original_present === "ja" ? values.original_location.trim() || null : null,
-      });
-      form.resetDirty();
+      const saved = await update.mutateAsync(body);
+      form.setValues(valuesOf(saved as DocumentDetail));
+      form.resetDirty(valuesOf(saved as DocumentDetail));
       notifySuccess("Gespeichert");
     } catch (e) {
       notifyError(e, "Speichern fehlgeschlagen");
     }
   });
+
+  async function autoTitle() {
+    try {
+      await update.mutateAsync({ title_locked: false });
+      form.resetDirty();
+      notifySuccess("Titel wird wieder automatisch gebildet");
+    } catch (e) {
+      notifyError(e);
+    }
+  }
+
+  const path = doc.files[0]?.path;
+  const propertyOptions = (properties.data ?? []).map((p) => ({ value: p.id, label: p.name }));
 
   return (
     <Paper withBorder p="md" radius="md">
@@ -72,7 +116,43 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
             <Title order={4}>Angaben</Title>
             <ExtractionHint doc={doc} />
           </Group>
-          <TextInput label="Titel" disabled={readOnly} {...form.getInputProps("title")} />
+          <TextInput
+            label={
+              <Group gap={6} component="span">
+                Titel
+                {doc.title_locked ? (
+                  <Badge size="xs" variant="light" color="gray">
+                    eigener Titel
+                  </Badge>
+                ) : (
+                  <Tooltip label="Wird aus Betreff und Absender gebildet">
+                    <Badge size="xs" variant="light" leftSection={<IconWand size={10} />}>
+                      automatisch
+                    </Badge>
+                  </Tooltip>
+                )}
+              </Group>
+            }
+            disabled={readOnly}
+            rightSectionWidth={doc.title_locked && !readOnly ? 36 : undefined}
+            rightSection={
+              doc.title_locked && !readOnly ? (
+                <Tooltip label="Titel wieder automatisch bilden">
+                  <ActionIcon variant="subtle" onClick={() => void autoTitle()} aria-label="Automatisch benennen">
+                    <IconWand size={16} />
+                  </ActionIcon>
+                </Tooltip>
+              ) : undefined
+            }
+            {...form.getInputProps("title")}
+          />
+          <TextInput
+            label="Betreff"
+            placeholder="z. B. Rechnung Heizungswartung"
+            description="Grundlage für Titel und Dateinamen"
+            disabled={readOnly}
+            {...form.getInputProps("subject")}
+          />
           <Group grow align="flex-start">
             <DateInput
               label="Dokumentdatum"
@@ -100,6 +180,17 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
             disabled={readOnly}
             {...form.getInputProps("issuer")}
           />
+          <Select
+            label="Objekt"
+            description="Haus oder Wohnung, zu der das Dokument gehört"
+            placeholder="keinem Objekt zugeordnet"
+            data={propertyOptions}
+            clearable
+            searchable
+            disabled={readOnly}
+            nothingFoundMessage="Objekte entstehen automatisch aus erkannten Adressen"
+            {...form.getInputProps("property_id")}
+          />
           <div>
             <Text size="sm" fw={500} mb={4}>
               Papier-Original
@@ -125,12 +216,29 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
           )}
           {!readOnly && form.isDirty() && (
             <Group justify="flex-end">
-              <Button variant="default" onClick={() => form.setValues(valuesOf(doc))}>
+              <Button variant="default" onClick={() => form.reset()}>
                 Verwerfen
               </Button>
               <Button type="submit" loading={update.isPending}>
                 Speichern
               </Button>
+            </Group>
+          )}
+          {path && (
+            <Group gap={6} wrap="nowrap" align="flex-start">
+              <IconFolder size={16} color="var(--mantine-color-dimmed)" style={{ flexShrink: 0, marginTop: 2 }} />
+              <Code style={{ overflowWrap: "anywhere", whiteSpace: "normal", flex: 1 }} fz="xs">
+                {path}
+              </Code>
+              <CopyButton value={path}>
+                {({ copied, copy }) => (
+                  <Tooltip label={copied ? "Kopiert" : "Ablageort kopieren"}>
+                    <ActionIcon variant="subtle" size="sm" onClick={copy} aria-label="Ablageort kopieren">
+                      {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
+                    </ActionIcon>
+                  </Tooltip>
+                )}
+              </CopyButton>
             </Group>
           )}
         </Stack>

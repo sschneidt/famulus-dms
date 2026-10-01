@@ -14,3 +14,6 @@ data/
 .DS_Store
 .idea/
 .vscode/
+
+# Von der Claude-App abgelegte Dateien (Screenshots u. a.)
+Claude outputs/

@@ -8,6 +8,7 @@ class CategoryResponse(BaseModel):
     description: str
     is_restricted: bool
     is_system_default: bool
+    property_mode: str = "none"  # Unterordner pro Objekt-Adresse: none | all | buildings
 
     model_config = {"from_attributes": True}
 

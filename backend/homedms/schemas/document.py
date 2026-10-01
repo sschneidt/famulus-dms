@@ -20,6 +20,8 @@ class DocumentFileResponse(BaseModel):
     page_number: int
     mime_type: str
     filename: str
+    # Ablageort relativ zum Dokumente-Ordner, z. B. "Familie/Steuern/2026/2026-03-01 Finanzamt – Bescheid.pdf"
+    path: str = ""
 
     model_config = {"from_attributes": True}
 
@@ -27,6 +29,9 @@ class DocumentFileResponse(BaseModel):
 class DocumentResponse(BaseModel):
     id: uuid.UUID
     title: str
+    title_locked: bool = False
+    subject: str | None = None
+    property_id: uuid.UUID | None = None
     category_id: uuid.UUID | None
     owner_user_id: uuid.UUID
     source: DocumentSource
@@ -72,7 +77,11 @@ class DocumentUpdateRequest(BaseModel):
     """Nur die Felder, die sich schon ohne Tag-/Klassifikations-Verwaltung sinnvoll aendern lassen
     (siehe backend/README.md "Was noch fehlt" fuer Tags/Kategorie-Korrektur ueber eigene Endpunkte)."""
 
-    title: str | None = None
+    title: str | None = Field(default=None, max_length=300)
+    # false = Titel wieder automatisch aus Betreff und Absender bilden
+    title_locked: bool | None = None
+    subject: str | None = Field(default=None, max_length=300)
+    property_id: uuid.UUID | None = None  # Objekt (Haus/Wohnung); null = keinem Objekt zugeordnet
     original_present: OriginalPresent | None = None
     original_location: str | None = None
     # Von der KI erkannte Metadaten korrigieren (null = Feld leeren)

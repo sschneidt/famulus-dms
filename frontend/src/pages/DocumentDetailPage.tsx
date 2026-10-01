@@ -1,10 +1,10 @@
 import { ActionIcon, Alert, Button, Center, Grid, Group, Loader, Menu, Stack, Tabs, Text, Title } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
-import { IconArrowLeft, IconDots, IconDownload, IconRestore, IconTrash } from "@tabler/icons-react";
+import { IconArrowLeft, IconDots, IconDownload, IconRefresh, IconRestore, IconTrash } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router";
 import { ApiError, type DocumentDetail } from "../api/client";
-import { useDeleteDocument, useDocument, useRestoreDocument } from "../api/queries";
+import { useDeleteDocument, useDocument, useReprocessDocument, useRestoreDocument } from "../api/queries";
 import { CategoryPanel } from "../components/detail/CategoryPanel";
 import { HistoryPanel } from "../components/detail/HistoryPanel";
 import { MetadataPanel } from "../components/detail/MetadataPanel";
@@ -12,7 +12,7 @@ import { OcrTextPanel } from "../components/detail/OcrTextPanel";
 import { WiedervorlagenPanel } from "../components/detail/WiedervorlagenPanel";
 import { DocumentPreview } from "../components/DocumentPreview";
 import { downloadDocument } from "../lib/download";
-import { formatDateTime } from "../lib/format";
+import { formatDateTime, isProcessing } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
 
 export function DocumentDetailPage() {
@@ -121,6 +121,7 @@ function BackButton({ onClick }: { onClick(): void }) {
 function DocumentActions({ doc }: { doc: DocumentDetail }) {
   const navigate = useNavigate();
   const remove = useDeleteDocument();
+  const reprocess = useReprocessDocument();
 
   function confirmDelete() {
     modals.openConfirmModal({
@@ -164,6 +165,20 @@ function DocumentActions({ doc }: { doc: DocumentDetail }) {
           >
             Herunterladen
           </Menu.Item>
+          {!doc.deleted_at && (
+            <Menu.Item
+              leftSection={<IconRefresh size={14} />}
+              disabled={isProcessing(doc)}
+              onClick={() =>
+                reprocess.mutate(doc.id, {
+                  onSuccess: () => notifySuccess("KI-Auswertung läuft erneut"),
+                  onError: (e) => notifyError(e),
+                })
+              }
+            >
+              Erneut analysieren
+            </Menu.Item>
+          )}
           {!doc.deleted_at && (
             <Menu.Item leftSection={<IconTrash size={14} />} color="red" onClick={confirmDelete}>
               In den Papierkorb

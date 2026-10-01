@@ -61,6 +61,9 @@ class Category(Base, UUIDPKMixin, TimestampMixin):
     description: Mapped[str] = mapped_column(Text, default="")
     is_restricted: Mapped[bool] = mapped_column(Boolean, default=False)
     is_system_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Unterordner pro Objekt-Adresse: none | all | buildings (nur Gebaeude-/Hausrat-Versicherungen),
+    # siehe homedms/core/addresses.py
+    property_mode: Mapped[str] = mapped_column(String(20), default="none", server_default="none")
 
 
 class CategoryAccess(Base, UUIDPKMixin):
@@ -86,6 +89,21 @@ class Tag(Base, UUIDPKMixin, TimestampMixin):
     __table_args__ = (UniqueConstraint("tenant_id", "name", name="uq_tag_tenant_name"),)
 
 
+class Property(Base, UUIDPKMixin, TimestampMixin):
+    """Ein Objekt (Haus/Wohnung) des Haushalts - automatisch angelegt, sobald die KI eine neue
+    Adresse erkennt. Der Name ist zugleich der Ordnername in der Ablage."""
+
+    __tablename__ = "properties"
+    __table_args__ = (UniqueConstraint("tenant_id", "match_key", name="uq_property_tenant_key"),)
+
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    street: Mapped[str] = mapped_column(String(200))
+    postal_code: Mapped[str] = mapped_column(String(10))
+    city: Mapped[str] = mapped_column(String(100))
+    match_key: Mapped[str] = mapped_column(String(300))  # normalisiert, siehe core/addresses.py
+
+
 class Document(Base, UUIDPKMixin, TimestampMixin):
     """Das zentrale Objekt - siehe Datenmodell 3.5."""
 
@@ -98,6 +116,13 @@ class Document(Base, UUIDPKMixin, TimestampMixin):
     )
 
     title: Mapped[str] = mapped_column(String(300), default="")
+    # True = Titel hat der Nutzer selbst vergeben -> nie automatisch ueberschreiben (Migration 0005)
+    title_locked: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # Kurzer Betreff, von der KI erkannt oder vom Nutzer gesetzt - Grundlage fuer Titel und Dateiname
+    subject: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    property_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("properties.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     ocr_text: Mapped[str] = mapped_column(Text, default="")
     ocr_language: Mapped[str] = mapped_column(String(10), default="")
     ocr_status: Mapped[OcrStatus] = mapped_column(
@@ -160,6 +185,12 @@ class DocumentFile(Base, UUIDPKMixin):
     def filename(self) -> str:
         """Reiner Dateiname fuer die API-Antwort, ohne den vollen Speicherpfad preiszugeben."""
         return Path(self.file_path).name
+
+    @property
+    def path(self) -> str:
+        from homedms.core.filing import relative_to_root
+
+        return relative_to_root(self.file_path)
 
 
 class DocumentTag(Base):

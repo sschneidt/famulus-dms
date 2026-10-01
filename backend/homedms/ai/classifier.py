@@ -94,21 +94,32 @@ SYSTEM_PROMPT = (
 def build_prompt(categories: list[tuple[str, str]], text: str, max_chars: int = 3000) -> tuple[str, str, dict]:
     """Liefert (system, user, json_schema). categories = [(name, beschreibung), ...]."""
     lines = [f"- {name}: {desc}" if desc else f"- {name}" for name, desc in categories]
+    # Erst beschreiben, dann entscheiden: Die Felder dokumentart und bezug stehen im Schema VOR
+    # kategorie - das Modell erzeugt sie zuerst und stuetzt die Wahl darauf. Kleine Modelle springen
+    # sonst auf einzelne Stichwoerter an (Praxisfall: "Reparatur" im Text einer Handwerker-Rechnung
+    # zum Wasserschaden -> "Fahrzeug", weil dort "Werkstattrechnungen" steht).
     user = (
         "Kategorien:\n" + "\n".join(lines) + "\n\n"
         f"Dokumenttext (Auszug):\n\"\"\"\n{text[:max_chars]}\n\"\"\"\n\n"
-        "Welche Kategorie passt am besten? Wenn wirklich keine passt, antworte mit "
-        f'"{NO_CATEGORY}". Gib ausserdem an, wie sicher du dir bist, als Zahl von 0 bis 1 '
-        "(konfidenz), und eine kurze Begruendung."
+        "Gehe in dieser Reihenfolge vor:\n"
+        "1. dokumentart: Was fuer ein Dokument ist das (z. B. Rechnung, Vertrag, Bescheid, Brief)?\n"
+        "2. bezug: Worauf bezieht es sich - Haus/Wohnung, Fahrzeug, Person, Arbeit, Geld, Behoerde ...?\n"
+        "3. kategorie: die Kategorie, deren Beschreibung zu Dokumentart UND Bezug passt. Einzelne "
+        "Stichwoerter wie \"Reparatur\" oder \"Rechnung\" reichen nicht - entscheidend ist, worauf "
+        f'sich das Dokument bezieht. Wenn wirklich keine passt: "{NO_CATEGORY}".\n'
+        "4. konfidenz: wie sicher du dir bist, als Zahl von 0 bis 1.\n"
+        "5. begruendung: ein kurzer Satz."
     )
     schema = {
         "type": "object",
         "properties": {
+            "dokumentart": {"type": "string"},
+            "bezug": {"type": "string"},
             "kategorie": {"type": "string", "enum": [name for name, _ in categories] + [NO_CATEGORY]},
             "konfidenz": {"type": "number"},
             "begruendung": {"type": "string"},
         },
-        "required": ["kategorie", "konfidenz"],
+        "required": ["dokumentart", "bezug", "kategorie", "konfidenz", "begruendung"],
     }
     return SYSTEM_PROMPT, user, schema
 
@@ -130,7 +141,13 @@ def parse_llm_answer(answer: dict[str, Any], categories_by_name: dict[str, uuid.
     if confidence > 1:  # manche Modelle antworten in Prozent
         confidence /= 100
     confidence = min(max(confidence, 0.0), 1.0)
-    reason = str(answer.get("begruendung", "")).strip()[:500]
+    reason = str(answer.get("begruendung", "")).strip()
+    context = ", ".join(
+        f"{label}: {value}"
+        for label, value in (("Art", answer.get("dokumentart")), ("Bezug", answer.get("bezug")))
+        if str(value or "").strip()
+    )
+    reason = (f"{context}. {reason}" if context else reason).strip()[:500]
 
     category_id = categories_by_name.get(name)
     if category_id is None:  # Gross-/Kleinschreibung tolerieren

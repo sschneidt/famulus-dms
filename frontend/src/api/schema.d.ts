@@ -275,6 +275,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/documents/{document_id}/reprocess": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Reprocess Document
+     * @description KI-Auswertung erneut anstossen, z. B. nach einem KI-Ausfall oder nach verbesserten
+     *     Kategorien. Eine vom Nutzer bestaetigte Kategorie bleibt; Metadaten fuellen weiterhin nur leere
+     *     Felder. War die Texterkennung fehlgeschlagen, laeuft auch sie erneut.
+     */
+    post: operations["reprocess_document_api_v1_documents__document_id__reprocess_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/documents/{document_id}/classification-history": {
     parameters: {
       query?: never;
@@ -451,6 +473,61 @@ export interface paths {
     patch: operations["update_rule_api_v1_retention_rules__rule_id__patch"];
     trace?: never;
   };
+  "/api/v1/properties": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Properties */
+    get: operations["list_properties_api_v1_properties_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/properties/{property_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Delete Property
+     * @description Dokumente bleiben erhalten und landen im Ordner "_Ohne Adresse".
+     */
+    delete: operations["delete_property_api_v1_properties__property_id__delete"];
+    options?: never;
+    head?: never;
+    /** Rename Property */
+    patch: operations["rename_property_api_v1_properties__property_id__patch"];
+    trace?: never;
+  };
+  "/api/v1/properties/{property_id}/merge": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Merge Property */
+    post: operations["merge_property_api_v1_properties__property_id__merge_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -540,6 +617,11 @@ export interface components {
       is_restricted: boolean;
       /** Is System Default */
       is_system_default: boolean;
+      /**
+       * Property Mode
+       * @default none
+       */
+      property_mode: string;
     };
     /** ClassificationEventResponse */
     ClassificationEventResponse: {
@@ -589,6 +671,15 @@ export interface components {
       id: string;
       /** Title */
       title: string;
+      /**
+       * Title Locked
+       * @default false
+       */
+      title_locked: boolean;
+      /** Subject */
+      subject?: string | null;
+      /** Property Id */
+      property_id?: string | null;
       /** Category Id */
       category_id: string | null;
       /**
@@ -647,6 +738,11 @@ export interface components {
       mime_type: string;
       /** Filename */
       filename: string;
+      /**
+       * Path
+       * @default
+       */
+      path: string;
     };
     /** DocumentListResponse */
     DocumentListResponse: {
@@ -668,6 +764,15 @@ export interface components {
       id: string;
       /** Title */
       title: string;
+      /**
+       * Title Locked
+       * @default false
+       */
+      title_locked: boolean;
+      /** Subject */
+      subject?: string | null;
+      /** Property Id */
+      property_id?: string | null;
       /** Category Id */
       category_id: string | null;
       /**
@@ -722,6 +827,12 @@ export interface components {
     DocumentUpdateRequest: {
       /** Title */
       title?: string | null;
+      /** Title Locked */
+      title_locked?: boolean | null;
+      /** Subject */
+      subject?: string | null;
+      /** Property Id */
+      property_id?: string | null;
       original_present?: components["schemas"]["OriginalPresent"] | null;
       /** Original Location */
       original_location?: string | null;
@@ -786,6 +897,43 @@ export interface components {
      * @enum {string}
      */
     OriginalPresent: "ja" | "nein" | "unbekannt";
+    /**
+     * PropertyMerge
+     * @description Dieses Objekt in ein anderes ueberfuehren (z. B. doppelt erkannte Adresse).
+     */
+    PropertyMerge: {
+      /**
+       * Into Id
+       * Format: uuid
+       */
+      into_id: string;
+    };
+    /** PropertyResponse */
+    PropertyResponse: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Street */
+      street: string;
+      /** Postal Code */
+      postal_code: string;
+      /** City */
+      city: string;
+      /**
+       * Document Count
+       * @default 0
+       */
+      document_count: number;
+    };
+    /** PropertyUpdate */
+    PropertyUpdate: {
+      /** Name */
+      name: string;
+    };
     /** RefreshRequest */
     RefreshRequest: {
       /** Refresh Token */
@@ -1561,6 +1709,37 @@ export interface operations {
       };
     };
   };
+  reprocess_document_api_v1_documents__document_id__reprocess_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentDetailResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   classification_history_api_v1_documents__document_id__classification_history_get: {
     parameters: {
       query?: never;
@@ -1954,6 +2133,125 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["RetentionRuleResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_properties_api_v1_properties_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PropertyResponse"][];
+        };
+      };
+    };
+  };
+  delete_property_api_v1_properties__property_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        property_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  rename_property_api_v1_properties__property_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        property_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PropertyUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PropertyResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  merge_property_api_v1_properties__property_id__merge_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        property_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PropertyMerge"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PropertyResponse"];
         };
       };
       /** @description Validation Error */

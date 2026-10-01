@@ -9,6 +9,10 @@ set -e
 if [ "$APP_ROLE" = "api" ]; then
   echo "Fuehre Datenbank-Migrationen aus (alembic upgrade head)..."
   alembic upgrade head
+  # Dateien aus aelteren Versionen in die Ordnerstruktur Kategorie/Jahr bringen (nur Jobs einreihen,
+  # der Worker verschiebt; bereits richtig abgelegte Dateien bleiben unberuehrt). Ein Fehler hier
+  # darf den Start nicht verhindern.
+  python -m homedms.cli refile || echo "Ablage konnte nicht eingereiht werden - weiter ohne."
 fi
 
 case "$APP_ROLE" in

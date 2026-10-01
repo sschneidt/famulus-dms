@@ -1,3018 +1,3424 @@
 {
- "openapi": "3.1.0",
- "info": {
-  "title": "HomeDMS API",
-  "version": "0.1.0"
- },
- "paths": {
-  "/health": {
-   "get": {
-    "tags": [
-     "system"
-    ],
-    "summary": "Health",
-    "operationId": "health_health_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "additionalProperties": true,
-         "type": "object",
-         "title": "Response Health Health Get"
-        }
-       }
-      }
-     }
-    }
-   }
+  "openapi": "3.1.0",
+  "info": {
+    "title": "HomeDMS API",
+    "version": "0.1.0"
   },
-  "/api/v1/auth/login": {
-   "post": {
-    "tags": [
-     "auth"
-    ],
-    "summary": "Login",
-    "operationId": "login_api_v1_auth_login_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/LoginRequest"
-       }
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
       }
-     },
-     "required": true
     },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/TokenResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/auth/refresh": {
-   "post": {
-    "tags": [
-     "auth"
-    ],
-    "summary": "Refresh",
-    "operationId": "refresh_api_v1_auth_refresh_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/RefreshRequest"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/TokenResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/auth/logout": {
-   "post": {
-    "tags": [
-     "auth"
-    ],
-    "summary": "Logout",
-    "operationId": "logout_api_v1_auth_logout_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/RefreshRequest"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "204": {
-      "description": "Successful Response"
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/auth/me": {
-   "get": {
-    "tags": [
-     "auth"
-    ],
-    "summary": "Me",
-    "operationId": "me_api_v1_auth_me_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/MeResponse"
-        }
-       }
-      }
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
-   }
-  },
-  "/api/v1/setup/status": {
-   "get": {
-    "tags": [
-     "setup"
-    ],
-    "summary": "Setup Status",
-    "operationId": "setup_status_api_v1_setup_status_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "additionalProperties": true,
-         "type": "object",
-         "title": "Response Setup Status Api V1 Setup Status Get"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/setup/bootstrap": {
-   "post": {
-    "tags": [
-     "setup"
-    ],
-    "summary": "Bootstrap",
-    "description": "Nur erlaubt, solange noch kein Tenant existiert (einmaliger Ersteinrichtungs-Schritt).",
-    "operationId": "bootstrap_api_v1_setup_bootstrap_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/BootstrapRequest"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "201": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/BootstrapResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/categories": {
-   "get": {
-    "tags": [
-     "categories"
-    ],
-    "summary": "List Categories",
-    "operationId": "list_categories_api_v1_categories_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "items": {
-          "$ref": "#/components/schemas/CategoryResponse"
-         },
-         "type": "array",
-         "title": "Response List Categories Api V1 Categories Get"
-        }
-       }
-      }
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
-   },
-   "post": {
-    "tags": [
-     "categories"
-    ],
-    "summary": "Create Category",
-    "operationId": "create_category_api_v1_categories_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/CategoryCreateRequest"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "201": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/CategoryResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
-   }
-  },
-  "/api/v1/documents": {
-   "get": {
-    "tags": [
-     "documents"
-    ],
-    "summary": "List Documents",
-    "operationId": "list_documents_api_v1_documents_get",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "page",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "minimum": 1,
-       "default": 1,
-       "title": "Page"
-      }
-     },
-     {
-      "name": "page_size",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "maximum": 100,
-       "minimum": 1,
-       "default": 25,
-       "title": "Page Size"
-      }
-     },
-     {
-      "name": "category_id",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "string",
-         "format": "uuid"
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
         },
-        {
-         "type": "null"
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
-       ],
-       "title": "Category Id"
       }
-     },
-     {
-      "name": "status",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "$ref": "#/components/schemas/ClassificationStatus"
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Refresh",
+        "operationId": "refresh_api_v1_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
         },
-        {
-         "type": "null"
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
-       ],
-       "title": "Status"
       }
-     },
-     {
-      "name": "date_from",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "string",
-         "format": "date"
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
         },
-        {
-         "type": "null"
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
-       ],
-       "title": "Date From"
       }
-     },
-     {
-      "name": "date_to",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "string",
-         "format": "date"
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Me",
+        "operationId": "me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          }
         },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Date To"
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/DocumentListResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   },
-   "post": {
-    "tags": [
-     "documents"
-    ],
-    "summary": "Create Document",
-    "operationId": "create_document_api_v1_documents_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "multipart/form-data": {
-       "schema": {
-        "$ref": "#/components/schemas/Body_create_document_api_v1_documents_post"
-       }
-      }
-     }
     },
-    "responses": {
-     "201": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/DocumentResponse"
+    "/api/v1/setup/status": {
+      "get": {
+        "tags": [
+          "setup"
+        ],
+        "summary": "Setup Status",
+        "operationId": "setup_status_api_v1_setup_status_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Setup Status Api V1 Setup Status Get"
+                }
+              }
+            }
+          }
         }
-       }
       }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/documents/needs-review": {
-   "get": {
-    "tags": [
-     "documents"
-    ],
-    "summary": "List Needs Review",
-    "operationId": "list_needs_review_api_v1_documents_needs_review_get",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "page",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "minimum": 1,
-       "default": 1,
-       "title": "Page"
-      }
-     },
-     {
-      "name": "page_size",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "maximum": 100,
-       "minimum": 1,
-       "default": 25,
-       "title": "Page Size"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/DocumentListResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/documents/trash": {
-   "get": {
-    "tags": [
-     "documents"
-    ],
-    "summary": "List Trash",
-    "description": "Papierkorb (Datenmodell 3.5: 30 Tage wiederherstellbar). Der Hintergrund-Job, der nach\n30 Tagen endgueltig loescht, ist noch nicht implementiert (siehe README \"Was noch fehlt\").",
-    "operationId": "list_trash_api_v1_documents_trash_get",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "page",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "minimum": 1,
-       "default": 1,
-       "title": "Page"
-      }
-     },
-     {
-      "name": "page_size",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "maximum": 100,
-       "minimum": 1,
-       "default": 25,
-       "title": "Page Size"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/DocumentListResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/documents/{document_id}": {
-   "get": {
-    "tags": [
-     "documents"
-    ],
-    "summary": "Get Document",
-    "operationId": "get_document_api_v1_documents__document_id__get",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "document_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Document Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/DocumentDetailResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   },
-   "patch": {
-    "tags": [
-     "documents"
-    ],
-    "summary": "Update Document",
-    "operationId": "update_document_api_v1_documents__document_id__patch",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "document_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Document Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/DocumentUpdateRequest"
-       }
-      }
-     }
     },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/DocumentResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   },
-   "delete": {
-    "tags": [
-     "documents"
-    ],
-    "summary": "Delete Document",
-    "operationId": "delete_document_api_v1_documents__document_id__delete",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "document_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Document Id"
-      }
-     }
-    ],
-    "responses": {
-     "204": {
-      "description": "Successful Response"
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/documents/{document_id}/restore": {
-   "post": {
-    "tags": [
-     "documents"
-    ],
-    "summary": "Restore Document",
-    "operationId": "restore_document_api_v1_documents__document_id__restore_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "document_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Document Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/DocumentResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/documents/{document_id}/download": {
-   "get": {
-    "tags": [
-     "documents"
-    ],
-    "summary": "Download Document",
-    "operationId": "download_document_api_v1_documents__document_id__download_get",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "document_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Document Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {}
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/documents/{document_id}/category": {
-   "post": {
-    "tags": [
-     "documents"
-    ],
-    "summary": "Assign Category",
-    "description": "Kategorie manuell setzen oder einen KI-Vorschlag bestaetigen (Feedback-Loop,\nAnforderungsdokument 4.3). Das Dokument wird danach nie mehr automatisch umkategorisiert und\ndient als neues Lernbeispiel fuer die Klassifikation.",
-    "operationId": "assign_category_api_v1_documents__document_id__category_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "document_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Document Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/CategoryAssignRequest"
-       }
-      }
-     }
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/DocumentDetailResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/documents/{document_id}/classification-history": {
-   "get": {
-    "tags": [
-     "documents"
-    ],
-    "summary": "Classification History",
-    "operationId": "classification_history_api_v1_documents__document_id__classification_history_get",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "document_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Document Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "array",
-         "items": {
-          "$ref": "#/components/schemas/ClassificationEventResponse"
-         },
-         "title": "Response Classification History Api V1 Documents  Document Id  Classification History Get"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/wiedervorlagen": {
-   "get": {
-    "tags": [
-     "wiedervorlagen"
-    ],
-    "summary": "List Wiedervorlagen",
-    "description": "Haushaltsweite Termin-Uebersicht, frueheste zuerst - nur fuer sichtbare Dokumente, die\nnicht im Papierkorb liegen.",
-    "operationId": "list_wiedervorlagen_api_v1_wiedervorlagen_get",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "status",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "string"
+    "/api/v1/setup/bootstrap": {
+      "post": {
+        "tags": [
+          "setup"
+        ],
+        "summary": "Bootstrap",
+        "description": "Nur erlaubt, solange noch kein Tenant existiert (einmaliger Ersteinrichtungs-Schritt).",
+        "operationId": "bootstrap_api_v1_setup_bootstrap_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BootstrapRequest"
+              }
+            }
+          },
+          "required": true
         },
-        {
-         "type": "null"
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BootstrapResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
-       ],
-       "description": "vorgeschlagen | offen | erledigt | verworfen",
-       "title": "Status"
-      },
-      "description": "vorgeschlagen | offen | erledigt | verworfen"
-     },
-     {
-      "name": "due_before",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "anyOf": [
-        {
-         "type": "string",
-         "format": "date"
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "tags": [
+          "categories"
+        ],
+        "summary": "List Categories",
+        "operationId": "list_categories_api_v1_categories_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Categories Api V1 Categories Get"
+                }
+              }
+            }
+          }
         },
-        {
-         "type": "null"
-        }
-       ],
-       "title": "Due Before"
-      }
-     },
-     {
-      "name": "page",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "minimum": 1,
-       "default": 1,
-       "title": "Page"
-      }
-     },
-     {
-      "name": "page_size",
-      "in": "query",
-      "required": false,
-      "schema": {
-       "type": "integer",
-       "maximum": 100,
-       "minimum": 1,
-       "default": 25,
-       "title": "Page Size"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/WiedervorlageListResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/documents/{document_id}/wiedervorlagen": {
-   "get": {
-    "tags": [
-     "wiedervorlagen"
-    ],
-    "summary": "List Document Wiedervorlagen",
-    "operationId": "list_document_wiedervorlagen_api_v1_documents__document_id__wiedervorlagen_get",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "document_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Document Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "type": "array",
-         "items": {
-          "$ref": "#/components/schemas/WiedervorlageResponse"
-         },
-         "title": "Response List Document Wiedervorlagen Api V1 Documents  Document Id  Wiedervorlagen Get"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   },
-   "post": {
-    "tags": [
-     "wiedervorlagen"
-    ],
-    "summary": "Create Wiedervorlage",
-    "operationId": "create_wiedervorlage_api_v1_documents__document_id__wiedervorlagen_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "document_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Document Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/WiedervorlageCreate"
-       }
-      }
-     }
-    },
-    "responses": {
-     "201": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/WiedervorlageResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/wiedervorlagen/{wiedervorlage_id}/confirm": {
-   "post": {
-    "tags": [
-     "wiedervorlagen"
-    ],
-    "summary": "Confirm Wiedervorlage",
-    "description": "KI-Vorschlag uebernehmen: vorgeschlagen -> offen.",
-    "operationId": "confirm_wiedervorlage_api_v1_wiedervorlagen__wiedervorlage_id__confirm_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "wiedervorlage_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Wiedervorlage Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/WiedervorlageResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/wiedervorlagen/{wiedervorlage_id}/reject": {
-   "post": {
-    "tags": [
-     "wiedervorlagen"
-    ],
-    "summary": "Reject Wiedervorlage",
-    "description": "KI-Vorschlag verwerfen: vorgeschlagen -> verworfen. Wird nicht erneut vorgeschlagen.",
-    "operationId": "reject_wiedervorlage_api_v1_wiedervorlagen__wiedervorlage_id__reject_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "wiedervorlage_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Wiedervorlage Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/WiedervorlageResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/wiedervorlagen/{wiedervorlage_id}": {
-   "patch": {
-    "tags": [
-     "wiedervorlagen"
-    ],
-    "summary": "Update Wiedervorlage",
-    "operationId": "update_wiedervorlage_api_v1_wiedervorlagen__wiedervorlage_id__patch",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "wiedervorlage_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Wiedervorlage Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/WiedervorlageUpdate"
-       }
-      }
-     }
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/WiedervorlageResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   },
-   "delete": {
-    "tags": [
-     "wiedervorlagen"
-    ],
-    "summary": "Delete Wiedervorlage",
-    "description": "Endgueltig loeschen. Hinweis: Termine aus einer Aufbewahrungsregel entstehen neu, sobald sich\nKategorie oder Datum des Dokuments aendern - dauerhaft entfernen laesst sich so ein Termin ueber\ndie Regel selbst.",
-    "operationId": "delete_wiedervorlage_api_v1_wiedervorlagen__wiedervorlage_id__delete",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "wiedervorlage_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Wiedervorlage Id"
-      }
-     }
-    ],
-    "responses": {
-     "204": {
-      "description": "Successful Response"
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/wiedervorlagen/{wiedervorlage_id}/complete": {
-   "post": {
-    "tags": [
-     "wiedervorlagen"
-    ],
-    "summary": "Complete Wiedervorlage",
-    "description": "Als erledigt markieren. Bei Wiederholung wird sofort der naechste Termin angelegt - wurde\nzu spaet erledigt, der naechste in der Zukunft (keine Reihe verpasster Termine).",
-    "operationId": "complete_wiedervorlage_api_v1_wiedervorlagen__wiedervorlage_id__complete_post",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "wiedervorlage_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Wiedervorlage Id"
-      }
-     }
-    ],
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/WiedervorlageCompleteResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  },
-  "/api/v1/retention-rules": {
-   "get": {
-    "tags": [
-     "retention-rules"
-    ],
-    "summary": "List Rules",
-    "operationId": "list_rules_api_v1_retention_rules_get",
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "items": {
-          "$ref": "#/components/schemas/RetentionRuleResponse"
-         },
-         "type": "array",
-         "title": "Response List Rules Api V1 Retention Rules Get"
-        }
-       }
-      }
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
-   },
-   "post": {
-    "tags": [
-     "retention-rules"
-    ],
-    "summary": "Create Rule",
-    "operationId": "create_rule_api_v1_retention_rules_post",
-    "requestBody": {
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/RetentionRuleCreate"
-       }
-      }
-     },
-     "required": true
-    },
-    "responses": {
-     "201": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/RetentionRuleResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    },
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ]
-   }
-  },
-  "/api/v1/retention-rules/{rule_id}": {
-   "patch": {
-    "tags": [
-     "retention-rules"
-    ],
-    "summary": "Update Rule",
-    "operationId": "update_rule_api_v1_retention_rules__rule_id__patch",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "rule_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Rule Id"
-      }
-     }
-    ],
-    "requestBody": {
-     "required": true,
-     "content": {
-      "application/json": {
-       "schema": {
-        "$ref": "#/components/schemas/RetentionRuleUpdate"
-       }
-      }
-     }
-    },
-    "responses": {
-     "200": {
-      "description": "Successful Response",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/RetentionRuleResponse"
-        }
-       }
-      }
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   },
-   "delete": {
-    "tags": [
-     "retention-rules"
-    ],
-    "summary": "Delete Rule",
-    "operationId": "delete_rule_api_v1_retention_rules__rule_id__delete",
-    "security": [
-     {
-      "HTTPBearer": []
-     }
-    ],
-    "parameters": [
-     {
-      "name": "rule_id",
-      "in": "path",
-      "required": true,
-      "schema": {
-       "type": "string",
-       "format": "uuid",
-       "title": "Rule Id"
-      }
-     }
-    ],
-    "responses": {
-     "204": {
-      "description": "Successful Response"
-     },
-     "422": {
-      "description": "Validation Error",
-      "content": {
-       "application/json": {
-        "schema": {
-         "$ref": "#/components/schemas/HTTPValidationError"
-        }
-       }
-      }
-     }
-    }
-   }
-  }
- },
- "components": {
-  "schemas": {
-   "Body_create_document_api_v1_documents_post": {
-    "properties": {
-     "file": {
-      "type": "string",
-      "contentMediaType": "application/octet-stream",
-      "title": "File"
-     },
-     "title": {
-      "type": "string",
-      "title": "Title",
-      "default": ""
-     },
-     "source": {
-      "$ref": "#/components/schemas/DocumentSource",
-      "default": "upload"
-     },
-     "original_present": {
-      "$ref": "#/components/schemas/OriginalPresent",
-      "default": "unbekannt"
-     },
-     "original_location": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Original Location"
-     }
-    },
-    "type": "object",
-    "required": [
-     "file"
-    ],
-    "title": "Body_create_document_api_v1_documents_post"
-   },
-   "BootstrapRequest": {
-    "properties": {
-     "household_name": {
-      "type": "string",
-      "maxLength": 200,
-      "minLength": 1,
-      "title": "Household Name"
-     },
-     "default_language": {
-      "type": "string",
-      "maxLength": 10,
-      "title": "Default Language",
-      "default": "de"
-     },
-     "admin_email": {
-      "type": "string",
-      "format": "email",
-      "title": "Admin Email"
-     },
-     "admin_password": {
-      "type": "string",
-      "minLength": 8,
-      "title": "Admin Password"
-     },
-     "admin_display_name": {
-      "type": "string",
-      "maxLength": 200,
-      "minLength": 1,
-      "title": "Admin Display Name"
-     }
-    },
-    "type": "object",
-    "required": [
-     "household_name",
-     "admin_email",
-     "admin_password",
-     "admin_display_name"
-    ],
-    "title": "BootstrapRequest"
-   },
-   "BootstrapResponse": {
-    "properties": {
-     "tenant_id": {
-      "type": "string",
-      "title": "Tenant Id"
-     },
-     "admin_user_id": {
-      "type": "string",
-      "title": "Admin User Id"
-     },
-     "categories_created": {
-      "type": "integer",
-      "title": "Categories Created"
-     }
-    },
-    "type": "object",
-    "required": [
-     "tenant_id",
-     "admin_user_id",
-     "categories_created"
-    ],
-    "title": "BootstrapResponse"
-   },
-   "CategoryAssignRequest": {
-    "properties": {
-     "category_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Category Id"
-     }
-    },
-    "type": "object",
-    "required": [
-     "category_id"
-    ],
-    "title": "CategoryAssignRequest",
-    "description": "POST /documents/{id}/category - manuelle Zuordnung bzw. Bestaetigung (Feedback-Loop)."
-   },
-   "CategoryCreateRequest": {
-    "properties": {
-     "name": {
-      "type": "string",
-      "maxLength": 200,
-      "minLength": 1,
-      "title": "Name"
-     },
-     "description": {
-      "type": "string",
-      "title": "Description",
-      "default": ""
-     },
-     "is_restricted": {
-      "type": "boolean",
-      "title": "Is Restricted",
-      "default": false
-     }
-    },
-    "type": "object",
-    "required": [
-     "name"
-    ],
-    "title": "CategoryCreateRequest"
-   },
-   "CategoryResponse": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "name": {
-      "type": "string",
-      "title": "Name"
-     },
-     "description": {
-      "type": "string",
-      "title": "Description"
-     },
-     "is_restricted": {
-      "type": "boolean",
-      "title": "Is Restricted"
-     },
-     "is_system_default": {
-      "type": "boolean",
-      "title": "Is System Default"
-     }
-    },
-    "type": "object",
-    "required": [
-     "id",
-     "name",
-     "description",
-     "is_restricted",
-     "is_system_default"
-    ],
-    "title": "CategoryResponse"
-   },
-   "ClassificationEventResponse": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "previous_category_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Previous Category Id"
-     },
-     "new_category_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "New Category Id"
-     },
-     "stage": {
-      "type": "string",
-      "title": "Stage"
-     },
-     "confidence": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Confidence"
-     },
-     "note": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Note"
-     },
-     "triggered_by_user_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Triggered By User Id"
-     },
-     "created_at": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Created At"
-     }
-    },
-    "type": "object",
-    "required": [
-     "id",
-     "previous_category_id",
-     "new_category_id",
-     "stage",
-     "confidence",
-     "note",
-     "triggered_by_user_id",
-     "created_at"
-    ],
-    "title": "ClassificationEventResponse"
-   },
-   "ClassificationStage": {
-    "type": "string",
-    "enum": [
-     "embedding",
-     "llm",
-     "manual",
-     "chat"
-    ],
-    "title": "ClassificationStage"
-   },
-   "ClassificationStatus": {
-    "type": "string",
-    "enum": [
-     "pending",
-     "auto_assigned",
-     "needs_review",
-     "confirmed"
-    ],
-    "title": "ClassificationStatus"
-   },
-   "DocumentDetailResponse": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "title": {
-      "type": "string",
-      "title": "Title"
-     },
-     "category_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Category Id"
-     },
-     "owner_user_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Owner User Id"
-     },
-     "source": {
-      "$ref": "#/components/schemas/DocumentSource"
-     },
-     "ocr_status": {
-      "$ref": "#/components/schemas/OcrStatus"
-     },
-     "classification_status": {
-      "$ref": "#/components/schemas/ClassificationStatus"
-     },
-     "classification_confidence": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Classification Confidence"
-     },
-     "classification_stage": {
-      "anyOf": [
-       {
-        "$ref": "#/components/schemas/ClassificationStage"
-       },
-       {
-        "type": "null"
-       }
-      ]
-     },
-     "extraction_status": {
-      "$ref": "#/components/schemas/ExtractionStatus"
-     },
-     "document_date": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Document Date"
-     },
-     "issuer": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Issuer"
-     },
-     "amount": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Amount"
-     },
-     "original_present": {
-      "$ref": "#/components/schemas/OriginalPresent"
-     },
-     "original_location": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Original Location"
-     },
-     "deleted_at": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date-time"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Deleted At"
-     },
-     "created_at": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Created At"
-     },
-     "updated_at": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Updated At"
-     },
-     "files": {
-      "items": {
-       "$ref": "#/components/schemas/DocumentFileResponse"
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       },
-      "type": "array",
-      "title": "Files",
-      "default": []
-     },
-     "ocr_text": {
-      "type": "string",
-      "title": "Ocr Text"
-     },
-     "ocr_language": {
-      "type": "string",
-      "title": "Ocr Language"
-     }
-    },
-    "type": "object",
-    "required": [
-     "id",
-     "title",
-     "category_id",
-     "owner_user_id",
-     "source",
-     "ocr_status",
-     "classification_status",
-     "classification_confidence",
-     "classification_stage",
-     "extraction_status",
-     "document_date",
-     "issuer",
-     "amount",
-     "original_present",
-     "original_location",
-     "deleted_at",
-     "created_at",
-     "updated_at",
-     "ocr_text",
-     "ocr_language"
-    ],
-    "title": "DocumentDetailResponse",
-    "description": "Detailansicht (GET /documents/{id}) - zusaetzlich mit dem erkannten Text. In Listen bewusst\nnicht enthalten, weil der Text pro Dokument sehr lang sein kann."
-   },
-   "DocumentFileResponse": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "page_number": {
-      "type": "integer",
-      "title": "Page Number"
-     },
-     "mime_type": {
-      "type": "string",
-      "title": "Mime Type"
-     },
-     "filename": {
-      "type": "string",
-      "title": "Filename"
-     }
-    },
-    "type": "object",
-    "required": [
-     "id",
-     "page_number",
-     "mime_type",
-     "filename"
-    ],
-    "title": "DocumentFileResponse"
-   },
-   "DocumentListResponse": {
-    "properties": {
-     "items": {
-      "items": {
-       "$ref": "#/components/schemas/DocumentResponse"
-      },
-      "type": "array",
-      "title": "Items"
-     },
-     "page": {
-      "type": "integer",
-      "title": "Page"
-     },
-     "page_size": {
-      "type": "integer",
-      "title": "Page Size"
-     },
-     "total": {
-      "type": "integer",
-      "title": "Total"
-     }
-    },
-    "type": "object",
-    "required": [
-     "items",
-     "page",
-     "page_size",
-     "total"
-    ],
-    "title": "DocumentListResponse"
-   },
-   "DocumentResponse": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "title": {
-      "type": "string",
-      "title": "Title"
-     },
-     "category_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Category Id"
-     },
-     "owner_user_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Owner User Id"
-     },
-     "source": {
-      "$ref": "#/components/schemas/DocumentSource"
-     },
-     "ocr_status": {
-      "$ref": "#/components/schemas/OcrStatus"
-     },
-     "classification_status": {
-      "$ref": "#/components/schemas/ClassificationStatus"
-     },
-     "classification_confidence": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Classification Confidence"
-     },
-     "classification_stage": {
-      "anyOf": [
-       {
-        "$ref": "#/components/schemas/ClassificationStage"
-       },
-       {
-        "type": "null"
-       }
-      ]
-     },
-     "extraction_status": {
-      "$ref": "#/components/schemas/ExtractionStatus"
-     },
-     "document_date": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Document Date"
-     },
-     "issuer": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Issuer"
-     },
-     "amount": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Amount"
-     },
-     "original_present": {
-      "$ref": "#/components/schemas/OriginalPresent"
-     },
-     "original_location": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Original Location"
-     },
-     "deleted_at": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date-time"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Deleted At"
-     },
-     "created_at": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Created At"
-     },
-     "updated_at": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Updated At"
-     },
-     "files": {
-      "items": {
-       "$ref": "#/components/schemas/DocumentFileResponse"
-      },
-      "type": "array",
-      "title": "Files",
-      "default": []
-     }
-    },
-    "type": "object",
-    "required": [
-     "id",
-     "title",
-     "category_id",
-     "owner_user_id",
-     "source",
-     "ocr_status",
-     "classification_status",
-     "classification_confidence",
-     "classification_stage",
-     "extraction_status",
-     "document_date",
-     "issuer",
-     "amount",
-     "original_present",
-     "original_location",
-     "deleted_at",
-     "created_at",
-     "updated_at"
-    ],
-    "title": "DocumentResponse"
-   },
-   "DocumentSource": {
-    "type": "string",
-    "enum": [
-     "photo_app",
-     "upload",
-     "nas_scan_folder",
-     "client_agent",
-     "email"
-    ],
-    "title": "DocumentSource"
-   },
-   "DocumentUpdateRequest": {
-    "properties": {
-     "title": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Title"
-     },
-     "original_present": {
-      "anyOf": [
-       {
-        "$ref": "#/components/schemas/OriginalPresent"
-       },
-       {
-        "type": "null"
-       }
-      ]
-     },
-     "original_location": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Original Location"
-     },
-     "document_date": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Document Date"
-     },
-     "issuer": {
-      "anyOf": [
-       {
-        "type": "string",
-        "maxLength": 300
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Issuer"
-     },
-     "amount": {
-      "anyOf": [
-       {
-        "type": "number",
-        "minimum": 0.0
-       },
-       {
-        "type": "string",
-        "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Amount"
-     }
-    },
-    "type": "object",
-    "title": "DocumentUpdateRequest",
-    "description": "Nur die Felder, die sich schon ohne Tag-/Klassifikations-Verwaltung sinnvoll aendern lassen\n(siehe backend/README.md \"Was noch fehlt\" fuer Tags/Kategorie-Korrektur ueber eigene Endpunkte)."
-   },
-   "ExtractionStatus": {
-    "type": "string",
-    "enum": [
-     "pending",
-     "done",
-     "failed"
-    ],
-    "title": "ExtractionStatus"
-   },
-   "HTTPValidationError": {
-    "properties": {
-     "detail": {
-      "items": {
-       "$ref": "#/components/schemas/ValidationError"
-      },
-      "type": "array",
-      "title": "Detail"
-     }
-    },
-    "type": "object",
-    "title": "HTTPValidationError"
-   },
-   "LoginRequest": {
-    "properties": {
-     "email": {
-      "type": "string",
-      "format": "email",
-      "title": "Email"
-     },
-     "password": {
-      "type": "string",
-      "title": "Password"
-     }
-    },
-    "type": "object",
-    "required": [
-     "email",
-     "password"
-    ],
-    "title": "LoginRequest"
-   },
-   "MeResponse": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "tenant_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Tenant Id"
-     },
-     "email": {
-      "type": "string",
-      "format": "email",
-      "title": "Email"
-     },
-     "display_name": {
-      "type": "string",
-      "title": "Display Name"
-     },
-     "role": {
-      "type": "string",
-      "title": "Role"
-     },
-     "locale": {
-      "type": "string",
-      "title": "Locale"
-     }
-    },
-    "type": "object",
-    "required": [
-     "id",
-     "tenant_id",
-     "email",
-     "display_name",
-     "role",
-     "locale"
-    ],
-    "title": "MeResponse"
-   },
-   "OcrStatus": {
-    "type": "string",
-    "enum": [
-     "pending",
-     "done",
-     "failed"
-    ],
-    "title": "OcrStatus"
-   },
-   "OriginalPresent": {
-    "type": "string",
-    "enum": [
-     "ja",
-     "nein",
-     "unbekannt"
-    ],
-    "title": "OriginalPresent"
-   },
-   "RefreshRequest": {
-    "properties": {
-     "refresh_token": {
-      "type": "string",
-      "title": "Refresh Token"
-     }
-    },
-    "type": "object",
-    "required": [
-     "refresh_token"
-    ],
-    "title": "RefreshRequest"
-   },
-   "RetentionRuleCreate": {
-    "properties": {
-     "category_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Category Id"
-     },
-     "retention_period_months": {
-      "type": "integer",
-      "maximum": 1200.0,
-      "minimum": 1.0,
-      "title": "Retention Period Months",
-      "description": "z. B. 120 = 10 Jahre"
-     },
-     "requires_original": {
-      "type": "boolean",
-      "title": "Requires Original",
-      "default": false
-     },
-     "notify_before_days": {
-      "type": "integer",
-      "maximum": 3650.0,
-      "minimum": 0.0,
-      "title": "Notify Before Days",
-      "default": 30
-     }
-    },
-    "type": "object",
-    "required": [
-     "category_id",
-     "retention_period_months"
-    ],
-    "title": "RetentionRuleCreate"
-   },
-   "RetentionRuleResponse": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "category_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Category Id"
-     },
-     "retention_period_months": {
-      "anyOf": [
-       {
-        "type": "integer"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Retention Period Months"
-     },
-     "requires_original": {
-      "type": "boolean",
-      "title": "Requires Original"
-     },
-     "notify_before_days": {
-      "type": "integer",
-      "title": "Notify Before Days"
-     }
-    },
-    "type": "object",
-    "required": [
-     "id",
-     "category_id",
-     "retention_period_months",
-     "requires_original",
-     "notify_before_days"
-    ],
-    "title": "RetentionRuleResponse"
-   },
-   "RetentionRuleUpdate": {
-    "properties": {
-     "category_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Category Id"
-     },
-     "retention_period_months": {
-      "anyOf": [
-       {
-        "type": "integer",
-        "maximum": 1200.0,
-        "minimum": 1.0
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Retention Period Months"
-     },
-     "requires_original": {
-      "anyOf": [
-       {
-        "type": "boolean"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Requires Original"
-     },
-     "notify_before_days": {
-      "anyOf": [
-       {
-        "type": "integer",
-        "maximum": 3650.0,
-        "minimum": 0.0
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Notify Before Days"
-     }
-    },
-    "type": "object",
-    "title": "RetentionRuleUpdate"
-   },
-   "TokenResponse": {
-    "properties": {
-     "access_token": {
-      "type": "string",
-      "title": "Access Token"
-     },
-     "refresh_token": {
-      "type": "string",
-      "title": "Refresh Token"
-     },
-     "token_type": {
-      "type": "string",
-      "title": "Token Type",
-      "default": "bearer"
-     }
-    },
-    "type": "object",
-    "required": [
-     "access_token",
-     "refresh_token"
-    ],
-    "title": "TokenResponse"
-   },
-   "ValidationError": {
-    "properties": {
-     "loc": {
-      "items": {
-       "anyOf": [
-        {
-         "type": "string"
+      "post": {
+        "tags": [
+          "categories"
+        ],
+        "summary": "Create Category",
+        "operationId": "create_category_api_v1_categories_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryCreateRequest"
+              }
+            }
+          },
+          "required": true
         },
-        {
-         "type": "integer"
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/documents": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "List Documents",
+        "operationId": "list_documents_api_v1_documents_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
+            }
+          },
+          {
+            "name": "category_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ClassificationStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "date_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date From"
+            }
+          },
+          {
+            "name": "date_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
-       ]
       },
-      "type": "array",
-      "title": "Location"
-     },
-     "msg": {
-      "type": "string",
-      "title": "Message"
-     },
-     "type": {
-      "type": "string",
-      "title": "Error Type"
-     },
-     "input": {
-      "title": "Input"
-     },
-     "ctx": {
-      "type": "object",
-      "title": "Context"
-     }
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Create Document",
+        "operationId": "create_document_api_v1_documents_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_document_api_v1_documents_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     },
-    "type": "object",
-    "required": [
-     "loc",
-     "msg",
-     "type"
-    ],
-    "title": "ValidationError"
-   },
-   "WiedervorlageCompleteResponse": {
-    "properties": {
-     "completed": {
-      "$ref": "#/components/schemas/WiedervorlageResponse"
-     },
-     "next": {
-      "anyOf": [
-       {
-        "$ref": "#/components/schemas/WiedervorlageResponse"
-       },
-       {
-        "type": "null"
-       }
-      ]
-     }
+    "/api/v1/documents/needs-review": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "List Needs Review",
+        "operationId": "list_needs_review_api_v1_documents_needs_review_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     },
-    "type": "object",
-    "required": [
-     "completed",
-     "next"
-    ],
-    "title": "WiedervorlageCompleteResponse"
-   },
-   "WiedervorlageCreate": {
-    "properties": {
-     "due_date": {
-      "type": "string",
-      "format": "date",
-      "title": "Due Date"
-     },
-     "note": {
-      "type": "string",
-      "maxLength": 1000,
-      "minLength": 1,
-      "title": "Note"
-     },
-     "recurrence": {
-      "type": "string",
-      "enum": [
-       "none",
-       "monthly",
-       "yearly",
-       "custom_months"
-      ],
-      "title": "Recurrence",
-      "default": "none"
-     },
-     "recurrence_interval_months": {
-      "anyOf": [
-       {
-        "type": "integer",
-        "maximum": 120.0,
-        "minimum": 1.0
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Recurrence Interval Months"
-     },
-     "assigned_user_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Assigned User Id"
-     },
-     "reminder_lead_days": {
-      "type": "integer",
-      "maximum": 3650.0,
-      "minimum": 0.0,
-      "title": "Reminder Lead Days",
-      "default": 30
-     }
+    "/api/v1/documents/trash": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "List Trash",
+        "description": "Papierkorb (Datenmodell 3.5: 30 Tage wiederherstellbar). Der Hintergrund-Job, der nach\n30 Tagen endgueltig loescht, ist noch nicht implementiert (siehe README \"Was noch fehlt\").",
+        "operationId": "list_trash_api_v1_documents_trash_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     },
-    "type": "object",
-    "required": [
-     "due_date",
-     "note"
-    ],
-    "title": "WiedervorlageCreate",
-    "description": "POST /documents/{id}/wiedervorlagen - manuell angelegter Termin (Status sofort \"offen\")."
-   },
-   "WiedervorlageListResponse": {
-    "properties": {
-     "items": {
-      "items": {
-       "$ref": "#/components/schemas/WiedervorlageResponse"
+    "/api/v1/documents/{document_id}": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Get Document",
+        "operationId": "get_document_api_v1_documents__document_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       },
-      "type": "array",
-      "title": "Items"
-     },
-     "page": {
-      "type": "integer",
-      "title": "Page"
-     },
-     "page_size": {
-      "type": "integer",
-      "title": "Page Size"
-     },
-     "total": {
-      "type": "integer",
-      "title": "Total"
-     }
+      "patch": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Update Document",
+        "operationId": "update_document_api_v1_documents__document_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Delete Document",
+        "operationId": "delete_document_api_v1_documents__document_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     },
-    "type": "object",
-    "required": [
-     "items",
-     "page",
-     "page_size",
-     "total"
-    ],
-    "title": "WiedervorlageListResponse"
-   },
-   "WiedervorlageResponse": {
-    "properties": {
-     "id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Id"
-     },
-     "document_id": {
-      "type": "string",
-      "format": "uuid",
-      "title": "Document Id"
-     },
-     "due_date": {
-      "type": "string",
-      "format": "date",
-      "title": "Due Date"
-     },
-     "note": {
-      "type": "string",
-      "title": "Note"
-     },
-     "type": {
-      "type": "string",
-      "title": "Type"
-     },
-     "source": {
-      "type": "string",
-      "title": "Source"
-     },
-     "status": {
-      "type": "string",
-      "title": "Status"
-     },
-     "confidence": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Confidence"
-     },
-     "source_snippet": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Source Snippet"
-     },
-     "recurrence": {
-      "type": "string",
-      "title": "Recurrence"
-     },
-     "recurrence_interval_months": {
-      "anyOf": [
-       {
-        "type": "integer"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Recurrence Interval Months"
-     },
-     "assigned_user_id": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Assigned User Id"
-     },
-     "reminder_lead_days": {
-      "type": "integer",
-      "title": "Reminder Lead Days"
-     },
-     "completed_at": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date-time"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Completed At"
-     },
-     "created_at": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Created At"
-     },
-     "updated_at": {
-      "type": "string",
-      "format": "date-time",
-      "title": "Updated At"
-     },
-     "document_title": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Document Title"
-     }
+    "/api/v1/documents/{document_id}/restore": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Restore Document",
+        "operationId": "restore_document_api_v1_documents__document_id__restore_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     },
-    "type": "object",
-    "required": [
-     "id",
-     "document_id",
-     "due_date",
-     "note",
-     "type",
-     "source",
-     "status",
-     "confidence",
-     "source_snippet",
-     "recurrence",
-     "recurrence_interval_months",
-     "assigned_user_id",
-     "reminder_lead_days",
-     "completed_at",
-     "created_at",
-     "updated_at"
-    ],
-    "title": "WiedervorlageResponse"
-   },
-   "WiedervorlageUpdate": {
-    "properties": {
-     "due_date": {
-      "anyOf": [
-       {
-        "type": "string",
-        "format": "date"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Due Date"
-     },
-     "note": {
-      "anyOf": [
-       {
-        "type": "string",
-        "maxLength": 1000,
-        "minLength": 1
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Note"
-     },
-     "recurrence": {
-      "anyOf": [
-       {
+    "/api/v1/documents/{document_id}/download": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Download Document",
+        "operationId": "download_document_api_v1_documents__document_id__download_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{document_id}/category": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Assign Category",
+        "description": "Kategorie manuell setzen oder einen KI-Vorschlag bestaetigen (Feedback-Loop,\nAnforderungsdokument 4.3). Das Dokument wird danach nie mehr automatisch umkategorisiert und\ndient als neues Lernbeispiel fuer die Klassifikation.",
+        "operationId": "assign_category_api_v1_documents__document_id__category_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryAssignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{document_id}/reprocess": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Reprocess Document",
+        "description": "KI-Auswertung erneut anstossen, z. B. nach einem KI-Ausfall oder nach verbesserten\nKategorien. Eine vom Nutzer bestaetigte Kategorie bleibt; Metadaten fuellen weiterhin nur leere\nFelder. War die Texterkennung fehlgeschlagen, laeuft auch sie erneut.",
+        "operationId": "reprocess_document_api_v1_documents__document_id__reprocess_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentDetailResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{document_id}/classification-history": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Classification History",
+        "operationId": "classification_history_api_v1_documents__document_id__classification_history_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClassificationEventResponse"
+                  },
+                  "title": "Response Classification History Api V1 Documents  Document Id  Classification History Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wiedervorlagen": {
+      "get": {
+        "tags": [
+          "wiedervorlagen"
+        ],
+        "summary": "List Wiedervorlagen",
+        "description": "Haushaltsweite Termin-Uebersicht, frueheste zuerst - nur fuer sichtbare Dokumente, die\nnicht im Papierkorb liegen.",
+        "operationId": "list_wiedervorlagen_api_v1_wiedervorlagen_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "vorgeschlagen | offen | erledigt | verworfen",
+              "title": "Status"
+            },
+            "description": "vorgeschlagen | offen | erledigt | verworfen"
+          },
+          {
+            "name": "due_before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Due Before"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WiedervorlageListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{document_id}/wiedervorlagen": {
+      "get": {
+        "tags": [
+          "wiedervorlagen"
+        ],
+        "summary": "List Document Wiedervorlagen",
+        "operationId": "list_document_wiedervorlagen_api_v1_documents__document_id__wiedervorlagen_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WiedervorlageResponse"
+                  },
+                  "title": "Response List Document Wiedervorlagen Api V1 Documents  Document Id  Wiedervorlagen Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "wiedervorlagen"
+        ],
+        "summary": "Create Wiedervorlage",
+        "operationId": "create_wiedervorlage_api_v1_documents__document_id__wiedervorlagen_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WiedervorlageCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WiedervorlageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wiedervorlagen/{wiedervorlage_id}/confirm": {
+      "post": {
+        "tags": [
+          "wiedervorlagen"
+        ],
+        "summary": "Confirm Wiedervorlage",
+        "description": "KI-Vorschlag uebernehmen: vorgeschlagen -> offen.",
+        "operationId": "confirm_wiedervorlage_api_v1_wiedervorlagen__wiedervorlage_id__confirm_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wiedervorlage_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Wiedervorlage Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WiedervorlageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wiedervorlagen/{wiedervorlage_id}/reject": {
+      "post": {
+        "tags": [
+          "wiedervorlagen"
+        ],
+        "summary": "Reject Wiedervorlage",
+        "description": "KI-Vorschlag verwerfen: vorgeschlagen -> verworfen. Wird nicht erneut vorgeschlagen.",
+        "operationId": "reject_wiedervorlage_api_v1_wiedervorlagen__wiedervorlage_id__reject_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wiedervorlage_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Wiedervorlage Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WiedervorlageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wiedervorlagen/{wiedervorlage_id}": {
+      "patch": {
+        "tags": [
+          "wiedervorlagen"
+        ],
+        "summary": "Update Wiedervorlage",
+        "operationId": "update_wiedervorlage_api_v1_wiedervorlagen__wiedervorlage_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wiedervorlage_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Wiedervorlage Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WiedervorlageUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WiedervorlageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "wiedervorlagen"
+        ],
+        "summary": "Delete Wiedervorlage",
+        "description": "Endgueltig loeschen. Hinweis: Termine aus einer Aufbewahrungsregel entstehen neu, sobald sich\nKategorie oder Datum des Dokuments aendern - dauerhaft entfernen laesst sich so ein Termin ueber\ndie Regel selbst.",
+        "operationId": "delete_wiedervorlage_api_v1_wiedervorlagen__wiedervorlage_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wiedervorlage_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Wiedervorlage Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/wiedervorlagen/{wiedervorlage_id}/complete": {
+      "post": {
+        "tags": [
+          "wiedervorlagen"
+        ],
+        "summary": "Complete Wiedervorlage",
+        "description": "Als erledigt markieren. Bei Wiederholung wird sofort der naechste Termin angelegt - wurde\nzu spaet erledigt, der naechste in der Zukunft (keine Reihe verpasster Termine).",
+        "operationId": "complete_wiedervorlage_api_v1_wiedervorlagen__wiedervorlage_id__complete_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "wiedervorlage_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Wiedervorlage Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WiedervorlageCompleteResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/retention-rules": {
+      "get": {
+        "tags": [
+          "retention-rules"
+        ],
+        "summary": "List Rules",
+        "operationId": "list_rules_api_v1_retention_rules_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RetentionRuleResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Rules Api V1 Retention Rules Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "retention-rules"
+        ],
+        "summary": "Create Rule",
+        "operationId": "create_rule_api_v1_retention_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionRuleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionRuleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/retention-rules/{rule_id}": {
+      "patch": {
+        "tags": [
+          "retention-rules"
+        ],
+        "summary": "Update Rule",
+        "operationId": "update_rule_api_v1_retention_rules__rule_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "rule_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Rule Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetentionRuleUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetentionRuleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "retention-rules"
+        ],
+        "summary": "Delete Rule",
+        "operationId": "delete_rule_api_v1_retention_rules__rule_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "rule_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Rule Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/properties": {
+      "get": {
+        "tags": [
+          "properties"
+        ],
+        "summary": "List Properties",
+        "operationId": "list_properties_api_v1_properties_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PropertyResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Properties Api V1 Properties Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}": {
+      "patch": {
+        "tags": [
+          "properties"
+        ],
+        "summary": "Rename Property",
+        "operationId": "rename_property_api_v1_properties__property_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "property_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Property Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "properties"
+        ],
+        "summary": "Delete Property",
+        "description": "Dokumente bleiben erhalten und landen im Ordner \"_Ohne Adresse\".",
+        "operationId": "delete_property_api_v1_properties__property_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "property_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Property Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/properties/{property_id}/merge": {
+      "post": {
+        "tags": [
+          "properties"
+        ],
+        "summary": "Merge Property",
+        "operationId": "merge_property_api_v1_properties__property_id__merge_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "property_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Property Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyMerge"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_create_document_api_v1_documents_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "default": ""
+          },
+          "source": {
+            "$ref": "#/components/schemas/DocumentSource",
+            "default": "upload"
+          },
+          "original_present": {
+            "$ref": "#/components/schemas/OriginalPresent",
+            "default": "unbekannt"
+          },
+          "original_location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Location"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_create_document_api_v1_documents_post"
+      },
+      "BootstrapRequest": {
+        "properties": {
+          "household_name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Household Name"
+          },
+          "default_language": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Default Language",
+            "default": "de"
+          },
+          "admin_email": {
+            "type": "string",
+            "format": "email",
+            "title": "Admin Email"
+          },
+          "admin_password": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Admin Password"
+          },
+          "admin_display_name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Admin Display Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "household_name",
+          "admin_email",
+          "admin_password",
+          "admin_display_name"
+        ],
+        "title": "BootstrapRequest"
+      },
+      "BootstrapResponse": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          },
+          "admin_user_id": {
+            "type": "string",
+            "title": "Admin User Id"
+          },
+          "categories_created": {
+            "type": "integer",
+            "title": "Categories Created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "admin_user_id",
+          "categories_created"
+        ],
+        "title": "BootstrapResponse"
+      },
+      "CategoryAssignRequest": {
+        "properties": {
+          "category_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Category Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category_id"
+        ],
+        "title": "CategoryAssignRequest",
+        "description": "POST /documents/{id}/category - manuelle Zuordnung bzw. Bestaetigung (Feedback-Loop)."
+      },
+      "CategoryCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "is_restricted": {
+            "type": "boolean",
+            "title": "Is Restricted",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "CategoryCreateRequest"
+      },
+      "CategoryResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "is_restricted": {
+            "type": "boolean",
+            "title": "Is Restricted"
+          },
+          "is_system_default": {
+            "type": "boolean",
+            "title": "Is System Default"
+          },
+          "property_mode": {
+            "type": "string",
+            "title": "Property Mode",
+            "default": "none"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "description",
+          "is_restricted",
+          "is_system_default"
+        ],
+        "title": "CategoryResponse"
+      },
+      "ClassificationEventResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "previous_category_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Category Id"
+          },
+          "new_category_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Category Id"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "triggered_by_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triggered By User Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "previous_category_id",
+          "new_category_id",
+          "stage",
+          "confidence",
+          "note",
+          "triggered_by_user_id",
+          "created_at"
+        ],
+        "title": "ClassificationEventResponse"
+      },
+      "ClassificationStage": {
         "type": "string",
         "enum": [
-         "none",
-         "monthly",
-         "yearly",
-         "custom_months"
-        ]
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Recurrence"
-     },
-     "recurrence_interval_months": {
-      "anyOf": [
-       {
-        "type": "integer",
-        "maximum": 120.0,
-        "minimum": 1.0
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Recurrence Interval Months"
-     },
-     "assigned_user_id": {
-      "anyOf": [
-       {
+          "embedding",
+          "llm",
+          "manual",
+          "chat"
+        ],
+        "title": "ClassificationStage"
+      },
+      "ClassificationStatus": {
         "type": "string",
-        "format": "uuid"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Assigned User Id"
-     },
-     "reminder_lead_days": {
-      "anyOf": [
-       {
-        "type": "integer",
-        "maximum": 3650.0,
-        "minimum": 0.0
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "title": "Reminder Lead Days"
-     }
+        "enum": [
+          "pending",
+          "auto_assigned",
+          "needs_review",
+          "confirmed"
+        ],
+        "title": "ClassificationStatus"
+      },
+      "DocumentDetailResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "title_locked": {
+            "type": "boolean",
+            "title": "Title Locked",
+            "default": false
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "owner_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Owner User Id"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DocumentSource"
+          },
+          "ocr_status": {
+            "$ref": "#/components/schemas/OcrStatus"
+          },
+          "classification_status": {
+            "$ref": "#/components/schemas/ClassificationStatus"
+          },
+          "classification_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification Confidence"
+          },
+          "classification_stage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClassificationStage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "extraction_status": {
+            "$ref": "#/components/schemas/ExtractionStatus"
+          },
+          "document_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Date"
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "original_present": {
+            "$ref": "#/components/schemas/OriginalPresent"
+          },
+          "original_location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Location"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentFileResponse"
+            },
+            "type": "array",
+            "title": "Files",
+            "default": []
+          },
+          "ocr_text": {
+            "type": "string",
+            "title": "Ocr Text"
+          },
+          "ocr_language": {
+            "type": "string",
+            "title": "Ocr Language"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "category_id",
+          "owner_user_id",
+          "source",
+          "ocr_status",
+          "classification_status",
+          "classification_confidence",
+          "classification_stage",
+          "extraction_status",
+          "document_date",
+          "issuer",
+          "amount",
+          "original_present",
+          "original_location",
+          "deleted_at",
+          "created_at",
+          "updated_at",
+          "ocr_text",
+          "ocr_language"
+        ],
+        "title": "DocumentDetailResponse",
+        "description": "Detailansicht (GET /documents/{id}) - zusaetzlich mit dem erkannten Text. In Listen bewusst\nnicht enthalten, weil der Text pro Dokument sehr lang sein kann."
+      },
+      "DocumentFileResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "page_number": {
+            "type": "integer",
+            "title": "Page Number"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "path": {
+            "type": "string",
+            "title": "Path",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "page_number",
+          "mime_type",
+          "filename"
+        ],
+        "title": "DocumentFileResponse"
+      },
+      "DocumentListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total"
+        ],
+        "title": "DocumentListResponse"
+      },
+      "DocumentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "title_locked": {
+            "type": "boolean",
+            "title": "Title Locked",
+            "default": false
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "owner_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Owner User Id"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DocumentSource"
+          },
+          "ocr_status": {
+            "$ref": "#/components/schemas/OcrStatus"
+          },
+          "classification_status": {
+            "$ref": "#/components/schemas/ClassificationStatus"
+          },
+          "classification_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification Confidence"
+          },
+          "classification_stage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClassificationStage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "extraction_status": {
+            "$ref": "#/components/schemas/ExtractionStatus"
+          },
+          "document_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Date"
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "original_present": {
+            "$ref": "#/components/schemas/OriginalPresent"
+          },
+          "original_location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Location"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentFileResponse"
+            },
+            "type": "array",
+            "title": "Files",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "category_id",
+          "owner_user_id",
+          "source",
+          "ocr_status",
+          "classification_status",
+          "classification_confidence",
+          "classification_stage",
+          "extraction_status",
+          "document_date",
+          "issuer",
+          "amount",
+          "original_present",
+          "original_location",
+          "deleted_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "DocumentResponse"
+      },
+      "DocumentSource": {
+        "type": "string",
+        "enum": [
+          "photo_app",
+          "upload",
+          "nas_scan_folder",
+          "client_agent",
+          "email"
+        ],
+        "title": "DocumentSource"
+      },
+      "DocumentUpdateRequest": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "title_locked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title Locked"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "original_present": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OriginalPresent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "original_location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Location"
+          },
+          "document_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Date"
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          }
+        },
+        "type": "object",
+        "title": "DocumentUpdateRequest",
+        "description": "Nur die Felder, die sich schon ohne Tag-/Klassifikations-Verwaltung sinnvoll aendern lassen\n(siehe backend/README.md \"Was noch fehlt\" fuer Tags/Kategorie-Korrektur ueber eigene Endpunkte)."
+      },
+      "ExtractionStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "done",
+          "failed"
+        ],
+        "title": "ExtractionStatus"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "MeResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Tenant Id"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "tenant_id",
+          "email",
+          "display_name",
+          "role",
+          "locale"
+        ],
+        "title": "MeResponse"
+      },
+      "OcrStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "done",
+          "failed"
+        ],
+        "title": "OcrStatus"
+      },
+      "OriginalPresent": {
+        "type": "string",
+        "enum": [
+          "ja",
+          "nein",
+          "unbekannt"
+        ],
+        "title": "OriginalPresent"
+      },
+      "PropertyMerge": {
+        "properties": {
+          "into_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Into Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "into_id"
+        ],
+        "title": "PropertyMerge",
+        "description": "Dieses Objekt in ein anderes ueberfuehren (z. B. doppelt erkannte Adresse)."
+      },
+      "PropertyResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "street": {
+            "type": "string",
+            "title": "Street"
+          },
+          "postal_code": {
+            "type": "string",
+            "title": "Postal Code"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "document_count": {
+            "type": "integer",
+            "title": "Document Count",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "street",
+          "postal_code",
+          "city"
+        ],
+        "title": "PropertyResponse"
+      },
+      "PropertyUpdate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PropertyUpdate"
+      },
+      "RefreshRequest": {
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshRequest"
+      },
+      "RetentionRuleCreate": {
+        "properties": {
+          "category_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Category Id"
+          },
+          "retention_period_months": {
+            "type": "integer",
+            "maximum": 1200.0,
+            "minimum": 1.0,
+            "title": "Retention Period Months",
+            "description": "z. B. 120 = 10 Jahre"
+          },
+          "requires_original": {
+            "type": "boolean",
+            "title": "Requires Original",
+            "default": false
+          },
+          "notify_before_days": {
+            "type": "integer",
+            "maximum": 3650.0,
+            "minimum": 0.0,
+            "title": "Notify Before Days",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "required": [
+          "category_id",
+          "retention_period_months"
+        ],
+        "title": "RetentionRuleCreate"
+      },
+      "RetentionRuleResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "retention_period_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Period Months"
+          },
+          "requires_original": {
+            "type": "boolean",
+            "title": "Requires Original"
+          },
+          "notify_before_days": {
+            "type": "integer",
+            "title": "Notify Before Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "category_id",
+          "retention_period_months",
+          "requires_original",
+          "notify_before_days"
+        ],
+        "title": "RetentionRuleResponse"
+      },
+      "RetentionRuleUpdate": {
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "retention_period_months": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1200.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Period Months"
+          },
+          "requires_original": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requires Original"
+          },
+          "notify_before_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3650.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notify Before Days"
+          }
+        },
+        "type": "object",
+        "title": "RetentionRuleUpdate"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "refresh_token": {
+            "type": "string",
+            "title": "Refresh Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "refresh_token"
+        ],
+        "title": "TokenResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WiedervorlageCompleteResponse": {
+        "properties": {
+          "completed": {
+            "$ref": "#/components/schemas/WiedervorlageResponse"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WiedervorlageResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "completed",
+          "next"
+        ],
+        "title": "WiedervorlageCompleteResponse"
+      },
+      "WiedervorlageCreate": {
+        "properties": {
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Due Date"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Note"
+          },
+          "recurrence": {
+            "type": "string",
+            "enum": [
+              "none",
+              "monthly",
+              "yearly",
+              "custom_months"
+            ],
+            "title": "Recurrence",
+            "default": "none"
+          },
+          "recurrence_interval_months": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recurrence Interval Months"
+          },
+          "assigned_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned User Id"
+          },
+          "reminder_lead_days": {
+            "type": "integer",
+            "maximum": 3650.0,
+            "minimum": 0.0,
+            "title": "Reminder Lead Days",
+            "default": 30
+          }
+        },
+        "type": "object",
+        "required": [
+          "due_date",
+          "note"
+        ],
+        "title": "WiedervorlageCreate",
+        "description": "POST /documents/{id}/wiedervorlagen - manuell angelegter Termin (Status sofort \"offen\")."
+      },
+      "WiedervorlageListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WiedervorlageResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total"
+        ],
+        "title": "WiedervorlageListResponse"
+      },
+      "WiedervorlageResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Document Id"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Due Date"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "source_snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Snippet"
+          },
+          "recurrence": {
+            "type": "string",
+            "title": "Recurrence"
+          },
+          "recurrence_interval_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recurrence Interval Months"
+          },
+          "assigned_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned User Id"
+          },
+          "reminder_lead_days": {
+            "type": "integer",
+            "title": "Reminder Lead Days"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "document_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "document_id",
+          "due_date",
+          "note",
+          "type",
+          "source",
+          "status",
+          "confidence",
+          "source_snippet",
+          "recurrence",
+          "recurrence_interval_months",
+          "assigned_user_id",
+          "reminder_lead_days",
+          "completed_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "WiedervorlageResponse"
+      },
+      "WiedervorlageUpdate": {
+        "properties": {
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "recurrence": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "monthly",
+                  "yearly",
+                  "custom_months"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recurrence"
+          },
+          "recurrence_interval_months": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 120.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recurrence Interval Months"
+          },
+          "assigned_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned User Id"
+          },
+          "reminder_lead_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3650.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminder Lead Days"
+          }
+        },
+        "type": "object",
+        "title": "WiedervorlageUpdate",
+        "description": "PATCH /wiedervorlagen/{id} - auch zum Korrigieren eines KI-Vorschlags vor dem Bestaetigen."
+      }
     },
-    "type": "object",
-    "title": "WiedervorlageUpdate",
-    "description": "PATCH /wiedervorlagen/{id} - auch zum Korrigieren eines KI-Vorschlags vor dem Bestaetigen."
-   }
-  },
-  "securitySchemes": {
-   "HTTPBearer": {
-    "type": "http",
-    "scheme": "bearer"
-   }
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
   }
- }
 }

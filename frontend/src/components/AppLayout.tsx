@@ -20,6 +20,7 @@ import {
   IconCamera,
   IconChecklist,
   IconFiles,
+  IconHome,
   IconLogout,
   IconMoon,
   IconShieldCheck,
@@ -99,6 +100,7 @@ export function AppLayout() {
         </Group>
       ),
     },
+    { to: "/objekte", label: "Objekte", icon: <IconHome size={20} /> },
     { to: "/papierkorb", label: "Papierkorb", icon: <IconTrash size={20} /> },
   ];
   if (user.role === "admin") {

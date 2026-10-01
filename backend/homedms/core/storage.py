@@ -1,11 +1,10 @@
 """Speicherort fuer Dokument-Dateien - siehe docs/Docker-Compose-Entwurf.md Abschnitt 4
 (DOCUMENTS_PATH) und docs/Anforderungsdokument.md 4.4.
 
-Aktuell: chronologische Ablage `<tenant_id>/<jahr>/<dokument_id>/page-NNN.<ext>`. Die im
-Anforderungsdokument 4.4 zusaetzlich beschriebene Ablage "nach Kategorie" folgt als spaeterer
-Verschiebe-Schritt, sobald die Klassifikation feststeht (siehe backend/README.md "Was noch fehlt") -
-Umbenennen/Verschieben nach Kategorie waere vor der ersten Klassifikation ohnehin nicht sinnvoll,
-da die Kategorie zum Upload-Zeitpunkt meist noch nicht bekannt ist.
+Beim Upload landet die Datei zunaechst unter `<tenant_id>/<jahr>/<dokument_id>/page-NNN.<ext>`.
+Sobald die Texterkennung fertig ist, verschiebt der Ablage-Job (homedms/core/filing.py) sie in die
+lesbare Struktur `<Haushalt>/<Kategorie>/[<Objekt>/]<Jahr>/<JJJJ-MM-TT Absender – Betreff>.<ext>`
+und zieht sie bei jeder Aenderung nach.
 """
 import hashlib
 import re

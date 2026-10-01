@@ -49,7 +49,7 @@ async def test_document_lifecycle(clean_database):
         })
         assert resp.status_code == 201, resp.text
         tenant_id = uuid.UUID(resp.json()["tenant_id"])
-        assert resp.json()["categories_created"] == 13
+        assert resp.json()["categories_created"] == 14
         # zweiter Bootstrap ist gesperrt
         assert (await client.post(f"{API}/setup/bootstrap", json={
             "household_name": "X", "admin_email": "x@example.com",
@@ -58,7 +58,7 @@ async def test_document_lifecycle(clean_database):
 
         admin = await _login(client, "admin@example.com", "admin-passwort")
         assert (await client.get(f"{API}/auth/me", headers=admin)).json()["role"] == "admin"
-        assert len((await client.get(f"{API}/categories", headers=admin)).json()) == 13
+        assert len((await client.get(f"{API}/categories", headers=admin)).json()) == 14
 
         # --- Upload -> OCR-Job wird eingereiht -----------------------------------------
         pdf = _digital_pdf("Stadtwerke Rechnung Nr 4711 Betrag 42 EUR")

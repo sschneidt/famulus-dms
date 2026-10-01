@@ -8,6 +8,8 @@ Fehler hier blockiert nicht die Kategorie. Bei < 50 Dokumenten/Monat ist der Zus
 unerheblich.
 
 - Metadaten fuellen nur leere Felder - was der Nutzer schon eingetragen hat, bleibt.
+- Titel wird zu "Betreff – Absender", ausser der Nutzer hat ihn selbst vergeben (title_locked);
+  danach wird die Datei passend benannt und abgelegt (tasks/filing.py).
 - Fristen werden Wiedervorlagen mit Status "vorgeschlagen" und muessen immer bestaetigt werden.
   Hat das Dokument bereits eine offene oder vorgeschlagene KI-Wiedervorlage, schlaegt der Job
   keine weiteren vor (keine Doppel-Vorschlaege).
@@ -21,11 +23,14 @@ from sqlalchemy import select
 from homedms.ai import ollama
 from homedms.ai.extraction import build_prompt, parse_extraction
 from homedms.ai.ollama import OllamaError
+from homedms.core.naming import refresh_title
+from homedms.core.properties import property_for
 from homedms.core.retention import sync_retention
 from homedms.jobs import app
 from homedms.models.classification import AIModelConfig
 from homedms.models.document import Document, ExtractionStatus
 from homedms.models.wiedervorlage import Wiedervorlage
+from homedms.tasks.filing import defer_filing
 
 logger = logging.getLogger("homedms.tasks.extraction")
 
@@ -74,6 +79,11 @@ async def extract_metadata(document_id: str) -> None:
             document.issuer = result.issuer
         if document.amount is None:
             document.amount = result.amount
+        if not document.subject:
+            document.subject = result.subject
+        if document.property_id is None and result.address is not None:
+            document.property_id = (await property_for(db, document.tenant_id, result.address)).id
+        refresh_title(document)  # "Betreff – Absender", ausser der Nutzer hat selbst einen Titel vergeben
 
         existing_ai = await db.scalar(
             select(Wiedervorlage.id).where(
@@ -96,3 +106,4 @@ async def extract_metadata(document_id: str) -> None:
         await sync_retention(db, document)
         document.extraction_status = ExtractionStatus.done
         await db.commit()
+        await defer_filing(document.id)  # Dateiname aus Datum/Absender/Betreff

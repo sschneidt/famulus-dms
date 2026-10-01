@@ -19,6 +19,36 @@ Ohne Docker sucht das Backend den Build unter `FRONTEND_DIST` (Standard `../fron
 also nach `npm run build` im Frontend-Ordner). Fehlt er, läuft nur die API. Für die
 Frontend-Entwicklung mit Live-Reload siehe `../frontend/README.md`.
 
+## Ablage auf dem NAS
+
+Dateien liegen im Dokumente-Ordner (`DOCUMENTS_PATH`) lesbar sortiert, z. B. für File Station:
+
+```
+Familie Muster/
+  Haus & Reparaturen/
+    Stuttgart Musterstraße 5/        <- ein Ordner je Objekt (Adresse)
+      2026/
+        2026-09-12 Sanitär Müller GmbH – Rechnung Wasserschaden-Reparatur.pdf
+  Steuern/
+    2026/
+      2026-03-01 Finanzamt Stuttgart – Einkommensteuerbescheid 2025.pdf
+  _Unsortiert/2026/   (noch keine Kategorie)
+  _Papierkorb/
+```
+
+- **Titel in der App:** „Betreff – Absender“; ein selbst vergebener Titel wird nie überschrieben
+  (in der App über den Zauberstab wieder auf automatisch umstellbar).
+- **Dateiname:** „JJJJ-MM-TT Absender – Betreff“, bei Namensgleichheit „ (2)“.
+- **Objekt-Ordner** für „Haus & Reparaturen“, „Wohnen & Nebenkosten“ und Gebäude-/Hausrat-
+  Versicherungen (`categories.property_mode`). Objekte legt HomeDMS aus erkannten Adressen selbst an
+  (Absenderadressen aus Briefkopf/Fußzeile werden verworfen); umbenennen/zusammenführen unter
+  „Objekte“ in der App.
+- Die Datenbank bleibt führend; die Ordner werden bei jeder Änderung vom Worker nachgezogen
+  (`homedms/core/filing.py`). Beim Start des API-Containers wird die Ablage für alle Dokumente
+  einmal eingereiht, manuell: `docker compose exec app-api python -m homedms.cli refile`.
+- **Bitte Dateien nicht direkt in File Station umbenennen oder verschieben** – HomeDMS findet sie
+  sonst nicht mehr. Änderungen immer über die App.
+
 ## Lokale Entwicklung
 
 Paketverwaltung über [`uv`](https://docs.astral.sh/uv/).

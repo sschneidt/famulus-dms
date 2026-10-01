@@ -30,6 +30,7 @@ from homedms.config import get_settings
 from homedms.core.retention import sync_retention
 from homedms.jobs import app
 from homedms.models.classification import AIModelConfig, CategoryExemplar, ClassificationEvent, ExemplarSource
+from homedms.tasks.filing import defer_filing
 from homedms.models.document import (
     Category,
     ClassificationStage,
@@ -136,6 +137,7 @@ async def classify_document(document_id: str) -> None:
             await _replace_exemplar(db, document, stage1.category_id, embedding, ExemplarSource.auto_high_confidence)
             await sync_retention(db, document)
             await db.commit()
+            await defer_filing(document.id)
             return
 
         # --- Stufe 2: Sprachmodell ----------------------------------------------------------
@@ -170,6 +172,7 @@ async def classify_document(document_id: str) -> None:
                 confidence=answer.confidence,
             )
         await db.commit()
+        await defer_filing(document.id)
 
 
 @app.task(name="learn_exemplar")

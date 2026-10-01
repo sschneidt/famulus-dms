@@ -16,6 +16,8 @@ from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from homedms.core.dates import add_months  # noqa: F401  (auch fuer bestehende Importe)
+from homedms.core.addresses import Address, parse_address
+from homedms.core.naming import clean_subject
 
 MIN_DEADLINE_CONFIDENCE = 0.5  # Anforderungsdokument 4.4a: darunter wird ein Fund verworfen
 MAX_DEADLINES = 5
@@ -43,9 +45,16 @@ Aufgaben:
 1. dokumentdatum: Datum des Dokuments (Rechnungs- oder Briefdatum) als JJJJ-MM-TT - nur wenn es
    im Text steht, sonst "". Niemals das heutige Datum einsetzen.
 2. absender: Firma, Behoerde oder Person, von der das Dokument stammt, sonst "".
-3. betrag: Gesamtbetrag in Euro als Zahl mit Punkt (z. B. "42.00"), nur bei Rechnungen oder
+3. betreff: worum es im Dokument geht, in 2 bis 6 Woertern nach dem Muster
+   "<Art des Dokuments> <Anlass oder Gegenstand>" - nur mit Woertern aus dem Text, ohne Absender,
+   ohne Datum, ohne Betrag.
+4. betrag: Gesamtbetrag in Euro als Zahl mit Punkt (z. B. "42.00"), nur bei Rechnungen oder
    Zahlungsaufforderungen, sonst "".
-4. fristen: Termine, zu denen der Empfaenger etwas tun muss oder kann (z. B. Zahlungsfrist,
+5. objektadresse: Adresse des Hauses oder der Wohnung, um die es im Dokument geht (z. B. bei
+   "Objekt", "Leistungsort", "Baustelle", "Verbrauchsstelle", "Versicherungsort"). Steht keine
+   eigene Objektadresse im Text, die Anschrift des Empfaengers. NIEMALS die Adresse des Absenders
+   aus Briefkopf oder Fusszeile. Felder: strasse (mit Hausnummer), plz, ort - sonst leer.
+6. fristen: Termine, zu denen der Empfaenger etwas tun muss oder kann (z. B. Zahlungsfrist,
    Kuendigungsfrist, Widerspruchsfrist, Vertragsende, Pruef- oder Wartungstermin). Je Frist:
    - datum: der LETZTE Tag, an dem der Empfaenger handeln muss, als JJJJ-MM-TT. Steht im Text ein
      Datum, genau dieses nehmen. Relative Angaben selbst ausrechnen (bei einer Kuendigungsfrist
@@ -65,7 +74,13 @@ Dokumenttext:
         "properties": {
             "dokumentdatum": {"type": "string"},
             "absender": {"type": "string"},
+            "betreff": {"type": "string"},
             "betrag": {"type": "string"},
+            "objektadresse": {
+                "type": "object",
+                "properties": {"strasse": {"type": "string"}, "plz": {"type": "string"}, "ort": {"type": "string"}},
+                "required": ["strasse", "plz", "ort"],
+            },
             "fristen": {
                 "type": "array",
                 "items": {
@@ -81,7 +96,7 @@ Dokumenttext:
                 },
             },
         },
-        "required": ["dokumentdatum", "absender", "betrag", "fristen"],
+        "required": ["dokumentdatum", "absender", "betreff", "betrag", "objektadresse", "fristen"],
     }
     return SYSTEM_PROMPT, user, schema
 
@@ -156,6 +171,18 @@ def _confidence(value: Any) -> float:
 
 def _words(s: str) -> list[str]:
     return re.findall(r"\w+", s.lower())
+
+
+def subject_supported(subject: str, document_text: str) -> bool:
+    """Schutz gegen erfundene oder aus dem Prompt abgeschriebene Betreffs: Mindestens die Haelfte
+    der Woerter (ab 4 Buchstaben) muss im Text vorkommen - als Wortstamm, damit z. B.
+    "Wasserschaden" auch zu "Wasserschadens" passt."""
+    words = [w for w in _words(subject) if len(w) >= 4 and not w.isdigit()]
+    if not words:
+        return False
+    text = document_text.lower()
+    hits = sum(w[: max(4, len(w) - 2)] in text for w in words)
+    return hits * 2 >= len(words)
 
 
 def quote_supported(quote: str, document_text: str) -> bool:
@@ -289,6 +316,8 @@ class DeadlineProposal:
 class ExtractionResult:
     document_date: date | None = None
     issuer: str | None = None
+    subject: str | None = None
+    address: Address | None = None
     amount: Decimal | None = None
     deadlines: list[DeadlineProposal] = field(default_factory=list)
     discarded: list[str] = field(default_factory=list)  # Begruendungen fuer Log/Nachvollziehbarkeit
@@ -306,6 +335,14 @@ def parse_extraction(answer: dict[str, Any], document_text: str, today: date) ->
             result.discarded.append(f"Dokumentdatum {doc_date.isoformat()} steht nicht im Text")
     issuer = str(answer.get("absender") or "").strip()
     result.issuer = issuer[:300] or None
+    subject = clean_subject(answer.get("betreff"))
+    if subject and subject_supported(subject, document_text):
+        result.subject = subject
+    elif subject:
+        result.discarded.append(f"Betreff {subject!r} passt nicht zum Text")
+    result.address = parse_address(answer.get("objektadresse"), document_text, result.issuer)
+    if result.address is None and isinstance(answer.get("objektadresse"), dict) and any(answer["objektadresse"].values()):
+        result.discarded.append(f"Objektadresse {answer['objektadresse']!r} nicht belegt oder Absenderadresse")
     result.amount = parse_amount(answer.get("betrag"))
 
     seen: set[tuple[date, str]] = set()

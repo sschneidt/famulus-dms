@@ -21,6 +21,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from homedms.api.deps import get_current_user
+from homedms.core.naming import refresh_title
 from homedms.core.retention import sync_retention
 from homedms.core.storage import document_file_path, save_upload
 from homedms.core.visibility import is_document_editable, is_document_visible, visible_documents_expr
@@ -35,9 +36,13 @@ from homedms.models.document import (
     Document,
     DocumentFile,
     DocumentSource,
+    ExtractionStatus,
+    OcrStatus,
     OriginalPresent,
+    Property,
 )
 from homedms.models.tenant import UserRole
+from homedms.tasks.filing import defer_filing, request_filing
 from homedms.models.tenant import User
 from homedms.schemas.document import (
     CategoryAssignRequest,
@@ -182,6 +187,7 @@ async def create_document(
         tenant_id=user.tenant_id,
         owner_user_id=user.id,
         title=title or (file.filename or ""),
+        title_locked=bool(title.strip()),  # selbst vergebener Titel wird nie automatisch ersetzt
         source=source,
         original_present=original_present,
         original_location=original_location,
@@ -241,12 +247,29 @@ async def update_document(
         raise HTTPException(status.HTTP_409_CONFLICT, "Dokument liegt im Papierkorb - erst wiederherstellen")
 
     updates = payload.model_dump(exclude_unset=True)
+    if "title" in updates:
+        title = (updates["title"] or "").strip()
+        if not title:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Titel darf nicht leer sein")
+        updates["title"] = title
+        # Selbst gesetzter Titel bleibt - ausser im selben Aufruf wird title_locked=false verlangt
+        updates.setdefault("title_locked", True)
+    if "subject" in updates:
+        updates["subject"] = (updates["subject"] or "").strip() or None
+    if updates.get("property_id") is not None:
+        prop = await db.get(Property, updates["property_id"])
+        if prop is None or prop.tenant_id != user.tenant_id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Objekt nicht gefunden")
+    if updates.get("title_locked") is None:
+        updates.pop("title_locked", None)
     for field, value in updates.items():
         setattr(document, field, value)
+    refresh_title(document)  # nur wenn nicht gesperrt: "Betreff – Absender" nachziehen
     if "document_date" in updates:
         await sync_retention(db, document)  # Aufbewahrungsfrist haengt am Dokumentdatum
 
     await db.commit()
+    await request_filing(document.id)  # Dateiname/Ordner folgen Titel, Datum, Absender, Betreff
     await db.refresh(document, attribute_names=["files"])
     return document
 
@@ -259,6 +282,7 @@ async def delete_document(
     if document.deleted_at is None:
         document.deleted_at = datetime.now(timezone.utc)
         await db.commit()
+        await request_filing(document.id)  # Datei wandert in den Ordner _Papierkorb
 
 
 @router.post("/{document_id}/restore", response_model=DocumentResponse)
@@ -270,6 +294,7 @@ async def restore_document(
         raise HTTPException(status.HTTP_409_CONFLICT, "Dokument liegt nicht im Papierkorb")
     document.deleted_at = None
     await db.commit()
+    await request_filing(document.id)  # zurueck in den Kategorie-Ordner
     await db.refresh(document, attribute_names=["files"])
     return document
 
@@ -333,6 +358,41 @@ async def assign_category(
         await jobs_app.configure_task("learn_exemplar").defer_async(
             document_id=str(document.id), category_id=str(category.id), user_id=str(user.id)
         )
+        await defer_filing(document.id)  # in den Ordner der neuen Kategorie
+    return document
+
+
+@router.post("/{document_id}/reprocess", response_model=DocumentDetailResponse)
+async def reprocess_document(
+    document_id: uuid.UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> Document:
+    """KI-Auswertung erneut anstossen, z. B. nach einem KI-Ausfall oder nach verbesserten
+    Kategorien. Eine vom Nutzer bestaetigte Kategorie bleibt; Metadaten fuellen weiterhin nur leere
+    Felder. War die Texterkennung fehlgeschlagen, laeuft auch sie erneut."""
+    document = await _get_editable_document(db, user, document_id)
+    if document.deleted_at is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Dokument liegt im Papierkorb - erst wiederherstellen")
+    if document.ocr_status == OcrStatus.pending or document.extraction_status == ExtractionStatus.pending or (
+        document.classification_status == ClassificationStatus.pending
+    ):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Das Dokument wird gerade schon verarbeitet")
+
+    redo_ocr = document.ocr_status == OcrStatus.failed
+    if redo_ocr:
+        document.ocr_status = OcrStatus.pending
+    if document.classification_status != ClassificationStatus.confirmed:
+        document.classification_status = ClassificationStatus.pending
+    document.extraction_status = ExtractionStatus.pending
+    await db.commit()
+
+    async with jobs_app.open_async():
+        if redo_ocr:
+            await jobs_app.configure_task("ocr_document").defer_async(document_id=str(document.id))
+        else:
+            if document.classification_status == ClassificationStatus.pending:
+                await jobs_app.configure_task("classify_document").defer_async(document_id=str(document.id))
+            await jobs_app.configure_task("extract_metadata").defer_async(document_id=str(document.id))
+    await db.refresh(document)
     return document
 
 

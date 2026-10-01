@@ -100,3 +100,26 @@ def test_accept_llm_needs_category_and_confidence():
     assert accept_llm(LlmAnswer(A, "X", 0.80, ""), T)
     assert not accept_llm(LlmAnswer(A, "X", 0.79, ""), T)
     assert not accept_llm(LlmAnswer(None, None, 0.99, ""), T)
+
+
+def test_prompt_erst_beschreiben_dann_entscheiden():
+    """Kleine Modelle erzeugen die JSON-Felder in Schema-Reihenfolge - dokumentart und bezug
+    muessen VOR kategorie stehen, damit die Entscheidung darauf aufbaut."""
+    from homedms.ai.classifier import build_prompt, parse_llm_answer
+
+    _, user, schema = build_prompt([("Haus & Reparaturen", "Handwerker am Haus"), ("Fahrzeug", "Kfz")], "Text")
+    keys = list(schema["properties"])
+    assert keys.index("dokumentart") < keys.index("kategorie")
+    assert keys.index("bezug") < keys.index("kategorie")
+    assert "worauf" in user.lower()
+
+    import uuid as _uuid
+
+    cid = _uuid.uuid4()
+    answer = parse_llm_answer(
+        {"dokumentart": "Rechnung", "bezug": "Wohnung", "kategorie": "Haus & Reparaturen", "konfidenz": 0.9,
+         "begruendung": "Handwerker"},
+        {"Haus & Reparaturen": cid},
+    )
+    assert answer.category_id == cid
+    assert answer.reason.startswith("Art: Rechnung, Bezug: Wohnung.")
