@@ -1,5 +1,5 @@
 """Hintergrund-Job: Dateien eines Dokuments nach Kategorie/Jahr ablegen und sprechend benennen
-(Logik: homedms/core/filing.py).
+(Logik: homedms/core/filing.py) - und den Suchindex auf denselben Stand bringen (core/meili.py).
 
 Wird nach jeder relevanten Aenderung eingereiht (Texterkennung fertig, Klassifikation,
 Metadaten, Bearbeitung, Papierkorb). Pro Dokument laeuft immer nur ein Ablage-Job gleichzeitig
@@ -12,6 +12,7 @@ import uuid
 from procrastinate.exceptions import AlreadyEnqueued
 
 from homedms.core.filing import refile
+from homedms.core.meili import index_document
 from homedms.jobs import app
 from homedms.models.document import Document, OcrStatus
 
@@ -43,7 +44,9 @@ async def file_document(document_id: str) -> None:
     async with async_session_factory() as db:
         document = await db.get(Document, uuid.UUID(document_id))
         if document is None:
+            await index_document(db, uuid.UUID(document_id))  # endgueltig geloescht -> aus dem Suchindex
             return
         if document.ocr_status == OcrStatus.pending:
             return  # Texterkennung liest die Datei gerade - sie reiht die Ablage danach selbst ein
         await refile(db, document)
+        await index_document(db, document.id)  # Suchindex mit demselben Stand (Titel, Kategorie, Objekt ...)

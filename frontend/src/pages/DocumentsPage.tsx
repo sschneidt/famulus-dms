@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   Center,
+  CloseButton,
   Group,
   Loader,
   Pagination,
@@ -11,14 +12,17 @@ import {
   Stack,
   Table,
   Text,
+  TextInput,
   Title,
   UnstyledButton,
 } from "@mantine/core";
-import { useMediaQuery } from "@mantine/hooks";
-import { IconCamera, IconFiles, IconUpload } from "@tabler/icons-react";
+import { useDebouncedValue, useMediaQuery } from "@mantine/hooks";
+import { IconCamera, IconFiles, IconSearch, IconUpload } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import type { DocumentItem } from "../api/client";
 import { useDocuments, type DocumentFilters } from "../api/queries";
+import { SearchSnippet } from "../components/SearchSnippet";
 import { DocumentStatusBadge } from "../components/StatusBadge";
 import { useOpenUpload } from "../components/upload-context";
 import { useCategoryNames, useCategoryOptions } from "../lib/categories";
@@ -39,11 +43,24 @@ export function DocumentsPage() {
   const categoryOptions = useCategoryOptions();
 
   // Filter stehen in der Adresszeile -> "Zurueck" aus der Detailansicht behaelt sie
+  // Suchfeld: sofort tippen, aber erst nach einer kurzen Pause suchen
+  const [searchInput, setSearchInput] = useState(params.get("suche") ?? "");
+  const [search] = useDebouncedValue(searchInput.trim(), 300);
+  useEffect(() => {
+    if ((params.get("suche") ?? "") === search) return;
+    const next = new URLSearchParams(params);
+    if (search) next.set("suche", search);
+    else next.delete("suche");
+    next.delete("seite");
+    setParams(next, { replace: true });
+  }, [search, params, setParams]);
+
   const filters: DocumentFilters = {
     page: Math.max(1, Number(params.get("seite")) || 1),
     page_size: PAGE_SIZE,
     category_id: params.get("kategorie") ?? undefined,
     status: (params.get("status") as DocumentFilters["status"]) ?? undefined,
+    q: params.get("suche") || undefined,
   };
   const documents = useDocuments(filters);
 
@@ -56,7 +73,7 @@ export function DocumentsPage() {
   }
 
   const totalPages = documents.data ? Math.max(1, Math.ceil(documents.data.total / PAGE_SIZE)) : 1;
-  const hasFilter = Boolean(filters.category_id || filters.status);
+  const hasFilter = Boolean(filters.category_id || filters.status || filters.q);
 
   return (
     <Stack>
@@ -69,7 +86,22 @@ export function DocumentsPage() {
             </Text>
           )}
         </div>
-        <Group gap="xs" grow={isMobile} w={isMobile ? "100%" : undefined}>
+        <Group gap="xs" grow={isMobile} w={isMobile ? "100%" : undefined} wrap={isMobile ? "wrap" : "nowrap"}>
+          <TextInput
+            placeholder="Suchen in Titel, Absender, Text …"
+            leftSection={<IconSearch size={16} />}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.currentTarget.value)}
+            rightSection={
+              searchInput ? (
+                <CloseButton size="sm" onClick={() => setSearchInput("")} aria-label="Suche löschen" />
+              ) : undefined
+            }
+            aria-label="Suche"
+            type="search"
+            w={isMobile ? "100%" : 280}
+            style={isMobile ? { flexBasis: "100%" } : undefined}
+          />
           <Select
             placeholder="Alle Kategorien"
             data={categoryOptions}
@@ -103,7 +135,7 @@ export function DocumentsPage() {
       ) : documents.data.items.length === 0 ? (
         hasFilter ? (
           <Text c="dimmed" ta="center" py="xl">
-            Keine Dokumente für diesen Filter.
+            {filters.q ? `Nichts gefunden für „${filters.q}“.` : "Keine Dokumente für diesen Filter."}
           </Text>
         ) : (
           <EmptyState onUpload={() => openUpload("files")} onCamera={() => openUpload("camera")} />
@@ -160,9 +192,13 @@ function DocumentTable({ items }: { items: DocumentItem[] }) {
                 >
                   {doc.title || "Ohne Titel"}
                 </Anchor>
-                <Text size="xs" c="dimmed">
-                  hochgeladen {formatDate(doc.created_at)}
-                </Text>
+                {doc.search_snippet ? (
+                  <SearchSnippet segments={doc.search_snippet} />
+                ) : (
+                  <Text size="xs" c="dimmed">
+                    hochgeladen {formatDate(doc.created_at)}
+                  </Text>
+                )}
               </Table.Td>
               <Table.Td>
                 <Text size="sm" c={doc.category_id ? undefined : "dimmed"}>
@@ -202,6 +238,7 @@ function DocumentCards({ items }: { items: DocumentItem[] }) {
             <Text size="sm" c="dimmed" mt={2}>
               {[categoryName(doc.category_id), doc.issuer].filter(Boolean).join(" · ")}
             </Text>
+            <SearchSnippet segments={doc.search_snippet} />
             <Group justify="space-between" mt={6} wrap="nowrap">
               <Group gap="xs" wrap="nowrap">
                 <Text size="sm">{formatDate(doc.document_date ?? doc.created_at)}</Text>

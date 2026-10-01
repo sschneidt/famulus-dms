@@ -23,6 +23,7 @@ export interface DocumentFilters {
   page_size: number;
   category_id?: string;
   status?: "pending" | "auto_assigned" | "needs_review" | "confirmed";
+  q?: string;
 }
 
 // --- Lesen ---------------------------------------------------------------------------------

@@ -1,4 +1,5 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { tokenStore } from "./api/client";
 import { routes } from "./routes";
@@ -30,6 +31,35 @@ describe("App (angemeldet)", () => {
     const nav = screen.getByRole("link", { name: /Prüfen/ });
     expect(await within(nav).findByText("1")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Aufbewahrung/ })).toBeInTheDocument(); // Admin
+  });
+
+  it("Suche schickt q und zeigt den Textausschnitt mit markiertem Treffer", async () => {
+    tokenStore.set("a", "r");
+    const { calls } = mockFetch([
+      { path: "/api/v1/auth/me", body: me },
+      { path: "/api/v1/categories", body: categories },
+      {
+        path: "/api/v1/documents",
+        body: page([
+          doc({
+            search_snippet: [
+              { text: "Reparatur des ", hit: false },
+              { text: "Wasserschaden", hit: true },
+              { text: "s im Bad", hit: false },
+            ],
+          }),
+        ]),
+      },
+      { path: "/api/v1/documents/needs-review", body: page([]) },
+      { path: "/api/v1/wiedervorlagen", body: page([]) },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(<></>, { routes });
+
+    await user.type(await screen.findByLabelText("Suche"), "wasserschadn");
+    await waitFor(() => expect(calls.some((c) => c.path.includes("q=wasserschadn"))).toBe(true));
+    const snippet = await screen.findByTestId("search-snippet");
+    expect(within(snippet).getByText("Wasserschaden").tagName).toBe("MARK");
   });
 
   it("leitet ohne Anmeldung zur Login-Seite", async () => {

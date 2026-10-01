@@ -26,6 +26,13 @@ class DocumentFileResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SearchSegment(BaseModel):
+    """Teil eines Textausschnitts bei der Suche; hit=True wird in der Oberflaeche hervorgehoben."""
+
+    text: str
+    hit: bool = False
+
+
 class DocumentResponse(BaseModel):
     id: uuid.UUID
     title: str
@@ -54,6 +61,8 @@ class DocumentResponse(BaseModel):
     updated_at: datetime
 
     files: list[DocumentFileResponse] = []
+    # Nur bei einer Suche (GET /documents?q=...): Ausschnitt aus dem Text mit markierten Treffern
+    search_snippet: list[SearchSegment] | None = None
 
     model_config = {"from_attributes": True}
 

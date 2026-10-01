@@ -411,6 +411,25 @@
               ],
               "title": "Date To"
             }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Volltextsuche (Titel, Betreff, Absender, Objekt, Text)",
+              "title": "Q"
+            },
+            "description": "Volltextsuche (Titel, Betreff, Absender, Objekt, Text)"
           }
         ],
         "responses": {
@@ -2266,6 +2285,20 @@
             "title": "Files",
             "default": []
           },
+          "search_snippet": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SearchSegment"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Snippet"
+          },
           "ocr_text": {
             "type": "string",
             "title": "Ocr Text"
@@ -2532,6 +2565,20 @@
             "type": "array",
             "title": "Files",
             "default": []
+          },
+          "search_snippet": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SearchSegment"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Snippet"
           }
         },
         "type": "object",
@@ -3002,6 +3049,25 @@
         },
         "type": "object",
         "title": "RetentionRuleUpdate"
+      },
+      "SearchSegment": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "hit": {
+            "type": "boolean",
+            "title": "Hit",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SearchSegment",
+        "description": "Teil eines Textausschnitts bei der Suche; hit=True wird in der Oberflaeche hervorgehoben."
       },
       "TokenResponse": {
         "properties": {

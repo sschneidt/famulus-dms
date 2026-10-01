@@ -12,16 +12,19 @@ der API-Design ist hier bewusst noch nicht angeschlossen. OCR/Klassifikation lau
 Upload noch nicht automatisch an (kein Worker-Task dafuer vorhanden) - Dokumente bleiben bis dahin
 im Status "pending".
 """
+import logging
 import uuid
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from homedms.api.deps import get_current_user
+from homedms.core import meili
 from homedms.core.naming import refresh_title
+from homedms.core.search import has_hit, like_pattern, search_terms, segments_from_marked, snippet_for_terms
 from homedms.core.retention import sync_retention
 from homedms.core.storage import document_file_path, save_upload
 from homedms.core.visibility import is_document_editable, is_document_visible, visible_documents_expr
@@ -51,9 +54,11 @@ from homedms.schemas.document import (
     DocumentListResponse,
     DocumentResponse,
     DocumentUpdateRequest,
+    SearchSegment,
 )
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+logger = logging.getLogger("homedms.api.documents")
 
 
 def _not_found() -> HTTPException:
@@ -92,6 +97,7 @@ async def list_documents(
     status_filter: ClassificationStatus | None = Query(None, alias="status"),
     date_from: date | None = None,
     date_to: date | None = None,
+    q: str | None = Query(None, max_length=200, description="Volltextsuche (Titel, Betreff, Absender, Objekt, Text)"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> DocumentListResponse:
@@ -109,6 +115,9 @@ async def list_documents(
     if date_to is not None:
         conditions.append(Document.document_date <= date_to)
 
+    if q and q.strip():
+        return await _search(db, user, q.strip(), conditions, category_id, page, page_size)
+
     total = await db.scalar(select(func.count()).select_from(Document).where(*conditions))
 
     result = await db.execute(
@@ -120,6 +129,56 @@ async def list_documents(
     )
     items = list(result.scalars().all())
     return DocumentListResponse(items=items, page=page, page_size=page_size, total=total or 0)
+
+
+async def _search(
+    db: AsyncSession, user: User, q: str, conditions: list, category_id: uuid.UUID | None, page: int, page_size: int,
+) -> DocumentListResponse:
+    """Volltextsuche - Ablauf und Gruende fuer die zwei Quellen: homedms/core/search.py."""
+    terms = search_terms(q)
+
+    # 1. Meilisearch: tippfehlertolerant, nach Relevanz sortiert
+    hits: list[dict] = []
+    try:
+        hits = await meili.client().search(q, str(user.tenant_id), str(category_id) if category_id else None)
+    except meili.SearchUnavailable as exc:
+        logger.warning("Suche ohne Meilisearch (nur Teilwort-Suche): %s", exc)
+    formatted: dict[uuid.UUID, dict] = {}
+    for hit in hits:
+        try:
+            formatted.setdefault(uuid.UUID(str(hit.get("id"))), hit.get("_formatted") or {})
+        except ValueError:
+            continue
+    ranked = list(formatted)
+    allowed = set(
+        (await db.execute(select(Document.id).where(*conditions, Document.id.in_(ranked)))).scalars()
+    ) if ranked else set()  # Zugriffsrechte und Filter prueft immer die Datenbank
+
+    # 2. Teilwort-Suche in der Datenbank (Wortteile, Rueckfall ohne Meilisearch)
+    partial: list[uuid.UUID] = []
+    if terms:
+        columns = (Document.title, Document.subject, Document.issuer, Document.ocr_text)
+        partial = list((await db.execute(
+            select(Document.id)
+            .where(*conditions, *(or_(*(c.ilike(like_pattern(t), escape="\\") for c in columns)) for t in terms))
+            .order_by(Document.created_at.desc())
+            .limit(meili.MAX_HITS)
+        )).scalars())
+
+    order = [i for i in ranked if i in allowed] + [i for i in partial if i not in allowed]
+    page_ids = order[(page - 1) * page_size: page * page_size]
+    docs = {d.id: d for d in (await db.execute(select(Document).where(Document.id.in_(page_ids)))).scalars()}
+
+    items = []
+    for document_id in page_ids:
+        document = docs[document_id]
+        segments = segments_from_marked(formatted.get(document_id, {}).get("ocr_text") or "")
+        if not has_hit(segments):
+            segments = snippet_for_terms(document.ocr_text or "", terms)
+        items.append(DocumentResponse.model_validate(document).model_copy(update={
+            "search_snippet": [SearchSegment(text=s.text, hit=s.hit) for s in segments] if has_hit(segments) else None,
+        }))
+    return DocumentListResponse(items=items, page=page, page_size=page_size, total=len(order))
 
 
 @router.get("/needs-review", response_model=DocumentListResponse)
