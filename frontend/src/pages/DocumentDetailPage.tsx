@@ -144,6 +144,23 @@ function DocumentActions({ doc }: { doc: DocumentDetail }) {
 
   return (
     <Group gap="xs" wrap="nowrap">
+      {!doc.deleted_at && (
+        <Button
+          variant="default"
+          leftSection={<IconRefresh size={16} />}
+          visibleFrom="sm"
+          disabled={isProcessing(doc)}
+          loading={reprocess.isPending}
+          onClick={() =>
+            reprocess.mutate(doc.id, {
+              onSuccess: () => notifySuccess("KI-Auswertung läuft erneut"),
+              onError: (e) => notifyError(e),
+            })
+          }
+        >
+          Erneut analysieren
+        </Button>
+      )}
       <Button
         variant="default"
         leftSection={<IconDownload size={16} />}
