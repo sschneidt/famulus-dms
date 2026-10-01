@@ -16,6 +16,7 @@ export const keys = {
   wiedervorlagen: (filters: object) => ["wiedervorlagen", filters] as const,
   retentionRules: ["retention-rules"] as const,
   properties: ["properties"] as const,
+  unpaid: ["documents", "unpaid"] as const,
 };
 
 export interface DocumentFilters {
@@ -78,6 +79,14 @@ export function useNeedsReview() {
     queryKey: keys.needsReview,
     queryFn: () => call(api.GET("/api/v1/documents/needs-review", { params: { query: { page_size: 100 } } })),
     refetchInterval: 30_000,
+  });
+}
+
+export function useUnpaid() {
+  return useQuery({
+    queryKey: keys.unpaid,
+    queryFn: () => call(api.GET("/api/v1/documents/unpaid")),
+    refetchInterval: 60_000,
   });
 }
 

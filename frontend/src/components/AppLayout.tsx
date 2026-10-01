@@ -18,6 +18,7 @@ import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import {
   IconCalendarDue,
   IconCamera,
+  IconCash,
   IconChecklist,
   IconFiles,
   IconHome,
@@ -31,7 +32,7 @@ import {
 import dayjs from "dayjs";
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { NavLink as RouterNavLink, Outlet, useLocation } from "react-router";
-import { useNeedsReview, useWiedervorlagen } from "../api/queries";
+import { useNeedsReview, useUnpaid, useWiedervorlagen } from "../api/queries";
 import { useAuth, useUser } from "../auth/AuthContext";
 import { Logo } from "./Logo";
 import { UploadContext, type UploadMode } from "./upload-context";
@@ -64,6 +65,8 @@ export function AppLayout() {
   const open = useWiedervorlagen("offen");
   const today = dayjs().format("YYYY-MM-DD");
   const dueCount = open.data?.items.filter((w) => w.due_date <= today).length ?? 0;
+  const unpaid = useUnpaid();
+  const overdueUnpaid = unpaid.data?.items.some((d) => d.payment_due && d.payment_due < today) ?? false;
 
   const items: NavItem[] = [
     { to: "/", label: "Dokumente", icon: <IconFiles size={20} />, end: true },
@@ -99,6 +102,16 @@ export function AppLayout() {
           ) : null}
         </Group>
       ),
+    },
+    {
+      to: "/unbezahlt",
+      label: "Unbezahlt",
+      icon: <IconCash size={20} />,
+      badge: unpaid.data?.total ? (
+        <Badge size="sm" color={overdueUnpaid ? "red" : "orange"} variant={overdueUnpaid ? "filled" : "light"}>
+          {unpaid.data.total}
+        </Badge>
+      ) : null,
     },
     { to: "/objekte", label: "Objekte", icon: <IconHome size={20} /> },
     { to: "/papierkorb", label: "Papierkorb", icon: <IconTrash size={20} /> },

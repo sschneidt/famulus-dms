@@ -179,6 +179,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/documents/unpaid": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Unpaid
+     * @description Unbezahlte Rechnungen (payment_status = offen) mit ihrer naechsten Zahlungsfrist - ueberfaellige
+     *     zuerst, ohne Frist am Ende. Ohne Seitenaufteilung: Offene Rechnungen sind im Haushalt wenige.
+     */
+    get: operations["list_unpaid_api_v1_documents_unpaid_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/documents/trash": {
     parameters: {
       query?: never;
@@ -713,6 +734,8 @@ export interface components {
        * @default false
        */
       paid_assumed: boolean;
+      /** Payment Due */
+      payment_due?: string | null;
       /** Deleted At */
       deleted_at: string | null;
       /**
@@ -817,6 +840,8 @@ export interface components {
        * @default false
        */
       paid_assumed: boolean;
+      /** Payment Due */
+      payment_due?: string | null;
       /** Deleted At */
       deleted_at: string | null;
       /**
@@ -1040,6 +1065,18 @@ export interface components {
        * @default bearer
        */
       token_type: string;
+    };
+    /**
+     * UnpaidListResponse
+     * @description GET /documents/unpaid - unbezahlte Rechnungen, die naechste Zahlungsfrist zuerst.
+     */
+    UnpaidListResponse: {
+      /** Items */
+      items: components["schemas"]["DocumentResponse"][];
+      /** Total */
+      total: number;
+      /** Total Amount */
+      total_amount: number;
     };
     /** ValidationError */
     ValidationError: {
@@ -1533,6 +1570,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_unpaid_api_v1_documents_unpaid_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnpaidListResponse"];
         };
       };
     };

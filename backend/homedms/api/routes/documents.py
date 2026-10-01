@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from homedms.api.deps import get_current_user
 from homedms.core import meili
 from homedms.core.naming import refresh_title
-from homedms.core.payments import mark_paid
+from homedms.core.payments import PAYMENT_PATTERN, mark_paid
 from homedms.core.search import has_hit, like_pattern, search_terms, segments_from_marked, snippet_for_terms
 from homedms.core.retention import sync_retention
 from homedms.core.storage import document_file_path, save_upload
@@ -46,6 +46,7 @@ from homedms.models.document import (
     Property,
 )
 from homedms.models.tenant import UserRole
+from homedms.models.wiedervorlage import Wiedervorlage
 from homedms.tasks.filing import defer_filing, request_filing
 from homedms.models.tenant import User
 from homedms.schemas.document import (
@@ -56,6 +57,7 @@ from homedms.schemas.document import (
     DocumentResponse,
     DocumentUpdateRequest,
     SearchSegment,
+    UnpaidListResponse,
 )
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -214,6 +216,38 @@ async def list_needs_review(
     )
     items = list(result.scalars().all())
     return DocumentListResponse(items=items, page=page, page_size=page_size, total=total or 0)
+
+
+@router.get("/unpaid", response_model=UnpaidListResponse)
+async def list_unpaid(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> UnpaidListResponse:
+    """Unbezahlte Rechnungen (payment_status = offen) mit ihrer naechsten Zahlungsfrist - ueberfaellige
+    zuerst, ohne Frist am Ende. Ohne Seitenaufteilung: Offene Rechnungen sind im Haushalt wenige."""
+    due = (
+        select(Wiedervorlage.document_id, func.min(Wiedervorlage.due_date).label("due"))
+        .where(
+            Wiedervorlage.tenant_id == user.tenant_id,
+            Wiedervorlage.status.in_(("offen", "vorgeschlagen")),
+            Wiedervorlage.note.op("~*")(PAYMENT_PATTERN),
+        )
+        .group_by(Wiedervorlage.document_id)
+        .subquery()
+    )
+    rows = (await db.execute(
+        select(Document, due.c.due)
+        .outerjoin(due, due.c.document_id == Document.id)
+        .where(
+            Document.tenant_id == user.tenant_id,
+            Document.deleted_at.is_(None),
+            Document.payment_status == "offen",
+            visible_documents_expr(user),
+        )
+        .order_by(due.c.due.asc().nulls_last(), Document.created_at.desc())
+        .limit(500)
+    )).all()
+    items = [DocumentResponse.model_validate(d).model_copy(update={"payment_due": d_due}) for d, d_due in rows]
+    return UnpaidListResponse(
+        items=items, total=len(items), total_amount=round(sum(float(d.amount or 0) for d, _ in rows), 2)
+    )
 
 
 @router.get("/trash", response_model=DocumentListResponse)

@@ -61,6 +61,7 @@ class DocumentResponse(BaseModel):
     payment_status: str | None = None  # None (keine Rechnung) | offen | bezahlt
     paid_on: date | None = None
     paid_assumed: bool = False  # automatisch angenommen: Frist lag beim Einlesen > 3 Monate zurueck
+    payment_due: date | None = None  # nur in GET /documents/unpaid: naechste offene Zahlungsfrist
 
     deleted_at: datetime | None
     created_at: datetime
@@ -86,6 +87,14 @@ class DocumentListResponse(BaseModel):
     page: int
     page_size: int
     total: int
+
+
+class UnpaidListResponse(BaseModel):
+    """GET /documents/unpaid - unbezahlte Rechnungen, die naechste Zahlungsfrist zuerst."""
+
+    items: list[DocumentResponse]
+    total: int
+    total_amount: float  # Summe der bekannten Betraege
 
 
 class DocumentUpdateRequest(BaseModel):

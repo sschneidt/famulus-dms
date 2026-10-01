@@ -68,6 +68,13 @@ async def test_zahlungen(clean_database, monkeypatch, tmp_path):
         offen = (await client.get(f"{API}/documents", headers=auth, params={"payment_status": "offen"})).json()
         assert {d["id"] for d in offen["items"]} == {neu, neu2, kuerzlich}
 
+        # Uebersicht "Unbezahlt": naechste Frist zuerst (ueberfaellig vorn), Summe der Betraege
+        unpaid = (await client.get(f"{API}/documents/unpaid", headers=auth)).json()
+        assert [(d["id"], d["payment_due"]) for d in unpaid["items"]] == [
+            (kuerzlich, "2026-09-01"), (neu, "2026-10-15"), (neu2, "2026-10-20"),
+        ]
+        assert (unpaid["total"], unpaid["total_amount"]) == (3, 126.0)
+
         r = await client.patch(f"{API}/documents/{neu}", headers=auth, json={"payment_status": "bezahlt", "paid_on": "2026-10-02"})
         assert r.status_code == 200, r.text
         assert (r.json()["payment_status"], r.json()["paid_on"], r.json()["paid_assumed"]) == ("bezahlt", "2026-10-02", False)

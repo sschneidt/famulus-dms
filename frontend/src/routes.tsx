@@ -10,6 +10,7 @@ import { RetentionPage } from "./pages/RetentionPage";
 import { ReviewPage } from "./pages/ReviewPage";
 import { TerminePage } from "./pages/TerminePage";
 import { TrashPage } from "./pages/TrashPage";
+import { UnpaidPage } from "./pages/UnpaidPage";
 
 export const routes: RouteObject[] = [
   { path: "/login", element: <LoginPage /> },
@@ -24,6 +25,7 @@ export const routes: RouteObject[] = [
       { path: "dokumente/:id", element: <DocumentDetailPage /> },
       { path: "pruefen", element: <ReviewPage /> },
       { path: "termine", element: <TerminePage /> },
+      { path: "unbezahlt", element: <UnpaidPage /> },
       { path: "objekte", element: <PropertiesPage /> },
       { path: "papierkorb", element: <TrashPage /> },
       { path: "aufbewahrung", element: <RetentionPage /> },

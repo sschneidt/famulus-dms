@@ -580,6 +580,33 @@
         }
       }
     },
+    "/api/v1/documents/unpaid": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "List Unpaid",
+        "description": "Unbezahlte Rechnungen (payment_status = offen) mit ihrer naechsten Zahlungsfrist - ueberfaellige\nzuerst, ohne Frist am Ende. Ohne Seitenaufteilung: Offene Rechnungen sind im Haushalt wenige.",
+        "operationId": "list_unpaid_api_v1_documents_unpaid_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnpaidListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/documents/trash": {
       "get": {
         "tags": [
@@ -2319,6 +2346,18 @@
             "title": "Paid Assumed",
             "default": false
           },
+          "payment_due": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Due"
+          },
           "deleted_at": {
             "anyOf": [
               {
@@ -2627,6 +2666,18 @@
             "type": "boolean",
             "title": "Paid Assumed",
             "default": false
+          },
+          "payment_due": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Due"
           },
           "deleted_at": {
             "anyOf": [
@@ -3210,6 +3261,33 @@
           "refresh_token"
         ],
         "title": "TokenResponse"
+      },
+      "UnpaidListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentResponse"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "total_amount": {
+            "type": "number",
+            "title": "Total Amount"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "total_amount"
+        ],
+        "title": "UnpaidListResponse",
+        "description": "GET /documents/unpaid - unbezahlte Rechnungen, die naechste Zahlungsfrist zuerst."
       },
       "ValidationError": {
         "properties": {

@@ -23,7 +23,8 @@ from homedms.models.wiedervorlage import Wiedervorlage
 
 ASSUME_PAID_AFTER_MONTHS = 3
 PAYMENT_STATUSES = ("offen", "bezahlt")
-_PAYMENT_WORDS = re.compile(r"zahl|überweis|ueberweis|fällig|faellig|begleich", re.IGNORECASE)
+PAYMENT_PATTERN = "zahl|überweis|ueberweis|fällig|faellig|begleich"  # auch fuer SQL (~*)
+_PAYMENT_WORDS = re.compile(PAYMENT_PATTERN, re.IGNORECASE)
 
 
 def is_payment(note: str | None) -> bool:
