@@ -154,7 +154,11 @@ export interface paths {
     /** List Documents */
     get: operations["list_documents_api_v1_documents_get"];
     put?: never;
-    /** Create Document */
+    /**
+     * Create Document
+     * @description Mehrere Dateien (z. B. Handy-Fotos eines zweiseitigen Briefs) werden in der gesendeten
+     *     Reihenfolge zu einer PDF zusammengefasst (homedms/core/pages.py).
+     */
     post: operations["create_document_api_v1_documents_post"];
     delete?: never;
     options?: never;
@@ -327,6 +331,74 @@ export interface paths {
     };
     /** Classification History */
     get: operations["classification_history_api_v1_documents__document_id__classification_history_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}/pages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Add Pages */
+    post: operations["add_pages_api_v1_documents__document_id__pages_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}/pages/{page}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Page */
+    delete: operations["delete_page_api_v1_documents__document_id__pages__page__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}/pages/order": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Reorder Pages */
+    put: operations["reorder_pages_api_v1_documents__document_id__pages_order_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/{document_id}/pages/{page}/thumbnail": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Page Thumbnail */
+    get: operations["page_thumbnail_api_v1_documents__document_id__pages__page__thumbnail_get"];
     put?: never;
     post?: never;
     delete?: never;
@@ -609,10 +681,26 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** Body_add_pages_api_v1_documents__document_id__pages_post */
+    Body_add_pages_api_v1_documents__document_id__pages_post: {
+      /**
+       * File
+       * @description Neue Seiten (PDF oder Bilder) in dieser Reihenfolge
+       */
+      file: string[];
+      /**
+       * Position
+       * @description Vor dieser Seite einfuegen (1-basiert); leer = ans Ende
+       */
+      position?: number | null;
+    };
     /** Body_create_document_api_v1_documents_post */
     Body_create_document_api_v1_documents_post: {
-      /** File */
-      file: string;
+      /**
+       * File
+       * @description Eine Datei - oder mehrere, die zu EINEM Dokument werden
+       */
+      file: string[];
       /**
        * Title
        * @default
@@ -811,6 +899,11 @@ export interface components {
       ocr_text: string;
       /** Ocr Language */
       ocr_language: string;
+      /**
+       * Page Count
+       * @default 1
+       */
+      page_count: number;
     };
     /** DocumentFileResponse */
     DocumentFileResponse: {
@@ -1057,6 +1150,16 @@ export interface components {
      * @enum {string}
      */
     OriginalPresent: "ja" | "nein" | "unbekannt";
+    /** PageOrder */
+    PageOrder: {
+      /** Order */
+      order: number[];
+    };
+    /** PagesResponse */
+    PagesResponse: {
+      /** Page Count */
+      page_count: number;
+    };
     /**
      * PropertyMerge
      * @description Dieses Objekt in ein anderes ueberfuehren (z. B. doppelt erkannte Adresse).
@@ -1975,6 +2078,142 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ClassificationEventResponse"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  add_pages_api_v1_documents__document_id__pages_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_add_pages_api_v1_documents__document_id__pages_post"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagesResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_page_api_v1_documents__document_id__pages__page__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+        page: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagesResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  reorder_pages_api_v1_documents__document_id__pages_order_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PageOrder"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagesResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  page_thumbnail_api_v1_documents__document_id__pages__page__thumbnail_get: {
+    parameters: {
+      query?: {
+        width?: number;
+      };
+      header?: never;
+      path: {
+        document_id: string;
+        page: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
         };
       };
       /** @description Validation Error */

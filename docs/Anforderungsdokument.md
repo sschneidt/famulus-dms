@@ -27,6 +27,7 @@ HomeDMS reduziert die Anzahl physischer Papierdokumente in Privathaushalten durc
 
 ### 4.1 Import-Wege
 - **App → Foto:** Aufnahme über Smartphone-Kamera (PWA MediaDevices-API), inkl. automatischer Perspektivkorrektur/Zuschnitt des fotografierten Dokuments.
+  - **Mehrseitig (umgesetzt 02.10.2026):** Mehrere Fotos/Dateien werden beim Hochladen auf Wunsch (bei Fotos voreingestellt) zu **einem** Dokument zusammengefasst – technisch eine PDF mit einer Seite je Foto (Fotos werden aufgerichtet und verkleinert). Seiten lassen sich später hinzufügen (Datei oder Kamera), entfernen und umsortieren; danach werden Text und Angaben neu ausgewertet. Perspektivkorrektur/Zuschnitt ist noch offen.
 - **Upload bereits gescannter Dokumente** über Web-UI/App (Datei-Auswahl).
 - **Scan-Ordner-Agent:** Überwachung eines Ordners und automatischer Import definierter Dateitypen. Unterstützt werden **beide** Varianten:
   - primär ein NAS-seitiger Ordner (Scanner/Multifunktionsgerät legt Scans direkt per SMB/FTP-Scan-to-Folder ab, Backend-Container überwacht diesen Ordner),

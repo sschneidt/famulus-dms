@@ -14,7 +14,7 @@ export function DocumentPreview({ doc }: { doc: DocumentDetail }) {
   const isMobile = useMediaQuery("(max-width: 48em)") ?? false;
   const file = doc.files[0];
   const blob = useQuery({
-    queryKey: ["document", doc.id, "file", file?.id],
+    queryKey: ["document", doc.id, "file", file?.id, doc.updated_at], // neu laden, wenn Seiten geaendert wurden
     queryFn: () => fetchDocumentFile(doc.id),
     enabled: Boolean(file),
     staleTime: Infinity,

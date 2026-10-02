@@ -10,6 +10,7 @@ from homedms.api.routes import (
     categories,
     documents,
     import_sources,
+    pages,
     properties,
     retention_rules,
     setup,
@@ -21,6 +22,7 @@ api_router.include_router(auth.router)
 api_router.include_router(setup.router)
 api_router.include_router(categories.router)
 api_router.include_router(documents.router)
+api_router.include_router(pages.router)
 api_router.include_router(wiedervorlagen.router)
 api_router.include_router(retention_rules.router)
 api_router.include_router(properties.router)

@@ -65,8 +65,10 @@ REST-API auf Basis von FastAPI, Base-Path `/api/v1`. Alle Endpunkte sind implizi
 | DELETE | `/documents/{id}` | Soft-Delete: setzt `deleted_at`, Dokument wandert in den Papierkorb (Datenmodell 3.5) | angemeldet + Edit-Recht |
 | POST | `/documents/{id}/restore` | Aus dem Papierkorb wiederherstellen (`deleted_at` zurücksetzen) | angemeldet + Edit-Recht |
 | GET | `/documents/{id}/download` | Original-Datei(en) herunterladen | angemeldet + Sichtbarkeit |
-| POST | `/documents/{id}/files` | Weitere Seite/Datei zu bestehendem Dokument hinzufügen (Mehrseiten-Scan) | angemeldet + Edit-Recht |
-| DELETE | `/documents/{id}/files/{file_id}` | Einzelne Seite entfernen | angemeldet + Edit-Recht |
+| POST | `/documents/{id}/pages` | Seiten (PDF/Bilder) hinzufügen, optional `position` (vor Seite n) – umgesetzt 02.10.2026: ein mehrseitiges Dokument ist **eine PDF-Datei**; mehrere Dateien beim Hochladen (`POST /documents` mit mehreren `file`-Teilen) werden ebenfalls zu einer PDF zusammengefasst | angemeldet + Edit-Recht |
+| DELETE | `/documents/{id}/pages/{n}` | Einzelne Seite entfernen (die letzte nicht) | angemeldet + Edit-Recht |
+| PUT | `/documents/{id}/pages/order` | Seiten umsortieren (`{"order": [2, 1, 3]}`) | angemeldet + Edit-Recht |
+| GET | `/documents/{id}/pages/{n}/thumbnail` | Vorschaubild einer Seite (PNG) | angemeldet + Sichtbarkeit |
 | POST | `/documents/{id}/category` | Kategorie manuell setzen/korrigieren (Feedback-Loop-Bestätigung) → erzeugt `ClassificationEvent` + neues `CategoryExemplar` | angemeldet + Edit-Recht |
 | GET | `/documents/{id}/classification-history` | Verlauf aller `ClassificationEvent`-Einträge | angemeldet + Sichtbarkeit |
 | POST | `/documents/bulk-reclassify` | Massen-Umkategorisierung über Filterkriterien (Chat-Tool-Funktion, siehe 1.) | angemeldet + Edit-Recht auf betroffene Dokumente |

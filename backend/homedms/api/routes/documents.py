@@ -14,6 +14,7 @@ im Status "pending".
 """
 import logging
 import uuid
+from pathlib import Path
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
@@ -24,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from homedms.api.deps import get_current_user
 from homedms.core import meili
 from homedms.core.naming import refresh_title
+from homedms.core.pages import PageError, Part, combine, file_page_count
 from homedms.core.payments import PAYMENT_PATTERN, mark_paid
 from homedms.core.search import has_hit, like_pattern, search_terms, segments_from_marked, snippet_for_terms
 from homedms.core.retention import sync_retention
@@ -278,7 +280,7 @@ async def list_trash(
 
 @router.post("", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
 async def create_document(
-    file: UploadFile = File(...),
+    file: list[UploadFile] = File(..., description="Eine Datei - oder mehrere, die zu EINEM Dokument werden"),
     title: str = Form(""),
     source: DocumentSource = Form(DocumentSource.upload),
     original_present: OriginalPresent = Form(OriginalPresent.unbekannt),
@@ -286,10 +288,22 @@ async def create_document(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Document:
+    """Mehrere Dateien (z. B. Handy-Fotos eines zweiseitigen Briefs) werden in der gesendeten
+    Reihenfolge zu einer PDF zusammengefasst (homedms/core/pages.py)."""
+    uploads = [(f.filename or "", f.content_type or "", await f.read()) for f in file]
+    if len(uploads) == 1:
+        filename, mime, content = uploads[0]
+    else:
+        try:
+            content = combine([Part(c, n, m) for n, m, c in uploads])
+        except PageError as exc:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+        filename, mime = f"{Path(uploads[0][0]).stem or 'Dokument'}.pdf", "application/pdf"
+
     document = Document(
         tenant_id=user.tenant_id,
         owner_user_id=user.id,
-        title=title or (file.filename or ""),
+        title=title or filename,
         title_locked=bool(title.strip()),  # selbst vergebener Titel wird nie automatisch ersetzt
         source=source,
         original_present=original_present,
@@ -298,8 +312,7 @@ async def create_document(
     db.add(document)
     await db.flush()  # document.id verfuegbar machen, ohne schon zu committen
 
-    content = await file.read()
-    path = document_file_path(user.tenant_id, document.id, page_number=1, original_filename=file.filename or "")
+    path = document_file_path(user.tenant_id, document.id, page_number=1, original_filename=filename)
     checksum = save_upload(path, content)
 
     db.add(
@@ -307,7 +320,7 @@ async def create_document(
             document_id=document.id,
             file_path=str(path),
             page_number=1,
-            mime_type=file.content_type or "application/octet-stream",
+            mime_type=mime or "application/octet-stream",
             checksum=checksum,
         )
     )
@@ -330,12 +343,13 @@ async def create_document(
 @router.get("/{document_id}", response_model=DocumentDetailResponse)
 async def get_document(
     document_id: uuid.UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
-) -> Document:
+) -> DocumentDetailResponse:
     document = await _get_visible_document(db, user, document_id)
     if document.deleted_at is not None:
         # Im Papierkorb - ueber GET /documents/trash sichtbar, nicht ueber die normale Detailansicht.
         raise _not_found()
-    return document
+    pages = file_page_count(document.files[0].file_path) if document.files else 1
+    return DocumentDetailResponse.model_validate(document).model_copy(update={"page_count": pages})
 
 
 @router.patch("/{document_id}", response_model=DocumentResponse)

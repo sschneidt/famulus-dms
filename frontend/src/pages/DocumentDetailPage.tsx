@@ -9,6 +9,7 @@ import { CategoryPanel } from "../components/detail/CategoryPanel";
 import { HistoryPanel } from "../components/detail/HistoryPanel";
 import { MetadataPanel } from "../components/detail/MetadataPanel";
 import { OcrTextPanel } from "../components/detail/OcrTextPanel";
+import { PagesPanel } from "../components/detail/PagesPanel";
 import { PaymentPanel } from "../components/detail/PaymentPanel";
 import { WiedervorlagenPanel } from "../components/detail/WiedervorlagenPanel";
 import { DocumentPreview } from "../components/DocumentPreview";
@@ -83,7 +84,10 @@ export function DocumentDetailPage() {
             {side}
           </Tabs.Panel>
           <Tabs.Panel value="vorschau" pt="sm">
-            <DocumentPreview doc={doc} />
+            <Stack>
+              <DocumentPreview doc={doc} />
+              <PagesPanel doc={doc} readOnly={readOnly} />
+            </Stack>
           </Tabs.Panel>
           <Tabs.Panel value="mehr" pt="sm">
             <Stack>
@@ -97,6 +101,7 @@ export function DocumentDetailPage() {
           <Grid.Col span={{ base: 12, md: 7 }}>
             <Stack>
               <DocumentPreview doc={doc} />
+              <PagesPanel doc={doc} readOnly={readOnly} />
               <OcrTextPanel doc={doc} />
             </Stack>
           </Grid.Col>

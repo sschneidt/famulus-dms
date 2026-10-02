@@ -162,10 +162,11 @@ export interface UploadOptions {
   originalLocation?: string;
 }
 
-/** Multipart-Upload (openapi-fetch kuemmert sich nicht um FormData-Bodies). */
-export async function uploadDocument(file: File, options: UploadOptions = {}): Promise<DocumentItem> {
+/** Multipart-Upload (openapi-fetch kuemmert sich nicht um FormData-Bodies).
+ *  Mehrere Dateien werden im Backend zu EINEM Dokument mit mehreren Seiten zusammengefasst. */
+export async function uploadDocument(files: File | File[], options: UploadOptions = {}): Promise<DocumentItem> {
   const form = new FormData();
-  form.append("file", file);
+  for (const file of Array.isArray(files) ? files : [files]) form.append("file", file);
   if (options.title) form.append("title", options.title);
   if (options.source) form.append("source", options.source);
   if (options.originalPresent) form.append("original_present", options.originalPresent);
@@ -181,4 +182,37 @@ export async function uploadDocument(file: File, options: UploadOptions = {}): P
     throw new ApiError(resp.status, messageFrom(error, resp.status));
   }
   return resp.json();
+}
+
+async function sendForm(path: string, method: string, form?: FormData, json?: unknown) {
+  const resp = await authFetch(`${api_base()}${path}`, {
+    method,
+    body: form ?? (json !== undefined ? JSON.stringify(json) : undefined),
+    headers: json !== undefined ? { "Content-Type": "application/json" } : undefined,
+  });
+  if (!resp.ok) {
+    let error: unknown;
+    try {
+      error = await resp.json();
+    } catch {
+      /* keine JSON-Antwort */
+    }
+    throw new ApiError(resp.status, messageFrom(error, resp.status));
+  }
+  return resp.json() as Promise<{ page_count: number }>;
+}
+
+/** Seiten hinzufuegen (PDF oder Bilder), position = vor dieser Seite (1-basiert), sonst ans Ende. */
+export function addPages(documentId: string, files: File[], position?: number) {
+  const form = new FormData();
+  for (const file of files) form.append("file", file);
+  if (position) form.append("position", String(position));
+  return sendForm(`/api/v1/documents/${documentId}/pages`, "POST", form);
+}
+
+/** Vorschaubild einer Seite (mit Anmeldung geladen). */
+export async function fetchPageThumbnail(documentId: string, page: number, width = 240): Promise<Blob> {
+  const resp = await authFetch(`${api_base()}/api/v1/documents/${documentId}/pages/${page}/thumbnail?width=${width}`);
+  if (!resp.ok) throw new ApiError(resp.status, `Vorschau nicht verfuegbar (${resp.status})`);
+  return resp.blob();
 }

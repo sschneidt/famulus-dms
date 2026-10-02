@@ -80,6 +80,7 @@ class DocumentDetailResponse(DocumentResponse):
 
     ocr_text: str
     ocr_language: str
+    page_count: int = 1
 
 
 class DocumentListResponse(BaseModel):

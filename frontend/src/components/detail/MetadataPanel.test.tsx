@@ -10,6 +10,7 @@ const detail = (o: Partial<DocumentDetail> = {}): DocumentDetail => ({
   ...doc(),
   ocr_text: "",
   ocr_language: "deu",
+  page_count: 1,
   ...o,
 });
 

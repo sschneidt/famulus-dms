@@ -13,7 +13,7 @@ import {
 } from "@mantine/core";
 import { Dropzone, type FileWithPath } from "@mantine/dropzone";
 import { useMediaQuery } from "@mantine/hooks";
-import { IconCamera, IconFile, IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
+import { IconArrowDown, IconArrowUp, IconCamera, IconFile, IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -92,10 +92,40 @@ function UploadForm({
   const busy = progress !== null;
   useEffect(() => onBusyChange(busy), [busy, onBusyChange]);
 
+  // Mehrere Dateien: ein Dokument mit mehreren Seiten oder einzelne Dokumente?
+  // Vorschlag: Fotos gehoeren meist zusammen (zweiseitiger Brief), PDFs sind meist getrennte Scans.
+  const [combineChoice, setCombineChoice] = useState<boolean | null>(null);
+  const combinable = files.length > 1 && files.every((f) => isPageFile(f.file));
+  const combine = combinable && (combineChoice ?? files.every((f) => f.file.type.startsWith("image/")));
+
+  function move(index: number, delta: number) {
+    setFiles((current) => {
+      const next = [...current];
+      const [item] = next.splice(index, 1);
+      next.splice(index + delta, 0, item);
+      return next;
+    });
+  }
+
   async function submit() {
     setProgress(0);
     const created: string[] = [];
     try {
+      if (combine) {
+        const doc = await uploadDocument(
+          files.map((f) => f.file),
+          {
+            title: title.trim() || undefined,
+            source: files.some((f) => f.source === "photo_app") ? "photo_app" : "upload",
+            originalPresent: original,
+            originalLocation: original === "ja" ? location.trim() || undefined : undefined,
+          },
+        );
+        notifySuccess(`Dokument mit ${files.length} Seiten hochgeladen – Texterkennung läuft im Hintergrund.`);
+        onClose();
+        navigate(`/dokumente/${doc.id}`);
+        return;
+      }
       for (const [index, pending] of files.entries()) {
         const doc = await uploadDocument(pending.file, {
           title: files.length === 1 ? title.trim() || undefined : undefined,
@@ -189,7 +219,7 @@ function UploadForm({
         disabled={busy}
         size={isMobile ? "md" : "sm"}
       >
-        Foto aufnehmen
+        {files.length > 0 ? "Weitere Seite fotografieren" : "Foto aufnehmen"}
       </Button>
 
       {rejected && (
@@ -198,11 +228,29 @@ function UploadForm({
         </Alert>
       )}
 
+      {combinable && (
+        <SegmentedControl
+          fullWidth
+          value={combine ? "eins" : "einzeln"}
+          onChange={(v) => setCombineChoice(v === "eins")}
+          disabled={busy}
+          data={[
+            { value: "eins", label: `Ein Dokument (${files.length} Seiten)` },
+            { value: "einzeln", label: `${files.length} einzelne Dokumente` },
+          ]}
+        />
+      )}
+
       {files.length > 0 && (
         <Stack gap={6}>
           {files.map((pending, index) => (
             <Group key={`${pending.file.name}-${index}`} justify="space-between" wrap="nowrap">
               <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
+                {combine && (
+                  <Text size="xs" c="dimmed" w={52} style={{ flexShrink: 0 }}>
+                    Seite {index + 1}
+                  </Text>
+                )}
                 <ThemeIcon variant="light" size="sm">
                   {pending.file.type.startsWith("image/") ? <IconPhoto size={14} /> : <IconFile size={14} />}
                 </ThemeIcon>
@@ -213,24 +261,48 @@ function UploadForm({
                   {formatSize(pending.file.size)}
                 </Text>
               </Group>
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                disabled={busy}
-                onClick={() => setFiles((current) => current.filter((_, i) => i !== index))}
-                aria-label={`${pending.file.name} entfernen`}
-              >
-                <IconX size={16} />
-              </ActionIcon>
+              <Group gap={0} wrap="nowrap">
+                {combine && (
+                  <>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      disabled={busy || index === 0}
+                      onClick={() => move(index, -1)}
+                      aria-label={`Seite ${index + 1} nach oben`}
+                    >
+                      <IconArrowUp size={16} />
+                    </ActionIcon>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      disabled={busy || index === files.length - 1}
+                      onClick={() => move(index, 1)}
+                      aria-label={`Seite ${index + 1} nach unten`}
+                    >
+                      <IconArrowDown size={16} />
+                    </ActionIcon>
+                  </>
+                )}
+                <ActionIcon
+                  variant="subtle"
+                  color="gray"
+                  disabled={busy}
+                  onClick={() => setFiles((current) => current.filter((_, i) => i !== index))}
+                  aria-label={`${pending.file.name} entfernen`}
+                >
+                  <IconX size={16} />
+                </ActionIcon>
+              </Group>
             </Group>
           ))}
         </Stack>
       )}
 
-      {files.length === 1 && (
+      {(files.length === 1 || combine) && (
         <TextInput
           label="Titel (optional)"
-          placeholder={files[0].file.name}
+          placeholder={combine ? "wird automatisch vergeben" : files[0].file.name}
           value={title}
           onChange={(e) => setTitle(e.currentTarget.value)}
           disabled={busy}
@@ -275,7 +347,11 @@ function UploadForm({
           loading={busy}
           leftSection={<IconUpload size={16} />}
         >
-          {files.length > 1 ? `${files.length} Dokumente hochladen` : "Hochladen"}
+          {combine
+            ? "Als ein Dokument hochladen"
+            : files.length > 1
+              ? `${files.length} Dokumente hochladen`
+              : "Hochladen"}
         </Button>
       </Group>
     </Stack>
@@ -285,4 +361,12 @@ function UploadForm({
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
+}
+
+function isPageFile(file: File): boolean {
+  return (
+    file.type === "application/pdf" ||
+    file.type.startsWith("image/") ||
+    /\.(pdf|jpe?g|png|tiff?|webp|hei[cf])$/i.test(file.name)
+  );
 }

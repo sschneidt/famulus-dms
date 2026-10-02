@@ -237,8 +237,7 @@ ergänzen). `0003` stellt alle Zeitstempel auf "mit Zeitzone" um.
 
 Die übrigen Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
 
-- **Dokumente (Rest):** Mehrseiten-Dateien hinzufügen/entfernen (`POST/DELETE
-  /documents/{id}/files*`), Tag-Zuordnung beim Update, optionaler Client-Agent für PC-Ordner
+- **Dokumente (Rest):** Tag-Zuordnung beim Update, optionaler Client-Agent für PC-Ordner
   (Anforderungsdokument 4.1).
 - **KI (Rest):** KI-Einstellungen per API (`/ai-config`), Kalibrierung der Schwellenwerte an
   echten Dokumenten, erneute Verarbeitung auf Knopfdruck (z. B. nach einem KI-Ausfall), Ablage
