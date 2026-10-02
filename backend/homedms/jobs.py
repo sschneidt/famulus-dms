@@ -22,3 +22,4 @@ from homedms.tasks import ocr as _ocr  # noqa: E402,F401  (registriert 'ocr_docu
 from homedms.tasks import classification as _classification  # noqa: E402,F401  (classify_document, learn_exemplar)
 from homedms.tasks import extraction as _extraction  # noqa: E402,F401  (extract_metadata)
 from homedms.tasks import filing as _filing  # noqa: E402,F401  (file_document)
+from homedms.tasks import scanfolder as _scanfolder  # noqa: E402,F401  (scan_folders, jede Minute)

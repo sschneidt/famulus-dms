@@ -49,6 +49,14 @@ Familie Muster/
 - **Bitte Dateien nicht direkt in File Station umbenennen oder verschieben** – HomeDMS findet sie
   sonst nicht mehr. Änderungen immer über die App.
 
+## Scan-Ordner
+
+Der Worker holt jede Minute neue Dateien aus `SCAN_FOLDER_PATH` ab (PDF, JPG, PNG, TIFF, HEIC,
+.eml; auch aus Unterordnern) und importiert sie als Dokumente des Haushalts. Halb geschriebene
+Dateien werden abgewartet, doppelte Inhalte nicht erneut importiert. Originale landen danach in
+`_importiert/JJJJ-MM/`, Unbrauchbares in `_fehler/JJJJ-MM/`. Logik: `homedms/core/scanfolder.py`,
+Job: `homedms/tasks/scanfolder.py`, Verwaltung: `/api/v1/import-sources` bzw. „Scan-Ordner“ in der App.
+
 ## Lokale Entwicklung
 
 Paketverwaltung über [`uv`](https://docs.astral.sh/uv/).
@@ -230,8 +238,8 @@ ergänzen). `0003` stellt alle Zeitstempel auf "mit Zeitzone" um.
 Die übrigen Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
 
 - **Dokumente (Rest):** Mehrseiten-Dateien hinzufügen/entfernen (`POST/DELETE
-  /documents/{id}/files*`), Tag-Zuordnung beim Update, Volltextsuche (`q`-Parameter, Meilisearch-
-  Anbindung), Scan-Ordner-Import (Agent, siehe Anforderungsdokument 4.1).
+  /documents/{id}/files*`), Tag-Zuordnung beim Update, optionaler Client-Agent für PC-Ordner
+  (Anforderungsdokument 4.1).
 - **KI (Rest):** KI-Einstellungen per API (`/ai-config`), Kalibrierung der Schwellenwerte an
   echten Dokumenten, erneute Verarbeitung auf Knopfdruck (z. B. nach einem KI-Ausfall), Ablage
   der Dateien nach Kategorie.
@@ -240,7 +248,6 @@ Die übrigen Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
 - **Massen-Umkategorisierung** (`POST /documents/bulk-reclassify`) und Zugriffs-Ausnahmen verwalten
   (`GET/PUT /documents/{id}/access`) - Modelle (`DocumentAccessOverride`) existieren bereits, nur
   die Endpunkte dafür fehlen noch.
-- **Import-Quellen** (Scan-Ordner-Überwachung, Konfiguration).
 - **Benachrichtigungen** (In-App, E-Mail, Web-Push) inkl. `PushSubscription`-Verwaltung.
 - **KI-Chat-Assistent** (`ChatSession`/`ChatMessage`, Bibliotheks-weite Fragen +
   Massen-Umkategorisierung).

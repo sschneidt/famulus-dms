@@ -17,6 +17,8 @@ class ImportSource(Base, UUIDPKMixin):
     config: Mapped[dict] = mapped_column(JSONB, default=dict)  # Pfad bzw. Agent-Token, Poll-Intervall
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     last_scanned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Die letzten Import-Ergebnisse (fuer die Anzeige in der App): [{at, file, status, message, document_id}]
+    recent: Mapped[list] = mapped_column(JSONB, default=list, server_default="[]")
 
 
 class Notification(Base, UUIDPKMixin):

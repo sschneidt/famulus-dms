@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     # Wo Dokument-Dateien liegen. Im Container immer "/data/documents" (fester Mount-Punkt,
     # siehe docker-compose.yml); fuer lokale Entwicklung ohne Docker Default relativ zum cwd.
     documents_path: str = "./data/documents"
+    # Ueberwachter Scan-Ordner (Anforderungsdokument 4.1). Im Container fest "/data/scan".
+    scan_path: str = "./data/scan"
+    scan_interval_cron: str = "* * * * *"  # jede Minute nachsehen
 
     # Gebaute Weboberflaeche (frontend/dist). Im Docker-Image fest "/app/frontend"; fehlt der
     # Ordner (z. B. bei reiner Backend-Entwicklung), laeuft nur die API.

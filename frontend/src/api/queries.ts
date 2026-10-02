@@ -17,6 +17,7 @@ export const keys = {
   retentionRules: ["retention-rules"] as const,
   properties: ["properties"] as const,
   unpaid: ["documents", "unpaid"] as const,
+  importSources: ["import-sources"] as const,
 };
 
 export interface DocumentFilters {
@@ -322,5 +323,41 @@ export function useSetPayment() {
         }),
       ),
     onSuccess: invalidate,
+  });
+}
+
+export function useImportSources(enabled: boolean) {
+  return useQuery({
+    queryKey: keys.importSources,
+    queryFn: () => call(api.GET("/api/v1/import-sources")),
+    enabled,
+    refetchInterval: 15_000, // Scan-Ordner wird jede Minute geprueft
+  });
+}
+
+export function useUpdateImportSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Schemas["ImportSourceUpdate"] }) =>
+      call(api.PATCH("/api/v1/import-sources/{source_id}", { params: { path: { source_id: id } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.importSources }),
+  });
+}
+
+export function useCreateImportSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (path: string) => call(api.POST("/api/v1/import-sources", { body: { path } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.importSources }),
+  });
+}
+
+export function useScanNow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      call(api.POST("/api/v1/import-sources/{source_id}/scan-now", { params: { path: { source_id: id } } })),
+    // nach ein paar Sekunden ist der Durchlauf meist fertig
+    onSuccess: () => setTimeout(() => void qc.invalidateQueries({ queryKey: keys.importSources }), 4000),
   });
 }

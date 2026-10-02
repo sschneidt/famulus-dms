@@ -128,7 +128,6 @@ services:
       TZ: ${TZ:-Europe/Berlin}
     volumes:
       - ${DOCUMENTS_PATH:-./data/documents}:/data/documents
-      - ${SCAN_FOLDER_PATH:-./data/scan}:/data/scan:ro
     ports:
       # Nur dieser eine Port verlässt den internen Docker-Netzwerk-Bereich.
       # Synology Reverse Proxy (DSM-Systemsteuerung) zeigt auf diesen Port und
@@ -176,7 +175,10 @@ services:
       OCR_LANGUAGES: ${OCR_LANGUAGES:-deu+eng}
       JWT_SECRET: ${JWT_SECRET}
       DOCUMENTS_PATH: /data/documents
+      SCAN_PATH: /data/scan
       TZ: ${TZ:-Europe/Berlin}
     volumes:
       - ${DOCUMENTS_PATH:-./data/documents}:/data/documents
-      - ${SCAN_FOLDER_PATH:-./data/scan}:/data/scan:ro
+      # Scan-Ordner: der Worker holt Dateien ab und verschiebt sie danach nach _importiert/ bzw.
+      # _fehler/ - deshalb mit Schreibrecht (nur hier; die API braucht den Ordner nicht).
+      - ${SCAN_FOLDER_PATH:-./data/scan}:/data/scan

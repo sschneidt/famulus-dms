@@ -404,6 +404,32 @@ foreach ($t in $testfaelle) {
     } finally { Remove-Item $ziel -ErrorAction SilentlyContinue }
 }
 
+# --- 7b. Scan-Ordner: Datei ablegen, Worker holt sie ab (Anforderungsdokument 4.1) ------------
+if (-not $OhneDocker) {
+    # SCAN_FOLDER_PATH aus der .env (Standard ./data/scan, relativ zum Repo)
+    $scanPfad = "./data/scan"
+    $envDatei = Join-Path $RepoRoot ".env"
+    if (Test-Path $envDatei) {
+        $zeile = Get-Content $envDatei | Where-Object { $_ -match "^\s*SCAN_FOLDER_PATH\s*=" } | Select-Object -Last 1
+        if ($zeile) { $scanPfad = ($zeile -split "=", 2)[1].Trim().Trim('"') }
+    }
+    if (-not [System.IO.Path]::IsPathRooted($scanPfad)) { $scanPfad = Join-Path $RepoRoot $scanPfad }
+    if (Test-Path $scanPfad) {
+        $scanName = "smoke-test-scan-$(Get-Date -Format 'yyyyMMdd-HHmmss').pdf"
+        $scanDatei = Join-Path $scanPfad $scanName
+        Copy-Item (Join-Path $TestDaten "rechnung-digital.pdf") $scanDatei
+        # Der Worker wartet 30 s, bis eine Datei "fertig" ist, und prueft jede Minute
+        $ende = (Get-Date).AddSeconds([Math]::Max($TimeoutSekunden, 180))
+        while ((Test-Path $scanDatei) -and (Get-Date) -lt $ende) { Start-Sleep -Seconds 5 }
+        $abgeholt = -not (Test-Path $scanDatei)
+        $imArchiv = @(Get-ChildItem (Join-Path $scanPfad "_importiert") -Recurse -Filter $scanName -ErrorAction SilentlyContinue).Count -gt 0
+        Schreibe-Schritt "Scan-Ordner" ($abgeholt -and $imArchiv) $(if ($abgeholt -and $imArchiv) { "abgeholt, Original liegt in _importiert" } elseif ($abgeholt) { "abgeholt, aber nicht in _importiert - siehe _fehler" } else { "Datei wurde nicht abgeholt: $scanDatei" })
+        if (-not $abgeholt) { Write-Host "          Hinweis: 'docker compose logs app-worker' pruefen - laeuft der Worker, ist der Ordner beschreibbar gemountet?" -ForegroundColor Yellow }
+    } else {
+        Schreibe-Schritt "Scan-Ordner" $false "Ordner nicht gefunden: $scanPfad (SCAN_FOLDER_PATH in .env)"
+    }
+}
+
 # --- 8. Aufraeumen ------------------------------------------------------------------------------
 if ($DokumenteBehalten) {
     Schreibe-Schritt "Aufraeumen" $true "uebersprungen - Testdokumente bleiben erhalten"

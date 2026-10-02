@@ -110,7 +110,9 @@ class Document(Base, UUIDPKMixin, TimestampMixin):
     __tablename__ = "documents"
 
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), index=True)
-    owner_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    # None = gehoert dem ganzen Haushalt (z. B. aus dem Scan-Ordner) - Zugriff dann nur ueber die
+    # Kategorie-Regeln (core/visibility.py), keine einzelne Person ist Eigentuemer.
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
     category_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("categories.id"), nullable=True, index=True
     )

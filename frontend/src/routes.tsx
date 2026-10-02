@@ -9,6 +9,7 @@ import { PropertiesPage } from "./pages/PropertiesPage";
 import { RetentionPage } from "./pages/RetentionPage";
 import { ReviewPage } from "./pages/ReviewPage";
 import { TerminePage } from "./pages/TerminePage";
+import { ScanFolderPage } from "./pages/ScanFolderPage";
 import { TrashPage } from "./pages/TrashPage";
 import { UnpaidPage } from "./pages/UnpaidPage";
 
@@ -29,6 +30,7 @@ export const routes: RouteObject[] = [
       { path: "objekte", element: <PropertiesPage /> },
       { path: "papierkorb", element: <TrashPage /> },
       { path: "aufbewahrung", element: <RetentionPage /> },
+      { path: "scan-ordner", element: <ScanFolderPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

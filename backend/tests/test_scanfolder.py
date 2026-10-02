@@ -1,0 +1,82 @@
+"""Hilfsfunktionen des Scan-Ordner-Imports (homedms/core/scanfolder.py)."""
+import io
+import os
+import time
+from pathlib import Path
+
+from PIL import Image
+
+from homedms.core.scanfolder import (
+    candidates,
+    destination,
+    is_ignored_name,
+    is_settled,
+    is_supported,
+    looks_complete,
+    title_from_filename,
+)
+
+
+def test_ignorierte_namen():
+    for name in (".DS_Store", "._Scan.pdf", "~$Brief.docx", "Thumbs.db", "scan.pdf.part", "x.tmp", ".hidden"):
+        assert is_ignored_name(name), name
+    assert not is_ignored_name("Scan_0815.pdf")
+
+
+def test_candidates_ueberspringt_eigene_und_synology_ordner(tmp_path: Path):
+    for rel in ("a.pdf", "sub/b.jpg", "_importiert/2026-10/c.pdf", "_fehler/d.pdf", "@eaDir/a.pdf/thumb.jpg",
+                "#recycle/e.pdf", ".hidden/f.pdf", "sub/.DS_Store"):
+        p = tmp_path / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(b"x")
+    os.utime(tmp_path / "sub/b.jpg", (1, 1))  # aelteste zuerst
+    assert [p.relative_to(tmp_path).as_posix() for p in candidates(tmp_path)] == ["sub/b.jpg", "a.pdf"]
+    assert candidates(tmp_path / "gibtsnicht") == []
+
+
+def test_candidates_folgt_keinen_verweisen(tmp_path: Path):
+    outside = tmp_path / "aussen"
+    outside.mkdir()
+    (outside / "geheim.pdf").write_bytes(b"x")
+    scan = tmp_path / "scan"
+    scan.mkdir()
+    (scan / "link").symlink_to(outside)
+    (scan / "link.pdf").symlink_to(outside / "geheim.pdf")
+    assert candidates(scan) == []
+
+
+def test_unterstuetzte_typen():
+    assert is_supported(Path("a.PDF")) and is_supported(Path("b.heic")) and is_supported(Path("c.eml"))
+    assert not is_supported(Path("d.docx")) and not is_supported(Path("e"))
+
+
+def test_is_settled(tmp_path: Path):
+    p = tmp_path / "a.pdf"
+    p.write_bytes(b"x")
+    assert not is_settled(p)
+    assert is_settled(p, now=time.time() + 31)
+    assert not is_settled(tmp_path / "weg.pdf")
+
+
+def _png(truncate: int = 0) -> bytes:
+    buf = io.BytesIO()
+    Image.new("RGB", (40, 40), "white").save(buf, format="PNG")
+    data = buf.getvalue()
+    return data[:-truncate] if truncate else data
+
+
+def test_looks_complete():
+    assert looks_complete(Path("a.pdf"), b"%PDF-1.7\n...\n%%EOF\n") is None
+    assert "unvollstaendig" in looks_complete(Path("a.pdf"), b"%PDF-1.7\n... abgebrochen")
+    assert "keine gueltige" in looks_complete(Path("a.pdf"), b"<html>")
+    assert looks_complete(Path("a.png"), _png()) is None
+    assert "nicht lesbar" in looks_complete(Path("a.png"), _png(truncate=30))
+    assert looks_complete(Path("a.pdf"), b"") == "Datei ist leer"
+
+
+def test_destination_und_titel(tmp_path: Path):
+    assert destination(tmp_path, "Scan.pdf") == tmp_path / "Scan.pdf"
+    (tmp_path / "Scan.pdf").write_bytes(b"x")
+    (tmp_path / "Scan (2).pdf").write_bytes(b"x")
+    assert destination(tmp_path, "Scan.pdf") == tmp_path / "Scan (3).pdf"
+    assert title_from_filename("Scan_2026-10-02_0815.pdf") == "Scan_2026-10-02_0815"

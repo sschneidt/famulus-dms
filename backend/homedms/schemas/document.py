@@ -42,7 +42,7 @@ class DocumentResponse(BaseModel):
     subject: str | None = None
     property_id: uuid.UUID | None = None
     category_id: uuid.UUID | None
-    owner_user_id: uuid.UUID
+    owner_user_id: uuid.UUID | None  # None = Haushalt
     source: DocumentSource
 
     ocr_status: OcrStatus

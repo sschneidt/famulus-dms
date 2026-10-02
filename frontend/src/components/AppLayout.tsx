@@ -21,6 +21,7 @@ import {
   IconCash,
   IconChecklist,
   IconFiles,
+  IconFolderSearch,
   IconHome,
   IconLogout,
   IconMoon,
@@ -118,6 +119,7 @@ export function AppLayout() {
   ];
   if (user.role === "admin") {
     items.push({ to: "/aufbewahrung", label: "Aufbewahrung", icon: <IconShieldCheck size={20} /> });
+    items.push({ to: "/scan-ordner", label: "Scan-Ordner", icon: <IconFolderSearch size={20} /> });
   }
 
   const isActive = (item: NavItem) =>

@@ -550,6 +550,61 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/import-sources": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Sources */
+    get: operations["list_sources_api_v1_import_sources_get"];
+    put?: never;
+    /** Create Source */
+    post: operations["create_source_api_v1_import_sources_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/import-sources/{source_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Source */
+    patch: operations["update_source_api_v1_import_sources__source_id__patch"];
+    trace?: never;
+  };
+  "/api/v1/import-sources/{source_id}/scan-now": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Scan Now
+     * @description Ordner sofort pruefen statt beim naechsten Minuten-Takt.
+     */
+    post: operations["scan_now_api_v1_import_sources__source_id__scan_now_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -704,11 +759,8 @@ export interface components {
       property_id?: string | null;
       /** Category Id */
       category_id: string | null;
-      /**
-       * Owner User Id
-       * Format: uuid
-       */
-      owner_user_id: string;
+      /** Owner User Id */
+      owner_user_id: string | null;
       source: components["schemas"]["DocumentSource"];
       ocr_status: components["schemas"]["OcrStatus"];
       classification_status: components["schemas"]["ClassificationStatus"];
@@ -810,11 +862,8 @@ export interface components {
       property_id?: string | null;
       /** Category Id */
       category_id: string | null;
-      /**
-       * Owner User Id
-       * Format: uuid
-       */
-      owner_user_id: string;
+      /** Owner User Id */
+      owner_user_id: string | null;
       source: components["schemas"]["DocumentSource"];
       ocr_status: components["schemas"]["OcrStatus"];
       classification_status: components["schemas"]["ClassificationStatus"];
@@ -904,6 +953,65 @@ export interface components {
     HTTPValidationError: {
       /** Detail */
       detail?: components["schemas"]["ValidationError"][];
+    };
+    /** ImportLogEntry */
+    ImportLogEntry: {
+      /** At */
+      at: string;
+      /** File */
+      file: string;
+      /** Status */
+      status: string;
+      /**
+       * Message
+       * @default
+       */
+      message: string;
+      /** Document Id */
+      document_id?: string | null;
+    };
+    /** ImportSourceCreate */
+    ImportSourceCreate: {
+      /**
+       * Path
+       * @default
+       */
+      path: string;
+    };
+    /** ImportSourceResponse */
+    ImportSourceResponse: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Type */
+      type: string;
+      /** Path */
+      path: string;
+      /** Is Active */
+      is_active: boolean;
+      /** Last Scanned At */
+      last_scanned_at: string | null;
+      /**
+       * Waiting
+       * @default 0
+       */
+      waiting: number;
+      /** Error */
+      error?: string | null;
+      /**
+       * Recent
+       * @default []
+       */
+      recent: components["schemas"]["ImportLogEntry"][];
+    };
+    /** ImportSourceUpdate */
+    ImportSourceUpdate: {
+      /** Path */
+      path?: string | null;
+      /** Is Active */
+      is_active?: boolean | null;
     };
     /** LoginRequest */
     LoginRequest: {
@@ -2365,6 +2473,127 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PropertyResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_sources_api_v1_import_sources_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImportSourceResponse"][];
+        };
+      };
+    };
+  };
+  create_source_api_v1_import_sources_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ImportSourceCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImportSourceResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_source_api_v1_import_sources__source_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        source_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ImportSourceUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImportSourceResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  scan_now_api_v1_import_sources__source_id__scan_now_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        source_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
       };
       /** @description Validation Error */
