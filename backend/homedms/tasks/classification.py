@@ -87,7 +87,7 @@ def _record(db: AsyncSession, document: Document, *, new_category_id, stage: str
     ))
 
 
-@app.task(name="classify_document")
+@app.task(name="classify_document", queue="ai")
 async def classify_document(document_id: str) -> None:
     from homedms.db import async_session_factory
 
@@ -175,7 +175,7 @@ async def classify_document(document_id: str) -> None:
         await defer_filing(document.id)
 
 
-@app.task(name="learn_exemplar")
+@app.task(name="learn_exemplar", queue="ai")
 async def learn_exemplar(document_id: str, category_id: str, user_id: str | None = None) -> None:
     from homedms.db import async_session_factory
 

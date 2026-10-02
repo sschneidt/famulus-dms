@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     ollama_url: str = "http://localhost:11434"
     ollama_chat_model: str = "llama3.2:3b"
     ollama_embedding_model: str = "nomic-embed-text"
+    # Wartezeit auf eine Antwort des Sprachmodells. Auf einem NAS ohne GPU rechnet ein 3B-Modell
+    # pro Dokument durchaus mehrere Minuten (v. a. beim ersten Laden ins RAM).
+    ollama_timeout_seconds: int = 900
     # Tesseract-Sprachpakete fuer die Texterkennung (Anforderungsdokument 4.2), "+"-getrennt.
     # Weitere Sprachen: Paket im Dockerfile ergaenzen (tesseract-ocr-<code>) und hier anhaengen.
     ocr_languages: str = "deu+eng"

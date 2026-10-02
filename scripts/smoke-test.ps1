@@ -101,6 +101,21 @@ function Invoke-Api([string]$Methode, [string]$Pfad, $Body = $null, [string]$Tok
     return @{ Status = $status; Json = $json; Text = $text }
 }
 
+function Get-WorkerGrund([string]$DokumentId) {
+    <# Letzte Fehlermeldung des Workers zu einem Dokument (z. B. "Ollama ... Timeout") - nur mit Docker. #>
+    if ($OhneDocker) { return "" }
+    $prevPref = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+    try {
+        Push-Location $RepoRoot
+        try { $log = & docker compose logs app-worker --no-color --tail 2000 2>&1 } finally { Pop-Location }
+    } finally { $ErrorActionPreference = $prevPref }
+    $treffer = @($log | ForEach-Object { "$_" } | Where-Object { $_ -match [regex]::Escape($DokumentId) -and $_ -match "fehlgeschlagen|nicht verfuegbar|Error" })
+    if ($treffer.Count -eq 0) { return "" }
+    $zeile = $treffer[-1] -replace "^.*?\|\s*", ""
+    if ($zeile.Length -gt 300) { $zeile = $zeile.Substring(0, 300) + " ..." }
+    return $zeile
+}
+
 function Invoke-Cli([string[]]$Argumente) {
     <# Verwaltungsbefehl (homedms.cli) - im Container oder, mit -OhneDocker, lokal per uv. #>
     # PowerShell 5.1 wertet Ausgaben externer Programme auf stderr sonst als Skriptfehler
@@ -324,7 +339,9 @@ foreach ($t in $testfaelle) {
     $status = if ($detail) { $detail.extraction_status } else { "keine Antwort" }
     if ($status -ne "done") {
         Schreibe-Schritt "Metadaten $($t.Name)" $false "Status: $status"
+        $grund = Get-WorkerGrund $t.Id
         $t.Hinweis = "Metadaten-Erkennung hat nicht funktioniert. Laeuft Ollama und ist das Chat-Modell geladen? 'docker compose logs app-worker' pruefen."
+        if ($grund) { $t.Hinweis += " Worker meldet: $grund" }
         continue
     }
     $teile = @()

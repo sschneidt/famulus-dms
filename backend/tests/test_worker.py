@@ -34,3 +34,17 @@ def test_database_url_normalization_asyncpg_variant():
     s = Settings(database_url="postgresql+asyncpg://u:p@host:5432/db")
     assert s.sqlalchemy_database_url == "postgresql+asyncpg://u:p@host:5432/db"
     assert s.procrastinate_database_url == "postgresql://u:p@host:5432/db"
+
+
+def test_ki_auftraege_laufen_in_eigener_warteschlange():
+    """Langsame Sprachmodell-Aufrufe duerfen Texterkennung und Ablage nicht aufhalten."""
+    queue = {name: task.queue for name, task in app.tasks.items()}
+    assert queue["classify_document"] == queue["extract_metadata"] == queue["learn_exemplar"] == "ai"
+    assert queue["ocr_document"] == queue["file_document"] == "default"
+
+
+def test_jede_warteschlange_hat_einen_worker():
+    from homedms.worker import QUEUES
+
+    served = {q for queues in QUEUES.values() for q in queues}
+    assert {task.queue for task in app.tasks.values()} <= served

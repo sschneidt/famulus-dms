@@ -71,7 +71,7 @@ class OllamaClient:
             "options": {"temperature": 0, "num_ctx": 4096},
         }
         # Das erste Laden des Modells in den Arbeitsspeicher kann auf einem NAS dauern.
-        data = await self._post("/api/chat", payload, timeout=300)
+        data = await self._post("/api/chat", payload, timeout=get_settings().ollama_timeout_seconds)
         content = (data.get("message") or {}).get("content", "")
         try:
             return json.loads(content)

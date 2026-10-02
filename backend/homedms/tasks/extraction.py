@@ -41,7 +41,7 @@ def today() -> date:
     return date.today()
 
 
-@app.task(name="extract_metadata")
+@app.task(name="extract_metadata", queue="ai")
 async def extract_metadata(document_id: str) -> None:
     from homedms.db import async_session_factory
 
