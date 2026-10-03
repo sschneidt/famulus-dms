@@ -1,7 +1,7 @@
 """Schlanker Client fuer die lokale Ollama-Instanz (Anforderungsdokument 4.3, KI-Betriebsmodell
 "lokal bevorzugt"). Nur die zwei Aufrufe, die die Klassifikation braucht:
 
-- embed(): Text -> Vektor (Stufe 1, Vergleich mit den Kategorie-Exemplaren per pgvector)
+- embed(): Text -> Vektor (Stufe 1, Vergleich mit den Kategorie-Exemplaren)
 - chat_json(): Frage an das Chat-Modell mit erzwungener JSON-Antwort (Stufe 2)
 
 Bewusst als eigene kleine Klasse statt direkt im Task, damit sich (a) spaeter ein externer

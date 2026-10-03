@@ -1,4 +1,4 @@
-"""Integrationstests gegen eine ECHTE PostgreSQL-Datenbank (mit pgvector + pg_trgm).
+"""Integrationstests gegen eine ECHTE PostgreSQL-Datenbank (mit pg_trgm).
 
 Laufen nur, wenn sie ausdruecklich eingeschaltet werden - sie LEEREN vor jedem Lauf alle
 Tabellen der Zieldatenbank:

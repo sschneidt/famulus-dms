@@ -1,5 +1,6 @@
 # Docker-Compose-Entwurf: HomeDMS
 
+> Ohne Docker (Windows-PC, Linux-Server): siehe `Installation-ohne-Docker.md`.
 Stand: 10.09.2026 · Version 0.1 · Basis: `Anforderungsdokument.md`, `Datenmodell.md`, `API-Design.md`
 
 Dieses Dokument erklärt die Container-Struktur (`docker-compose.yml`, `.env.example`, `init/postgres-extensions.sql` – alle drei Dateien liegen daneben) und löst dabei den letzten offenen Punkt aus dem Anforderungsdokument (Abschnitt 7): die Wahl der Job-Queue-Technologie.
@@ -8,7 +9,7 @@ Dieses Dokument erklärt die Container-Struktur (`docker-compose.yml`, `.env.exa
 
 | Container | Zweck | Läuft dauerhaft? | Nach außen sichtbar? |
 |---|---|---|---|
-| `db` | PostgreSQL + `pgvector` + `pg_trgm` | ja, leichtgewichtig | nein, nur intern |
+| `db` | PostgreSQL + `pg_trgm` (Image `pgvector/pgvector` bleibt aus Kompatibilität mit bestehenden Datenbanken; die Erweiterung wird seit Migration 0010 nicht mehr genutzt) | ja, leichtgewichtig | nein, nur intern |
 | `meilisearch` | Volltextsuche | ja, leichtgewichtig | nein, nur intern |
 | `ollama` | Lokales KI-Modell (Server-Prozess) | ja, leichtgewichtig; Modell selbst nur bei Bedarf im RAM | nein, nur intern |
 | `ollama-init` | Lädt beim ersten Start die konfigurierten Modelle herunter, beendet sich danach | nein, einmalig | nein |

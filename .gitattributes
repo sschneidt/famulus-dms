@@ -1,0 +1,6 @@
+# Zeilenenden festlegen - die Installationsskripte muessen auch dann laufen, wenn der Ordner unter
+# Windows ausgecheckt und auf einen Linux-Server kopiert wird (und umgekehrt).
+*.sh   text eol=lf
+*.ps1  text eol=crlf
+*.cmd  text eol=crlf
+docker-entrypoint.sh text eol=lf

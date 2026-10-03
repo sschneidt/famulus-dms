@@ -7,13 +7,13 @@ Im Container:  docker compose exec app-api python -m homedms.cli users
 Lokal:         uv run python -m homedms.cli ...
 """
 import argparse
-import asyncio
 import getpass
 import sys
 from datetime import datetime, timezone
 
 from sqlalchemy import func, select, update
 
+from homedms import runtime
 from homedms.core.security import hash_password
 from homedms.db import async_session_factory, engine
 from homedms.models.tenant import RefreshToken, Tenant, User
@@ -115,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
         finally:
             await engine.dispose()
 
-    return asyncio.run(run())
+    return runtime.run(run())
 
 
 if __name__ == "__main__":

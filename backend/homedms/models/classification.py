@@ -1,10 +1,11 @@
-"""CategoryExemplar (pgvector), ClassificationEvent, AIModelConfig - Datenmodell 3.7."""
+"""CategoryExemplar, ClassificationEvent, AIModelConfig - Datenmodell 3.7."""
 import enum
 import uuid
 from datetime import datetime
 
-from pgvector.sqlalchemy import Vector
-from sqlalchemy import Boolean, Enum as SAEnum, ForeignKey, Numeric, String, Text, DateTime, func
+from sqlalchemy import DateTime, Float, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
 from homedms.models.base import Base, UUIDPKMixin
@@ -29,7 +30,9 @@ class CategoryExemplar(Base, UUIDPKMixin):
     document_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("documents.id", ondelete="CASCADE"), nullable=True, index=True
     )
-    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
+    # Zahlenliste statt pgvector (0010) - so reicht ein Standard-PostgreSQL, auch unter Windows.
+    # Die Aehnlichkeit rechnet tasks/classification.py selbst.
+    embedding: Mapped[list[float]] = mapped_column(ARRAY(Float(precision=53)))
     created_via: Mapped[ExemplarSource] = mapped_column(SAEnum(ExemplarSource, name="exemplar_source"))
     confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

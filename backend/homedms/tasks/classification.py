@@ -13,7 +13,8 @@ Die Entscheidungsregeln selbst stehen in homedms/ai/classifier.py.
 import logging
 import uuid
 
-from sqlalchemy import delete, func, or_, select
+import numpy as np
+from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from homedms.ai.classifier import (
@@ -48,12 +49,14 @@ async def _config_for(db: AsyncSession, tenant_id: uuid.UUID) -> AIModelConfig |
 async def _category_scores(
     db: AsyncSession, tenant_id: uuid.UUID, embedding: list[float], exclude_document_id: uuid.UUID
 ) -> list[CategoryScore]:
-    """Beste Aehnlichkeit je Kategorie (1 - Kosinus-Abstand) plus Anzahl der Exemplare.
-    Exemplare aus Dokumenten im Papierkorb zaehlen nicht mit."""
-    distance = CategoryExemplar.embedding.cosine_distance(embedding)
+    """Beste Aehnlichkeit je Kategorie (Kosinus-Aehnlichkeit) plus Anzahl der Exemplare.
+    Exemplare aus Dokumenten im Papierkorb zaehlen nicht mit.
+
+    Gerechnet wird hier statt in der Datenbank (frueher pgvector), damit ein Standard-PostgreSQL
+    reicht - siehe alembic/versions/0010. Ein Haushalt hat einige hundert bis tausend Exemplare."""
     rows = (
         await db.execute(
-            select(CategoryExemplar.category_id, func.max(1 - distance), func.count())
+            select(CategoryExemplar.category_id, CategoryExemplar.embedding)
             .join(Category, Category.id == CategoryExemplar.category_id)
             .outerjoin(Document, Document.id == CategoryExemplar.document_id)
             .where(
@@ -61,10 +64,24 @@ async def _category_scores(
                 or_(CategoryExemplar.document_id.is_(None), Document.deleted_at.is_(None)),
                 or_(CategoryExemplar.document_id.is_(None), CategoryExemplar.document_id != exclude_document_id),
             )
-            .group_by(CategoryExemplar.category_id)
         )
     ).all()
-    return [CategoryScore(cat_id, float(sim), int(n)) for cat_id, sim, n in rows]
+    return category_scores(embedding, [(cat_id, vec) for cat_id, vec in rows])
+
+
+def category_scores(embedding: list[float], exemplars: list[tuple[uuid.UUID, list[float]]]) -> list[CategoryScore]:
+    """Reine Rechnung (getestet in tests/test_classifier.py): max. Kosinus-Aehnlichkeit je Kategorie."""
+    if not exemplars:
+        return []
+    query = np.asarray(embedding, dtype=np.float64)
+    vectors = np.asarray([vec for _, vec in exemplars], dtype=np.float64)
+    norms = np.linalg.norm(vectors, axis=1) * (np.linalg.norm(query) or 1.0)
+    similarity = vectors @ query / np.where(norms == 0, 1.0, norms)
+    best: dict[uuid.UUID, tuple[float, int]] = {}
+    for (cat_id, _), sim in zip(exemplars, similarity):
+        top, count = best.get(cat_id, (-1.0, 0))
+        best[cat_id] = (max(top, float(sim)), count + 1)
+    return [CategoryScore(cat_id, sim, n) for cat_id, (sim, n) in best.items()]
 
 
 async def _replace_exemplar(

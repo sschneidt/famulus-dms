@@ -140,7 +140,7 @@ Damit muss ein Admin nur für die wenigen sensiblen Kategorien (z. B. Gesundheit
 | id | UUID, PK | |
 | category_id | UUID, FK | |
 | document_id | UUID, FK, nullable | Quelldokument (Nachvollziehbarkeit) |
-| embedding | vector(N) | via `pgvector`, N je nach gewähltem Embedding-Modell |
+| embedding | double precision[] | Vektor des Embedding-Modells (N Werte, nomic-embed-text: 768). Bis 03.10.2026 `vector(N)` via `pgvector` – umgestellt (Migration 0010), damit ein Standard-PostgreSQL reicht (Betrieb unter Windows/Linux ohne Docker); die Ähnlichkeit rechnet der Worker |
 | created_via | enum(auto_high_confidence, llm_confirmed, manual_feedback, chat_correction) | |
 | confirmed_by_user_id | UUID, FK, nullable | |
 | created_at | timestamp | |

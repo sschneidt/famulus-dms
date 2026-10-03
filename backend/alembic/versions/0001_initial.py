@@ -16,7 +16,6 @@ einigen Zeitstempel-Spalten - diese behebt Migration 0003 fuer alle Installation
 
 Aenderungen am Schema gehoeren ab jetzt ausschliesslich in neue Migrationen.
 """
-import pgvector.sqlalchemy
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy import Text
@@ -29,7 +28,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute("CREATE EXTENSION IF NOT EXISTS vector")
+    # pgvector wird nicht mehr gebraucht (0010): Exemplare liegen als einfache Zahlenliste vor, damit
+    # HomeDMS auch mit einem Standard-PostgreSQL (Windows/Linux ohne Zusatzpaket) laeuft.
     op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
 
     op.create_table('tenants',
@@ -205,7 +205,7 @@ def upgrade() -> None:
     op.create_table('category_exemplars',
     sa.Column('category_id', sa.UUID(), nullable=False),
     sa.Column('document_id', sa.UUID(), nullable=True),
-    sa.Column('embedding', pgvector.sqlalchemy.vector.VECTOR(dim=768), nullable=False),
+    sa.Column('embedding', postgresql.ARRAY(sa.Float(precision=53)), nullable=False),
     sa.Column('created_via', sa.Enum('auto_high_confidence', 'llm_confirmed', 'manual_feedback', 'chat_correction', name='exemplar_source'), nullable=False),
     sa.Column('confirmed_by_user_id', sa.UUID(), nullable=True),
     sa.Column('created_at', sa.DateTime(), server_default='now()', nullable=False),

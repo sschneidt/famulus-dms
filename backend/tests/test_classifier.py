@@ -123,3 +123,19 @@ def test_prompt_erst_beschreiben_dann_entscheiden():
     )
     assert answer.category_id == cid
     assert answer.reason.startswith("Art: Rechnung, Bezug: Wohnung.")
+
+
+def test_aehnlichkeit_je_kategorie_ohne_pgvector():
+    """Stufe 1 rechnet die Kosinus-Aehnlichkeit selbst (alembic 0010) - beste je Kategorie + Anzahl."""
+    import uuid
+
+    from homedms.tasks.classification import category_scores
+
+    strom, kfz = uuid.uuid4(), uuid.uuid4()
+    scores = {s.category_id: s for s in category_scores(
+        [1.0, 0.0, 0.0],
+        [(strom, [2.0, 0.0, 0.0]), (strom, [0.0, 1.0, 0.0]), (kfz, [1.0, 1.0, 0.0]), (kfz, [0.0, 0.0, 0.0])],
+    )}
+    assert scores[strom].similarity == pytest.approx(1.0) and scores[strom].exemplar_count == 2
+    assert scores[kfz].similarity == pytest.approx(2 ** -0.5) and scores[kfz].exemplar_count == 2
+    assert category_scores([1.0, 0.0], []) == []

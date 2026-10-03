@@ -10,8 +10,8 @@ volumes:
 
 services:
   # ---------------------------------------------------------------------------
-  # Datenbank: PostgreSQL inkl. pgvector (Klassifikations-Exemplare) und pg_trgm
-  # (Fallback-Volltextsuche). Basis-Image mit pgvector vorinstalliert.
+  # Datenbank: PostgreSQL inkl. pg_trgm (Fallback-Volltextsuche). Das pgvector-Image bleibt fuer
+  # bestehende Datenbanken, die Erweiterung wird seit Migration 0010 nicht mehr gebraucht.
   # ---------------------------------------------------------------------------
   db:
     image: pgvector/pgvector:pg16

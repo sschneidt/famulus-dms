@@ -1,5 +1,6 @@
 """Zentrale Konfiguration. Env-Variablen spiegeln docker-compose.yml (Repo-Root)."""
 from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +14,8 @@ class Settings(BaseSettings):
     # Varianten, die die beiden unterschiedlichen Treiber (asyncpg vs. psycopg) brauchen.
     database_url: str = "postgresql://homedms:changeme@localhost:5432/homedms"
 
+    # Leer = ohne Meilisearch: die Suche nutzt dann nur die Datenbank (Teilwort-Suche, ohne
+    # Tippfehler-Toleranz) - z. B. fuer eine schlanke Installation ohne Docker.
     meilisearch_url: str = "http://localhost:7700"
     meilisearch_key: str = "changeme"
 
@@ -25,6 +28,8 @@ class Settings(BaseSettings):
     # Tesseract-Sprachpakete fuer die Texterkennung (Anforderungsdokument 4.2), "+"-getrennt.
     # Weitere Sprachen: Paket im Dockerfile ergaenzen (tesseract-ocr-<code>) und hier anhaengen.
     ocr_languages: str = "deu+eng"
+    # Pfad zu tesseract(.exe), falls nicht im PATH (Windows) - leer = automatisch suchen (runtime.py)
+    tesseract_cmd: str = ""
 
     ai_caution_level: str = "normal"  # vorsichtig | normal | mutig, siehe Datenmodell 3.7 AIModelConfig
 

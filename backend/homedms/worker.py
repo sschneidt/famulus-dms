@@ -9,9 +9,9 @@ Start (lokal): `uv run python -m homedms.worker`
 Start (Container, APP_ROLE=worker): dasselbe Kommando, siehe Dockerfile (CMD-Weiche je nach APP_ROLE).
 """
 import asyncio
-import logging
 import signal
 
+from homedms import runtime
 from homedms.jobs import app
 
 # Zwei getrennte Warteschlangen, je ein eigener Arbeitsstrang:
@@ -25,7 +25,7 @@ QUEUES = {"dateien": ["default", "builtin"], "ki": ["ai"]}  # builtin: Procrasti
 
 
 async def _main() -> None:
-    logging.basicConfig(level=logging.INFO)
+    runtime.setup_logging("worker")
     async with app.open_async():
         workers = [
             asyncio.create_task(
@@ -34,13 +34,20 @@ async def _main() -> None:
             for name, queues in QUEUES.items()
         ]
         loop = asyncio.get_running_loop()
+
+        def stop(*_args) -> None:
+            loop.call_soon_threadsafe(lambda: [w.cancel() for w in workers])  # sauber beenden
+
         for sig in (signal.SIGTERM, signal.SIGINT):
-            loop.add_signal_handler(sig, lambda: [w.cancel() for w in workers])  # sauber beenden
+            try:
+                loop.add_signal_handler(sig, stop)
+            except NotImplementedError:  # Windows: kein add_signal_handler
+                signal.signal(sig, stop)
         await asyncio.gather(*workers, return_exceptions=True)
 
 
 def main() -> None:
-    asyncio.run(_main())
+    runtime.run(_main())
 
 
 if __name__ == "__main__":

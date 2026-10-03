@@ -1,5 +1,9 @@
 # Secrets / lokale Konfiguration
 .env
+homedms.env
+
+# Betrieb ohne Docker: von den Installationsskripten geladene Werkzeuge (Node, Python, Meilisearch)
+.tools/
 
 # Python (siehe zusaetzlich backend/.gitignore)
 __pycache__/

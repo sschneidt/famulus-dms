@@ -21,7 +21,10 @@ from dataclasses import dataclass
 import pytesseract
 from PIL import Image, ImageFilter, ImageMath, ImageOps
 
+from homedms.runtime import configure_tesseract
+
 logger = logging.getLogger("homedms.core.ocr_image")
+configure_tesseract()  # Windows: tesseract.exe liegt meist nicht im PATH
 
 MAX_EDGE = 4000
 MIN_EDGE = 1600

@@ -1,4 +1,4 @@
-"""Klassifikation gegen echte DB (pgvector), mit einer Ollama-Attrappe statt echtem Sprachmodell.
+"""Klassifikation gegen echte DB, mit einer Ollama-Attrappe statt echtem Sprachmodell.
 
 Die Attrappe verhaelt sich vorhersehbar: Embeddings sind "Wortbeutel"-Vektoren (aehnliche Texte ->
 aehnliche Vektoren), das "Sprachmodell" entscheidet nach Stichworten. So laesst sich die gesamte

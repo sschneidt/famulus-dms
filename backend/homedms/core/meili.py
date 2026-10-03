@@ -35,6 +35,8 @@ class MeiliClient:
         self._settings_applied = False
 
     async def _request(self, method: str, path: str, json: Any = None, timeout: float = 10) -> dict:
+        if not self.base_url:
+            raise SearchUnavailable("Meilisearch ist nicht eingerichtet (MEILISEARCH_URL leer)")
         try:
             async with httpx.AsyncClient(
                 base_url=self.base_url, timeout=timeout, transport=self._transport,
