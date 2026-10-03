@@ -1,8 +1,11 @@
 import {
   ActionIcon,
   Alert,
+  Badge,
   Button,
   Group,
+  Image,
+  Loader,
   Modal,
   Progress,
   SegmentedControl,
@@ -10,6 +13,7 @@ import {
   Text,
   TextInput,
   ThemeIcon,
+  UnstyledButton,
 } from "@mantine/core";
 import { Dropzone, type FileWithPath } from "@mantine/dropzone";
 import { useMediaQuery } from "@mantine/hooks";
@@ -17,7 +21,7 @@ import { IconArrowDown, IconArrowUp, IconCamera, IconFile, IconPhoto, IconUpload
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { uploadDocument, type Schemas } from "../api/client";
+import { rectifyPhoto, uploadDocument, type Schemas } from "../api/client";
 import { notifyError, notifySuccess } from "../lib/notify";
 
 const ACCEPTED_TYPES = {
@@ -35,6 +39,41 @@ export interface PendingFile {
   file: File;
   source: Schemas["DocumentSource"];
 }
+
+/**
+ * Automatischer Zuschnitt (Nutzerwunsch): Jedes Foto wird gleich nach der Aufnahme vom Server
+ * zugeschnitten, entzerrt und gerade gerichtet (POST /photos/rectify, nichts wird gespeichert).
+ * Das Ergebnis erscheint als Vorschau; per Tipp laesst sich stattdessen das Original verwenden.
+ * Hochgeladen wird genau die gezeigte Fassung. Ist die Vorschau noch nicht fertig (oder
+ * fehlgeschlagen), schneidet der Server beim Hochladen selbst zu.
+ */
+type ScanState =
+  | { status: "busy" }
+  | { status: "failed" }
+  | { status: "done"; corrected: File; url: string; cropped: boolean; skew: number };
+
+interface Item extends PendingFile {
+  key: number;
+  scan?: ScanState;
+  /** Vorschau-Adresse des Originals (fuer die Vergleichsansicht) */
+  originalUrl?: string;
+  useOriginal: boolean;
+}
+
+function scanChanged(scan: ScanState | undefined): scan is Extract<ScanState, { status: "done" }> {
+  return scan?.status === "done" && (scan.cropped || scan.skew !== 0);
+}
+
+/** Welche Datei hochgeladen wird - und ob der Server sie noch zuschneiden soll. */
+function uploadVersion(item: Item): { file: File; autoCrop: boolean } {
+  if (item.scan?.status === "done") {
+    return { file: scanChanged(item.scan) && !item.useOriginal ? item.scan.corrected : item.file, autoCrop: false };
+  }
+  return { file: item.file, autoCrop: !item.useOriginal };
+}
+
+let nextKey = 0;
+const toItem = (pending: PendingFile): Item => ({ ...pending, key: nextKey++, useOriginal: false });
 
 interface Props {
   opened: boolean;
@@ -79,7 +118,8 @@ function UploadForm({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const cameraInput = useRef<HTMLInputElement>(null);
-  const [files, setFiles] = useState<PendingFile[]>(initialFiles ?? []);
+  const [files, setFiles] = useState<Item[]>(() => (initialFiles ?? []).map(toItem));
+  const [previewKey, setPreviewKey] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [original, setOriginal] = useState<Schemas["OriginalPresent"]>("unbekannt");
   const [location, setLocation] = useState("");
@@ -87,7 +127,38 @@ function UploadForm({
   const [rejected, setRejected] = useState<string | null>(null);
 
   const addFiles = (added: File[], source: Schemas["DocumentSource"]) =>
-    setFiles((current) => [...current, ...added.map((file) => ({ file, source }))]);
+    setFiles((current) => [...current, ...added.map((file) => toItem({ file, source }))]);
+
+  // Fotos gleich nach dem Hinzufuegen zuschneiden lassen (Vorschau)
+  const started = useRef(new Set<number>());
+  const objectUrls = useRef<string[]>([]);
+  useEffect(() => {
+    const urls = objectUrls.current;
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
+  useEffect(() => {
+    for (const item of files) {
+      if (started.current.has(item.key) || !isImageFile(item.file)) continue;
+      started.current.add(item.key);
+      const update = (patch: Partial<Item>) =>
+        setFiles((current) => current.map((i) => (i.key === item.key ? { ...i, ...patch } : i)));
+      update({ scan: { status: "busy" } });
+      rectifyPhoto(item.file)
+        .then((result) => {
+          const url = URL.createObjectURL(result.file);
+          const originalUrl = URL.createObjectURL(item.file);
+          objectUrls.current.push(url, originalUrl);
+          update({
+            scan: { status: "done", corrected: result.file, url, cropped: result.cropped, skew: result.skew },
+            originalUrl,
+          });
+        })
+        .catch(() => update({ scan: { status: "failed" } }));
+    }
+  }, [files]);
+  const setUseOriginal = (key: number, useOriginal: boolean) =>
+    setFiles((current) => current.map((i) => (i.key === key ? { ...i, useOriginal } : i)));
+  const previewItem = files.find((f) => f.key === previewKey);
 
   const busy = progress !== null;
   useEffect(() => onBusyChange(busy), [busy, onBusyChange]);
@@ -112,13 +183,15 @@ function UploadForm({
     const created: string[] = [];
     try {
       if (combine) {
+        const versions = files.map(uploadVersion);
         const doc = await uploadDocument(
-          files.map((f) => f.file),
+          versions.map((v) => v.file),
           {
             title: title.trim() || undefined,
             source: files.some((f) => f.source === "photo_app") ? "photo_app" : "upload",
             originalPresent: original,
             originalLocation: original === "ja" ? location.trim() || undefined : undefined,
+            autoCrop: versions.map((v) => v.autoCrop),
           },
         );
         notifySuccess(`Dokument mit ${files.length} Seiten hochgeladen – Texterkennung läuft im Hintergrund.`);
@@ -127,7 +200,9 @@ function UploadForm({
         return;
       }
       for (const [index, pending] of files.entries()) {
-        const doc = await uploadDocument(pending.file, {
+        const version = uploadVersion(pending);
+        const doc = await uploadDocument(version.file, {
+          autoCrop: [version.autoCrop],
           title: files.length === 1 ? title.trim() || undefined : undefined,
           source: pending.source,
           originalPresent: original,
@@ -244,22 +319,44 @@ function UploadForm({
       {files.length > 0 && (
         <Stack gap={6}>
           {files.map((pending, index) => (
-            <Group key={`${pending.file.name}-${index}`} justify="space-between" wrap="nowrap">
+            <Group key={pending.key} justify="space-between" wrap="nowrap">
               <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
                 {combine && (
                   <Text size="xs" c="dimmed" w={52} style={{ flexShrink: 0 }}>
                     Seite {index + 1}
                   </Text>
                 )}
-                <ThemeIcon variant="light" size="sm">
-                  {pending.file.type.startsWith("image/") ? <IconPhoto size={14} /> : <IconFile size={14} />}
-                </ThemeIcon>
-                <Text size="sm" truncate>
-                  {pending.file.name || "Foto"}
-                </Text>
-                <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
-                  {formatSize(pending.file.size)}
-                </Text>
+                {pending.scan?.status === "done" ? (
+                  <UnstyledButton
+                    onClick={() => setPreviewKey(pending.key)}
+                    aria-label={`Vorschau ${pending.file.name || "Foto"}`}
+                    style={{ flexShrink: 0 }}
+                  >
+                    <Image
+                      src={pending.useOriginal ? pending.originalUrl : pending.scan.url}
+                      w={44}
+                      h={44}
+                      fit="cover"
+                      radius="sm"
+                      fallbackSrc={pending.scan.url}
+                    />
+                  </UnstyledButton>
+                ) : (
+                  <ThemeIcon variant="light" size="sm">
+                    {pending.file.type.startsWith("image/") ? <IconPhoto size={14} /> : <IconFile size={14} />}
+                  </ThemeIcon>
+                )}
+                <Stack gap={2} style={{ minWidth: 0 }}>
+                  <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
+                    <Text size="sm" truncate>
+                      {pending.file.name || "Foto"}
+                    </Text>
+                    <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
+                      {formatSize(pending.file.size)}
+                    </Text>
+                  </Group>
+                  <ScanInfo item={pending} onToggle={(v) => setUseOriginal(pending.key, v)} disabled={busy} />
+                </Stack>
               </Group>
               <Group gap={0} wrap="nowrap">
                 {combine && (
@@ -337,6 +434,38 @@ function UploadForm({
 
       {progress !== null && <Progress value={progress} animated />}
 
+      <Modal
+        opened={previewItem?.scan?.status === "done"}
+        onClose={() => setPreviewKey(null)}
+        title={previewItem?.file.name || "Foto"}
+        size="lg"
+        fullScreen={isMobile}
+      >
+        {previewItem?.scan?.status === "done" && (
+          <Stack>
+            {scanChanged(previewItem.scan) && (
+              <SegmentedControl
+                fullWidth
+                value={previewItem.useOriginal ? "original" : "zugeschnitten"}
+                onChange={(v) => setUseOriginal(previewItem.key, v === "original")}
+                data={[
+                  { value: "zugeschnitten", label: "Zugeschnitten" },
+                  { value: "original", label: "Original" },
+                ]}
+              />
+            )}
+            <Image
+              src={previewItem.useOriginal ? previewItem.originalUrl : previewItem.scan.url}
+              fallbackSrc={previewItem.scan.url}
+              fit="contain"
+              mah={isMobile ? "70vh" : 560}
+              radius="sm"
+            />
+            <Button onClick={() => setPreviewKey(null)}>Übernehmen</Button>
+          </Stack>
+        )}
+      </Modal>
+
       <Group justify="flex-end">
         <Button variant="default" onClick={onClose} disabled={busy}>
           Abbrechen
@@ -361,6 +490,52 @@ function UploadForm({
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
+}
+
+function ScanInfo({
+  item,
+  onToggle,
+  disabled,
+}: {
+  item: Item;
+  onToggle(useOriginal: boolean): void;
+  disabled: boolean;
+}) {
+  const scan = item.scan;
+  if (!scan) return null;
+  if (scan.status === "busy") {
+    return (
+      <Group gap={6} wrap="nowrap">
+        <Loader size={12} />
+        <Text size="xs" c="dimmed">
+          wird zugeschnitten …
+        </Text>
+      </Group>
+    );
+  }
+  if (scan.status === "failed") return null;
+  if (!scanChanged(scan)) {
+    return (
+      <Text size="xs" c="dimmed">
+        Kein Blattrand erkannt – bleibt wie aufgenommen
+      </Text>
+    );
+  }
+  const label = scan.cropped ? "Zugeschnitten" : `Gerade gerichtet (${Math.abs(scan.skew).toLocaleString("de-DE")}°)`;
+  return (
+    <Group gap={6} wrap="nowrap">
+      <Badge size="xs" variant="light" color={item.useOriginal ? "gray" : "teal"}>
+        {item.useOriginal ? "Original" : label}
+      </Badge>
+      <Button size="compact-xs" variant="subtle" disabled={disabled} onClick={() => onToggle(!item.useOriginal)}>
+        {item.useOriginal ? "Zuschnitt verwenden" : "Original verwenden"}
+      </Button>
+    </Group>
+  );
+}
+
+function isImageFile(file: File): boolean {
+  return file.type.startsWith("image/") || /\.(jpe?g|png|tiff?|webp|hei[cf])$/i.test(file.name);
 }
 
 function isPageFile(file: File): boolean {

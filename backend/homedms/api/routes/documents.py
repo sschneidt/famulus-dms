@@ -18,6 +18,7 @@ from pathlib import Path
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -285,6 +286,10 @@ async def create_document(
     source: DocumentSource = Form(DocumentSource.upload),
     original_present: OriginalPresent = Form(OriginalPresent.unbekannt),
     original_location: str | None = Form(None),
+    auto_crop: list[bool] = Form(
+        [], description="Je Datei: Foto zuschneiden + gerade richten (Standard ja). Nein, wenn die "
+        "Weboberflaeche das schon per Vorschau erledigt hat oder das Original gewuenscht ist."
+    ),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Document:
@@ -295,9 +300,13 @@ async def create_document(
         filename, mime, content = uploads[0]
     else:
         # Mehrere Dateien -> eine PDF. Auch ein einzelnes Foto wird zur PDF (Nutzerwunsch): aufgerichtet,
-        # verkleinert, in der Ablage einheitlich - und die Texterkennung arbeitet mit der richtigen Drehung.
+        # zugeschnitten, verkleinert, in der Ablage einheitlich - und die Texterkennung arbeitet mit der
+        # richtigen Drehung.
         try:
-            content = combine([Part(c, n, m) for n, m, c in uploads])
+            content = await run_in_threadpool(combine, [
+                Part(c, n, m, auto_crop=auto_crop[i] if i < len(auto_crop) else True)
+                for i, (n, m, c) in enumerate(uploads)
+            ])
         except PageError as exc:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
         filename, mime = f"{Path(uploads[0][0]).stem or 'Dokument'}.pdf", "application/pdf"
@@ -532,7 +541,7 @@ async def reprocess_document(
         part = Part(content, Path(current.file_path).name, current.mime_type)
         if part.kind == "image":
             try:
-                replace_with_pdf(current, combine([part]))
+                replace_with_pdf(current, await run_in_threadpool(combine, [part]))
             except PageError:
                 pass  # unlesbares Bild - Texterkennung meldet das dann
 

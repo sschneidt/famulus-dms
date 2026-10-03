@@ -15,10 +15,10 @@ import {
   Tooltip,
 } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { IconArrowLeft, IconArrowRight, IconCamera, IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconArrowLeft, IconArrowRight, IconCamera, IconCrop, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { addPages, api, call, fetchPageThumbnail, type DocumentDetail } from "../../api/client";
+import { addPages, api, call, fetchPageThumbnail, rectifyPage, type DocumentDetail } from "../../api/client";
 import { isProcessing } from "../../lib/format";
 import { notifyError, notifySuccess } from "../../lib/notify";
 
@@ -36,10 +36,15 @@ export function PagesPanel({ doc, readOnly = false }: { doc: DocumentDetail; rea
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["document", doc.id] });
   const change = useMutation({
     mutationFn: async (
-      action: { kind: "add"; files: File[] } | { kind: "delete"; page: number } | { kind: "order"; order: number[] },
+      action:
+        | { kind: "add"; files: File[] }
+        | { kind: "delete"; page: number }
+        | { kind: "order"; order: number[] }
+        | { kind: "rectify"; page: number },
     ) => {
       const path = { params: { path: { document_id: doc.id } } };
       if (action.kind === "add") return addPages(doc.id, action.files);
+      if (action.kind === "rectify") return rectifyPage(doc.id, action.page);
       if (action.kind === "delete")
         return call(
           api.DELETE("/api/v1/documents/{document_id}/pages/{page}", {
@@ -54,11 +59,14 @@ export function PagesPanel({ doc, readOnly = false }: { doc: DocumentDetail; rea
           ? `Jetzt ${result.page_count} Seiten – Text wird neu erkannt`
           : action.kind === "delete"
             ? "Seite entfernt"
-            : "Reihenfolge geändert",
+            : action.kind === "rectify"
+              ? `Seite ${action.page} zugeschnitten und gerade gerichtet – Text wird neu erkannt`
+              : "Reihenfolge geändert",
       );
       void refresh();
     },
-    onError: (e) => notifyError(e, "Seiten konnten nicht geändert werden"),
+    onError: (e, action) =>
+      notifyError(e, action.kind === "rectify" ? "Zuschneiden nicht möglich" : "Seiten konnten nicht geändert werden"),
   });
 
   function move(page: number, delta: number) {
@@ -145,44 +153,60 @@ export function PagesPanel({ doc, readOnly = false }: { doc: DocumentDetail; rea
                   <Text size="xs" c="dimmed" pl={2}>
                     {page}
                   </Text>
-                  {!readOnly && count > 1 && (
+                  {!readOnly && (
                     <Group gap={0} wrap="nowrap">
-                      <Tooltip label="nach vorn">
+                      <Tooltip label="zuschneiden & gerade richten">
                         <ActionIcon
                           size="sm"
                           variant="subtle"
                           color="gray"
-                          disabled={locked || page === 1}
-                          onClick={() => move(page, -1)}
-                          aria-label={`Seite ${page} nach vorn`}
-                        >
-                          <IconArrowLeft size={14} />
-                        </ActionIcon>
-                      </Tooltip>
-                      <Tooltip label="nach hinten">
-                        <ActionIcon
-                          size="sm"
-                          variant="subtle"
-                          color="gray"
-                          disabled={locked || page === count}
-                          onClick={() => move(page, 1)}
-                          aria-label={`Seite ${page} nach hinten`}
-                        >
-                          <IconArrowRight size={14} />
-                        </ActionIcon>
-                      </Tooltip>
-                      <Tooltip label="entfernen">
-                        <ActionIcon
-                          size="sm"
-                          variant="subtle"
-                          color="red"
                           disabled={locked}
-                          onClick={() => confirmDelete(page)}
-                          aria-label={`Seite ${page} entfernen`}
+                          onClick={() => change.mutate({ kind: "rectify", page })}
+                          aria-label={`Seite ${page} zuschneiden`}
                         >
-                          <IconTrash size={14} />
+                          <IconCrop size={14} />
                         </ActionIcon>
                       </Tooltip>
+                      {count > 1 && (
+                        <>
+                          <Tooltip label="nach vorn">
+                            <ActionIcon
+                              size="sm"
+                              variant="subtle"
+                              color="gray"
+                              disabled={locked || page === 1}
+                              onClick={() => move(page, -1)}
+                              aria-label={`Seite ${page} nach vorn`}
+                            >
+                              <IconArrowLeft size={14} />
+                            </ActionIcon>
+                          </Tooltip>
+                          <Tooltip label="nach hinten">
+                            <ActionIcon
+                              size="sm"
+                              variant="subtle"
+                              color="gray"
+                              disabled={locked || page === count}
+                              onClick={() => move(page, 1)}
+                              aria-label={`Seite ${page} nach hinten`}
+                            >
+                              <IconArrowRight size={14} />
+                            </ActionIcon>
+                          </Tooltip>
+                          <Tooltip label="entfernen">
+                            <ActionIcon
+                              size="sm"
+                              variant="subtle"
+                              color="red"
+                              disabled={locked}
+                              onClick={() => confirmDelete(page)}
+                              aria-label={`Seite ${page} entfernen`}
+                            >
+                              <IconTrash size={14} />
+                            </ActionIcon>
+                          </Tooltip>
+                        </>
+                      )}
                     </Group>
                   )}
                 </Group>

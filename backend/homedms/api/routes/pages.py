@@ -8,6 +8,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -84,14 +85,20 @@ async def add_pages(
     document_id: uuid.UUID,
     file: list[UploadFile] = File(..., description="Neue Seiten (PDF oder Bilder) in dieser Reihenfolge"),
     position: int | None = Form(None, description="Vor dieser Seite einfuegen (1-basiert); leer = ans Ende"),
+    auto_crop: list[bool] = Form([], description="Je Datei: Foto zuschneiden + gerade richten (Standard ja)"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PagesResponse:
     document = await _editable(db, user, document_id)
     current_file, current = _current(document)
-    parts = [pages.Part(await f.read(), f.filename or "", f.content_type or "") for f in file]
+    parts = [
+        pages.Part(await f.read(), f.filename or "", f.content_type or "", auto_crop=auto_crop[i] if i < len(auto_crop) else True)
+        for i, f in enumerate(file)
+    ]
     pdf = _apply(pages.as_pdf, current)
-    return await _save(db, document, current_file, _apply(pages.insert_pages, pdf, parts, position))
+    # Fotos werden dabei zugeschnitten - Rechenarbeit im Thread, nicht im Event-Loop
+    content = await run_in_threadpool(_apply, pages.insert_pages, pdf, parts, position)
+    return await _save(db, document, current_file, content)
 
 
 @router.delete("/{document_id}/pages/{page}", response_model=PagesResponse)
@@ -115,6 +122,19 @@ async def reorder_pages(
     return await _save(db, document, current_file, _apply(pages.reorder, pdf, payload.order))
 
 
+@router.post("/{document_id}/pages/{page}/rectify", response_model=PagesResponse)
+async def rectify_page(
+    document_id: uuid.UUID, page: int, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> PagesResponse:
+    """Eine Foto-/Scan-Seite nachtraeglich zuschneiden und gerade richten (z. B. vor der Funktion
+    hochgeladene Fotos). 422, wenn weder Blattrand noch Schraeglage zu erkennen ist."""
+    document = await _editable(db, user, document_id)
+    current_file, current = _current(document)
+    pdf = _apply(pages.as_pdf, current)
+    content = await run_in_threadpool(_apply, pages.rectify_page, pdf, page)
+    return await _save(db, document, current_file, content)
+
+
 @router.get("/{document_id}/pages/{page}/thumbnail")
 async def page_thumbnail(
     document_id: uuid.UUID, page: int, width: int = Query(240, ge=60, le=1200),
@@ -126,4 +146,39 @@ async def page_thumbnail(
     # Inhalt aendert sich mit jeder Seitenaenderung -> Pruefsumme als Cache-Schluessel
     return Response(png, media_type="image/png", headers={
         "Cache-Control": "private, max-age=3600", "ETag": f'"{current_file.checksum[:16]}-{page}-{width}"',
+    })
+
+
+# --- Foto-Vorschau beim Hochladen --------------------------------------------------------------
+
+photos_router = APIRouter(prefix="/photos", tags=["documents"])
+
+MAX_PREVIEW_BYTES = 50 * 1024 * 1024
+
+
+@photos_router.post(
+    "/rectify",
+    responses={200: {"content": {"image/jpeg": {}}, "description": "Aufbereitetes Foto als JPEG"}},
+    response_class=Response,
+)
+async def rectify_photo(
+    file: UploadFile = File(..., description="Ein Foto (JPEG, PNG, HEIC ...)"),
+    user: User = Depends(get_current_user),
+) -> Response:
+    """Foto zuschneiden, entzerren und gerade richten - nur Vorschau, es wird nichts gespeichert.
+
+    Die Weboberflaeche zeigt das Ergebnis direkt nach der Aufnahme an; der Nutzer kann dann
+    zwischen aufbereitet und Original waehlen. Kopfzeilen: X-Cropped (true/false), X-Skew (Grad).
+    """
+    content = await file.read(MAX_PREVIEW_BYTES + 1)
+    if len(content) > MAX_PREVIEW_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Foto zu gross (max. 50 MB)")
+    if pages.Part(content, file.filename or "", file.content_type or "").kind != "image":
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Nur Fotos lassen sich zuschneiden")
+    # Rechenarbeit (ca. 0,5 s) nicht im Event-Loop - sonst stockt die API fuer alle anderen
+    jpeg, result = await run_in_threadpool(_apply, pages.preview, content)
+    return Response(jpeg, media_type="image/jpeg", headers={
+        "X-Cropped": "true" if result.cropped else "false",
+        "X-Skew": f"{result.skew:.1f}",
+        "Cache-Control": "no-store",
     })

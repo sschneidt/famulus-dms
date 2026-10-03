@@ -1,4 +1,4 @@
-"""POST /auth/login, /auth/refresh, /auth/logout, GET /auth/me - docs/API-Design.md Abschnitt 2."""
+"""POST /auth/login, /auth/refresh, /auth/logout, GET/PATCH /auth/me - docs/API-Design.md Abschnitt 2."""
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -14,8 +14,8 @@ from homedms.core.security import (
     verify_password,
 )
 from homedms.db import get_db
-from homedms.models.tenant import RefreshToken, User
-from homedms.schemas.auth import LoginRequest, MeResponse, RefreshRequest, TokenResponse
+from homedms.models.tenant import RefreshToken, Tenant, User
+from homedms.schemas.auth import LoginRequest, MeResponse, ProfileUpdate, RefreshRequest, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -77,8 +77,8 @@ async def logout(payload: RefreshRequest, db: AsyncSession = Depends(get_db)) ->
         await db.commit()
 
 
-@router.get("/me", response_model=MeResponse)
-async def me(user: User = Depends(get_current_user)) -> MeResponse:
+async def _me(user: User, db: AsyncSession) -> MeResponse:
+    tenant = await db.get(Tenant, user.tenant_id)
     return MeResponse(
         id=user.id,
         tenant_id=user.tenant_id,
@@ -86,4 +86,23 @@ async def me(user: User = Depends(get_current_user)) -> MeResponse:
         display_name=user.display_name,
         role=user.role.value,
         locale=user.locale,
+        household_name=tenant.name if tenant else "",
     )
+
+
+@router.get("/me", response_model=MeResponse)
+async def me(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> MeResponse:
+    return await _me(user, db)
+
+
+@router.patch("/me", response_model=MeResponse)
+async def update_me(
+    payload: ProfileUpdate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> MeResponse:
+    """Eigenen Anzeigenamen aendern (E-Mail und Rolle aendert nur ein Admin)."""
+    name = payload.display_name.strip()
+    if not name:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Bitte einen Namen angeben")
+    user.display_name = name
+    await db.commit()
+    return await _me(user, db)

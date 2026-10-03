@@ -22,6 +22,8 @@ dependencies = [
     "pymupdf>=1.24",      # PDF-Textextraktion + Rasterung fuer OCR, keine System-Poppler-Abhaengigkeit
     "pillow-heif>=0.18",  # HEIC-Fotos vom Handy (Anforderungsdokument 4.1)
     "httpx>=0.27",        # Aufrufe an Ollama (homedms/ai/ollama.py)
+    "opencv-python-headless>=4.10",  # Fotos zuschneiden/entzerren (homedms/core/docscan.py); "headless" = ohne GUI-Bibliotheken, keine System-Pakete noetig
+    "numpy>=1.26",                   # von OpenCV benoetigt
 ]
 
 [project.optional-dependencies]

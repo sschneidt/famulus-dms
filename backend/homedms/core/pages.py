@@ -13,6 +13,8 @@ from dataclasses import dataclass
 import pymupdf
 from PIL import Image, ImageOps
 
+from homedms.core import docscan
+
 try:
     import pillow_heif
 
@@ -36,6 +38,7 @@ class Part:
     content: bytes
     filename: str = ""
     mime: str = ""
+    auto_crop: bool = True  # Fotos zuschneiden + gerade richten (core/docscan.py); False = Original
 
     @property
     def kind(self) -> str:
@@ -48,19 +51,64 @@ class Part:
         return "other"
 
 
-def _image_page(doc: pymupdf.Document, content: bytes) -> None:
+def _load(content: bytes, auto_crop: bool) -> Image.Image:
     try:
         with Image.open(io.BytesIO(content)) as img:
             img = ImageOps.exif_transpose(img)  # Handy-Fotos stehen sonst oft quer
             img = img.convert("RGB")
-            img.thumbnail((MAX_IMAGE_EDGE, MAX_IMAGE_EDGE))
-            buf = io.BytesIO()
-            img.save(buf, format="JPEG", quality=JPEG_QUALITY, optimize=True)
-            width, height = img.size
     except Exception as exc:  # noqa: BLE001 - jedes defekte Bild
         raise PageError("Ein Bild konnte nicht gelesen werden") from exc
+    if auto_crop:
+        img = docscan.rectify(img).image
+    return img
+
+
+def _jpeg(img: Image.Image, max_edge: int = MAX_IMAGE_EDGE) -> tuple[bytes, int, int]:
+    img = img.copy()
+    img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=JPEG_QUALITY, optimize=True)
+    return buf.getvalue(), img.width, img.height
+
+
+def _image_page(doc: pymupdf.Document, content: bytes, auto_crop: bool = True) -> None:
+    jpeg, width, height = _jpeg(_load(content, auto_crop))
     page = doc.new_page(width=PAGE_WIDTH_PT, height=PAGE_WIDTH_PT * height / width)
-    page.insert_image(page.rect, stream=buf.getvalue())
+    page.insert_image(page.rect, stream=jpeg)
+
+
+def preview(content: bytes) -> tuple[bytes, docscan.ScanResult]:
+    """Foto so aufbereiten, wie es als Seite gespeichert wuerde - fuer die Vorschau beim Hochladen.
+
+    Liefert das fertige JPEG (gleiche Groesse/Qualitaet wie in der PDF). Laedt die Weboberflaeche
+    es danach als Seite hoch, wird es nicht ein zweites Mal zugeschnitten (auto_crop=False)."""
+    img = _load(content, auto_crop=False)
+    result = docscan.rectify(img)
+    jpeg, _, _ = _jpeg(result.image)
+    return jpeg, result
+
+
+def rectify_page(pdf: bytes, page: int) -> bytes:
+    """Eine bereits gespeicherte Foto-/Scan-Seite nachtraeglich zuschneiden und gerade richten."""
+    with pymupdf.open(stream=pdf, filetype="pdf") as doc:
+        if not 1 <= page <= doc.page_count:
+            raise PageError("Diese Seite gibt es nicht")
+        images = doc[page - 1].get_images(full=True)
+        if len(images) != 1:
+            raise PageError("Nur Seiten aus einem Foto oder Scan lassen sich zuschneiden")
+        try:
+            content = doc.extract_image(images[0][0])["image"]
+            with Image.open(io.BytesIO(content)) as img:
+                result = docscan.rectify(img.convert("RGB"))
+        except Exception as exc:  # noqa: BLE001
+            raise PageError("Das Bild dieser Seite konnte nicht gelesen werden") from exc
+        if not result.changed:
+            raise PageError("Kein Blattrand und keine Schräglage erkannt - die Seite bleibt, wie sie ist")
+        jpeg, width, height = _jpeg(result.image)
+        new = doc.new_page(page - 1, width=PAGE_WIDTH_PT, height=PAGE_WIDTH_PT * height / width)
+        new.insert_image(new.rect, stream=jpeg)
+        doc.delete_page(page)  # die alte Seite ist durch das Einfuegen eins nach hinten gerutscht
+        return _save(doc)
 
 
 def _append(doc: pymupdf.Document, part: Part) -> None:
@@ -75,7 +123,7 @@ def _append(doc: pymupdf.Document, part: Part) -> None:
         except Exception as exc:  # noqa: BLE001
             raise PageError("Eine PDF-Datei ist beschaedigt") from exc
     elif part.kind == "image":
-        _image_page(doc, part.content)
+        _image_page(doc, part.content, part.auto_crop)
     else:
         raise PageError(f"{part.filename or 'Datei'}: nur PDF und Bilder lassen sich zu Seiten zusammenfassen")
 

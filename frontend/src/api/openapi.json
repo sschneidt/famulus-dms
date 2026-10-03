@@ -168,6 +168,121 @@
             "HTTPBearer": []
           }
         ]
+      },
+      "patch": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Update Me",
+        "description": "Eigenen Anzeigenamen aendern (E-Mail und Rolle aendert nur ein Admin).",
+        "operationId": "update_me_api_v1_auth_me_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tenant": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get Household",
+        "operationId": "get_household_api_v1_tenant_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Rename Household",
+        "operationId": "rename_household_api_v1_tenant_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HouseholdUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/setup/status": {
@@ -1240,6 +1355,64 @@
         }
       }
     },
+    "/api/v1/documents/{document_id}/pages/{page}/rectify": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Rectify Page",
+        "description": "Eine Foto-/Scan-Seite nachtraeglich zuschneiden und gerade richten (z. B. vor der Funktion\nhochgeladene Fotos). 422, wenn weder Blattrand noch Schraeglage zu erkennen ist.",
+        "operationId": "rectify_page_api_v1_documents__document_id__pages__page__rectify_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Page"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/documents/{document_id}/pages/{page}/thumbnail": {
       "get": {
         "tags": [
@@ -1305,6 +1478,49 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/photos/rectify": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Rectify Photo",
+        "description": "Foto zuschneiden, entzerren und gerade richten - nur Vorschau, es wird nichts gespeichert.\n\nDie Weboberflaeche zeigt das Ergebnis direkt nach der Aufnahme an; der Nutzer kann dann\nzwischen aufbereitet und Original waehlen. Kopfzeilen: X-Cropped (true/false), X-Skew (Grad).",
+        "operationId": "rectify_photo_api_v1_photos_rectify_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_rectify_photo_api_v1_photos_rectify_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Aufbereitetes Foto als JPEG",
+            "content": {
+              "image/jpeg": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/wiedervorlagen": {
@@ -2339,6 +2555,15 @@
             ],
             "title": "Position",
             "description": "Vor dieser Seite einfuegen (1-basiert); leer = ans Ende"
+          },
+          "auto_crop": {
+            "items": {
+              "type": "boolean"
+            },
+            "type": "array",
+            "title": "Auto Crop",
+            "description": "Je Datei: Foto zuschneiden + gerade richten (Standard ja)",
+            "default": []
           }
         },
         "type": "object",
@@ -2381,6 +2606,15 @@
               }
             ],
             "title": "Original Location"
+          },
+          "auto_crop": {
+            "items": {
+              "type": "boolean"
+            },
+            "type": "array",
+            "title": "Auto Crop",
+            "description": "Je Datei: Foto zuschneiden + gerade richten (Standard ja). Nein, wenn die Weboberflaeche das schon per Vorschau erledigt hat oder das Original gewuenscht ist.",
+            "default": []
           }
         },
         "type": "object",
@@ -2389,35 +2623,65 @@
         ],
         "title": "Body_create_document_api_v1_documents_post"
       },
+      "Body_rectify_photo_api_v1_photos_rectify_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "Ein Foto (JPEG, PNG, HEIC ...)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_rectify_photo_api_v1_photos_rectify_post"
+      },
       "BootstrapRequest": {
         "properties": {
           "household_name": {
             "type": "string",
             "maxLength": 200,
             "minLength": 1,
-            "title": "Household Name"
+            "title": "Household Name",
+            "examples": [
+              "Familie Mustermann"
+            ]
           },
           "default_language": {
             "type": "string",
             "maxLength": 10,
             "title": "Default Language",
-            "default": "de"
+            "default": "de",
+            "examples": [
+              "de"
+            ]
           },
           "admin_email": {
             "type": "string",
             "format": "email",
-            "title": "Admin Email"
+            "title": "Admin Email",
+            "examples": [
+              "max@example.com"
+            ]
           },
           "admin_password": {
             "type": "string",
             "minLength": 8,
-            "title": "Admin Password"
+            "title": "Admin Password",
+            "examples": [
+              "ein-langes-Passwort"
+            ]
           },
           "admin_display_name": {
             "type": "string",
             "maxLength": 200,
             "minLength": 1,
-            "title": "Admin Display Name"
+            "title": "Admin Display Name",
+            "examples": [
+              "Max Mustermann"
+            ]
           }
         },
         "type": "object",
@@ -3442,6 +3706,42 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "HouseholdResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "documents_refiled": {
+            "type": "integer",
+            "title": "Documents Refiled",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "HouseholdResponse"
+      },
+      "HouseholdUpdate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "examples": [
+              "Familie Mustermann"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "HouseholdUpdate"
+      },
       "ImportLogEntry": {
         "properties": {
           "at": {
@@ -3636,6 +3936,11 @@
           "locale": {
             "type": "string",
             "title": "Locale"
+          },
+          "household_name": {
+            "type": "string",
+            "title": "Household Name",
+            "default": ""
           }
         },
         "type": "object",
@@ -3695,6 +4000,24 @@
           "page_count"
         ],
         "title": "PagesResponse"
+      },
+      "ProfileUpdate": {
+        "properties": {
+          "display_name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "examples": [
+              "Max Mustermann"
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "display_name"
+        ],
+        "title": "ProfileUpdate"
       },
       "PropertyMerge": {
         "properties": {

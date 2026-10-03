@@ -29,3 +29,7 @@ class ResizeObserverStub {
 }
 window.ResizeObserver ??= ResizeObserverStub as unknown as typeof ResizeObserver;
 window.HTMLElement.prototype.scrollIntoView ??= () => undefined;
+
+// Vorschaubilder (Blob-Adressen)
+URL.createObjectURL ??= () => "blob:test";
+URL.revokeObjectURL ??= () => undefined;

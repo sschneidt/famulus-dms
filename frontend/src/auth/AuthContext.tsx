@@ -9,6 +9,8 @@ interface AuthContextValue {
   state: AuthState;
   login(email: string, password: string): Promise<void>;
   logout(): Promise<void>;
+  /** Angaben zum Nutzer neu laden (z. B. nach Aendern des Anzeigenamens) */
+  refresh(): Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -59,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ status: "anonymous", user: null });
   }, [queryClient]);
 
-  const value = useMemo(() => ({ state, login, logout }), [state, login, logout]);
+  const value = useMemo(() => ({ state, login, logout, refresh: loadMe }), [state, login, logout, loadMe]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

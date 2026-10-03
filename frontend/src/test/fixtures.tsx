@@ -7,6 +7,7 @@ export const me: Me = {
   display_name: "Anna Muster",
   role: "admin",
   locale: "de",
+  household_name: "Familie Muster",
 };
 
 export const categories: Category[] = [

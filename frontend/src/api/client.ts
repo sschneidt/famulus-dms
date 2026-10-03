@@ -160,6 +160,8 @@ export interface UploadOptions {
   source?: Schemas["DocumentSource"];
   originalPresent?: Schemas["OriginalPresent"];
   originalLocation?: string;
+  /** je Datei (gleiche Reihenfolge): Foto vom Server zuschneiden lassen? Standard ja */
+  autoCrop?: boolean[];
 }
 
 /** Multipart-Upload (openapi-fetch kuemmert sich nicht um FormData-Bodies).
@@ -171,6 +173,8 @@ export async function uploadDocument(files: File | File[], options: UploadOption
   if (options.source) form.append("source", options.source);
   if (options.originalPresent) form.append("original_present", options.originalPresent);
   if (options.originalLocation) form.append("original_location", options.originalLocation);
+  // je Datei: false = schon per Vorschau aufbereitet bzw. Original gewuenscht; fehlt = Server schneidet zu
+  for (const crop of options.autoCrop ?? []) form.append("auto_crop", String(crop));
   const resp = await authFetch(`${api_base()}/api/v1/documents`, { method: "POST", body: form });
   if (!resp.ok) {
     let error: unknown;
@@ -208,6 +212,33 @@ export function addPages(documentId: string, files: File[], position?: number) {
   for (const file of files) form.append("file", file);
   if (position) form.append("position", String(position));
   return sendForm(`/api/v1/documents/${documentId}/pages`, "POST", form);
+}
+
+/** Eine Foto-/Scan-Seite nachtraeglich zuschneiden und gerade richten. */
+export function rectifyPage(documentId: string, page: number) {
+  return sendForm(`/api/v1/documents/${documentId}/pages/${page}/rectify`, "POST");
+}
+
+export interface RectifiedPhoto {
+  /** aufbereitetes Foto als JPEG - so wird es als Seite gespeichert */
+  file: File;
+  cropped: boolean;
+  skew: number;
+}
+
+/** Foto zuschneiden, entzerren und gerade richten lassen (nur Vorschau, nichts wird gespeichert). */
+export async function rectifyPhoto(photo: File, signal?: AbortSignal): Promise<RectifiedPhoto> {
+  const form = new FormData();
+  form.append("file", photo);
+  const resp = await authFetch(`${api_base()}/api/v1/photos/rectify`, { method: "POST", body: form, signal });
+  if (!resp.ok) throw new ApiError(resp.status, `Zuschnitt nicht moeglich (${resp.status})`);
+  const bytes = await resp.arrayBuffer();
+  const name = (photo.name || "Foto").replace(/\.[^.]+$/, "") + ".jpg";
+  return {
+    file: new File([bytes], name, { type: "image/jpeg" }),
+    cropped: resp.headers.get("X-Cropped") === "true",
+    skew: Number(resp.headers.get("X-Skew") ?? 0) || 0,
+  };
 }
 
 /** Vorschaubild einer Seite (mit Anmeldung geladen). */

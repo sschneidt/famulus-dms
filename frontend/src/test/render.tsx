@@ -14,6 +14,9 @@ export interface MockRoute {
   path: string | RegExp;
   status?: number;
   body?: unknown;
+  /** Rohdaten statt JSON (z. B. ein Bild) */
+  raw?: string;
+  headers?: Record<string, string>;
 }
 
 /** fetch-Attrappe: beantwortet Anfragen anhand einer Liste; unbekannte -> 404. Protokolliert alle Aufrufe. */
@@ -36,9 +39,12 @@ export function mockFetch(routes: MockRoute[]) {
         (typeof r.path === "string" ? r.path === url.pathname : r.path.test(url.pathname)),
     );
     if (!route) return new Response(JSON.stringify({ detail: "Not Found" }), { status: 404 });
+    if (route.raw !== undefined) {
+      return new Response(route.raw, { status: route.status ?? 200, headers: route.headers });
+    }
     return new Response(route.body === undefined ? null : JSON.stringify(route.body), {
       status: route.status ?? 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...route.headers },
     });
   });
   vi.stubGlobal("fetch", fn);

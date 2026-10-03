@@ -86,7 +86,29 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    patch?: never;
+    /**
+     * Update Me
+     * @description Eigenen Anzeigenamen aendern (E-Mail und Rolle aendert nur ein Admin).
+     */
+    patch: operations["update_me_api_v1_auth_me_patch"];
+    trace?: never;
+  };
+  "/api/v1/tenant": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Household */
+    get: operations["get_household_api_v1_tenant_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Rename Household */
+    patch: operations["rename_household_api_v1_tenant_patch"];
     trace?: never;
   };
   "/api/v1/setup/status": {
@@ -392,6 +414,27 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/documents/{document_id}/pages/{page}/rectify": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Rectify Page
+     * @description Eine Foto-/Scan-Seite nachtraeglich zuschneiden und gerade richten (z. B. vor der Funktion
+     *     hochgeladene Fotos). 422, wenn weder Blattrand noch Schraeglage zu erkennen ist.
+     */
+    post: operations["rectify_page_api_v1_documents__document_id__pages__page__rectify_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/documents/{document_id}/pages/{page}/thumbnail": {
     parameters: {
       query?: never;
@@ -403,6 +446,29 @@ export interface paths {
     get: operations["page_thumbnail_api_v1_documents__document_id__pages__page__thumbnail_get"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/photos/rectify": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Rectify Photo
+     * @description Foto zuschneiden, entzerren und gerade richten - nur Vorschau, es wird nichts gespeichert.
+     *
+     *     Die Weboberflaeche zeigt das Ergebnis direkt nach der Aufnahme an; der Nutzer kann dann
+     *     zwischen aufbereitet und Original waehlen. Kopfzeilen: X-Cropped (true/false), X-Skew (Grad).
+     */
+    post: operations["rectify_photo_api_v1_photos_rectify_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -695,6 +761,12 @@ export interface components {
        * @description Vor dieser Seite einfuegen (1-basiert); leer = ans Ende
        */
       position?: number | null;
+      /**
+       * Auto Crop
+       * @description Je Datei: Foto zuschneiden + gerade richten (Standard ja)
+       * @default []
+       */
+      auto_crop: boolean[];
     };
     /** Body_create_document_api_v1_documents_post */
     Body_create_document_api_v1_documents_post: {
@@ -714,24 +786,49 @@ export interface components {
       original_present: components["schemas"]["OriginalPresent"];
       /** Original Location */
       original_location?: string | null;
+      /**
+       * Auto Crop
+       * @description Je Datei: Foto zuschneiden + gerade richten (Standard ja). Nein, wenn die Weboberflaeche das schon per Vorschau erledigt hat oder das Original gewuenscht ist.
+       * @default []
+       */
+      auto_crop: boolean[];
+    };
+    /** Body_rectify_photo_api_v1_photos_rectify_post */
+    Body_rectify_photo_api_v1_photos_rectify_post: {
+      /**
+       * File
+       * @description Ein Foto (JPEG, PNG, HEIC ...)
+       */
+      file: string;
     };
     /** BootstrapRequest */
     BootstrapRequest: {
-      /** Household Name */
+      /**
+       * Household Name
+       * @example Familie Mustermann
+       */
       household_name: string;
       /**
        * Default Language
        * @default de
+       * @example de
        */
       default_language: string;
       /**
        * Admin Email
        * Format: email
+       * @example max@example.com
        */
       admin_email: string;
-      /** Admin Password */
+      /**
+       * Admin Password
+       * @example ein-langes-Passwort
+       */
       admin_password: string;
-      /** Admin Display Name */
+      /**
+       * Admin Display Name
+       * @example Max Mustermann
+       */
       admin_display_name: string;
     };
     /** BootstrapResponse */
@@ -1065,6 +1162,24 @@ export interface components {
       /** Detail */
       detail?: components["schemas"]["ValidationError"][];
     };
+    /** HouseholdResponse */
+    HouseholdResponse: {
+      /** Name */
+      name: string;
+      /**
+       * Documents Refiled
+       * @default 0
+       */
+      documents_refiled: number;
+    };
+    /** HouseholdUpdate */
+    HouseholdUpdate: {
+      /**
+       * Name
+       * @example Familie Mustermann
+       */
+      name: string;
+    };
     /** ImportLogEntry */
     ImportLogEntry: {
       /** At */
@@ -1157,6 +1272,11 @@ export interface components {
       role: string;
       /** Locale */
       locale: string;
+      /**
+       * Household Name
+       * @default
+       */
+      household_name: string;
     };
     /**
      * OcrStatus
@@ -1177,6 +1297,14 @@ export interface components {
     PagesResponse: {
       /** Page Count */
       page_count: number;
+    };
+    /** ProfileUpdate */
+    ProfileUpdate: {
+      /**
+       * Display Name
+       * @example Max Mustermann
+       */
+      display_name: string;
     };
     /**
      * PropertyMerge
@@ -1588,6 +1716,92 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["MeResponse"];
+        };
+      };
+    };
+  };
+  update_me_api_v1_auth_me_patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProfileUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MeResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_household_api_v1_tenant_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HouseholdResponse"];
+        };
+      };
+    };
+  };
+  rename_household_api_v1_tenant_patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["HouseholdUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HouseholdResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };
@@ -2213,6 +2427,38 @@ export interface operations {
       };
     };
   };
+  rectify_page_api_v1_documents__document_id__pages__page__rectify_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: string;
+        page: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PagesResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   page_thumbnail_api_v1_documents__document_id__pages__page__thumbnail_get: {
     parameters: {
       query?: {
@@ -2234,6 +2480,39 @@ export interface operations {
         };
         content: {
           "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  rectify_photo_api_v1_photos_rectify_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["Body_rectify_photo_api_v1_photos_rectify_post"];
+      };
+    };
+    responses: {
+      /** @description Aufbereitetes Foto als JPEG */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/jpeg": unknown;
         };
       };
       /** @description Validation Error */

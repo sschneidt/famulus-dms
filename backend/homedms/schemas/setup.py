@@ -28,11 +28,13 @@ PROPERTY_MODES = {"Haus & Reparaturen": "all", "Wohnen & Nebenkosten": "all", "V
 
 
 class BootstrapRequest(BaseModel):
-    household_name: str = Field(min_length=1, max_length=200)
-    default_language: str = Field(default="de", max_length=10)
-    admin_email: EmailStr
-    admin_password: str = Field(min_length=8)
-    admin_display_name: str = Field(min_length=1, max_length=200)
+    # Beispielwerte statt "string" in der API-Doku (/docs) - sonst landet beim Ausprobieren
+    # leicht "string" als Haushalts- bzw. Anzeigename in der Datenbank.
+    household_name: str = Field(min_length=1, max_length=200, examples=["Familie Mustermann"])
+    default_language: str = Field(default="de", max_length=10, examples=["de"])
+    admin_email: EmailStr = Field(examples=["max@example.com"])
+    admin_password: str = Field(min_length=8, examples=["ein-langes-Passwort"])
+    admin_display_name: str = Field(min_length=1, max_length=200, examples=["Max Mustermann"])
 
 
 class BootstrapResponse(BaseModel):

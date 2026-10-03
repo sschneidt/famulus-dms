@@ -21,7 +21,8 @@ REST-API auf Basis von FastAPI, Base-Path `/api/v1`. Alle Endpunkte sind implizi
 | POST | `/auth/login` | Login mit E-Mail/Passwort, liefert Access- + Refresh-Token | öffentlich |
 | POST | `/auth/refresh` | Neues Access-Token gegen gültiges Refresh-Token | öffentlich (Token-Besitz) |
 | POST | `/auth/logout` | Refresh-Token widerrufen | angemeldet |
-| GET | `/auth/me` | Eigenes Nutzerprofil + Rolle + Tenant-Info | angemeldet |
+| GET | `/auth/me` | Eigenes Nutzerprofil + Rolle + Tenant-Info (`household_name`) | angemeldet |
+| PATCH | `/auth/me` | Eigenen Anzeigenamen ändern (`{"display_name": "..."}`) – umgesetzt 03.10.2026, im Benutzermenü unter „Profil & Haushalt“ | angemeldet |
 | POST | `/setup/bootstrap` | Einmaliger Ersteinrichtungs-Schritt: legt Tenant + ersten Admin-User an (Einrichtungsassistent, Anforderungsdokument 4.7) | öffentlich, nur wenn noch kein Tenant existiert |
 | GET | `/setup/status` | Fortschritt der Ersteinrichtung (u. a. Ollama-Modell-Download-Status) | angemeldet (Admin) |
 
@@ -30,7 +31,7 @@ REST-API auf Basis von FastAPI, Base-Path `/api/v1`. Alle Endpunkte sind implizi
 | Methode | Pfad | Zweck | Rolle |
 |---|---|---|---|
 | GET | `/tenant` | Aktuelle Haushaltseinstellungen (Name, Sprache) | angemeldet |
-| PATCH | `/tenant` | Haushaltseinstellungen ändern | Admin |
+| PATCH | `/tenant` | Haushaltseinstellungen ändern – umgesetzt 03.10.2026 für den Namen (`{"name": "..."}`). Der Name ist zugleich der oberste Ablage-Ordner: alle Dokumente des Haushalts werden neu abgelegt (Antwort `documents_refiled`) | Admin |
 | GET | `/users` | Haushaltsmitglieder auflisten | angemeldet |
 | POST | `/users` | Neues Mitglied anlegen/einladen | Admin |
 | GET | `/users/{id}` | Nutzerdetails | angemeldet |
@@ -69,6 +70,8 @@ REST-API auf Basis von FastAPI, Base-Path `/api/v1`. Alle Endpunkte sind implizi
 | DELETE | `/documents/{id}/pages/{n}` | Einzelne Seite entfernen (die letzte nicht) | angemeldet + Edit-Recht |
 | PUT | `/documents/{id}/pages/order` | Seiten umsortieren (`{"order": [2, 1, 3]}`) | angemeldet + Edit-Recht |
 | GET | `/documents/{id}/pages/{n}/thumbnail` | Vorschaubild einer Seite (PNG) | angemeldet + Sichtbarkeit |
+| POST | `/documents/{id}/pages/{n}/rectify` | Foto-/Scan-Seite nachträglich zuschneiden, entzerren und gerade richten; 422, wenn weder Blattrand noch Schräglage erkennbar (umgesetzt 03.10.2026) | angemeldet + Edit-Recht |
+| POST | `/photos/rectify` | Vorschau: Foto zuschneiden/entzerren/gerade richten, liefert das JPEG zurück (Kopfzeilen `X-Cropped`, `X-Skew`), speichert nichts. `POST /documents` und `POST /documents/{id}/pages` nehmen dazu je Datei `auto_crop` (Standard `true`; `false` = schon aufbereitet bzw. Original gewünscht) | angemeldet |
 | POST | `/documents/{id}/category` | Kategorie manuell setzen/korrigieren (Feedback-Loop-Bestätigung) → erzeugt `ClassificationEvent` + neues `CategoryExemplar` | angemeldet + Edit-Recht |
 | GET | `/documents/{id}/classification-history` | Verlauf aller `ClassificationEvent`-Einträge | angemeldet + Sichtbarkeit |
 | POST | `/documents/bulk-reclassify` | Massen-Umkategorisierung über Filterkriterien (Chat-Tool-Funktion, siehe 1.) | angemeldet + Edit-Recht auf betroffene Dokumente |

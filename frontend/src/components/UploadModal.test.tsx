@@ -52,4 +52,66 @@ describe("UploadModal", () => {
     await user.click(screen.getByRole("button", { name: "2 Dokumente hochladen" }));
     await waitFor(() => expect(uploadedNames(calls)).toEqual([["a.jpg"], ["b.jpg"]]));
   });
+
+  it("Foto wird gleich zugeschnitten: Vorschau hochladen, ohne erneuten Zuschnitt", async () => {
+    const { calls } = mockFetch([
+      {
+        method: "POST",
+        path: "/api/v1/photos/rectify",
+        raw: "INHALT-zugeschnitten.jpg",
+        headers: { "Content-Type": "image/jpeg", "X-Cropped": "true", "X-Skew": "0.0" },
+      },
+      { method: "POST", path: "/api/v1/documents", status: 201, body: { id: "neu" } },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(
+      <UploadModal opened onClose={vi.fn()} initialFiles={[{ file: foto("tisch.jpg"), source: "photo_app" }]} />,
+    );
+    expect(await screen.findByText("Zugeschnitten")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Hochladen" }));
+    await waitFor(() => expect(uploadedNames(calls)).toEqual([["zugeschnitten.jpg"]]));
+    expect(autoCropFlags(calls)).toEqual([["false"]]);
+  });
+
+  it("'Original verwenden' laedt das unveraenderte Foto hoch", async () => {
+    const { calls } = mockFetch([
+      {
+        method: "POST",
+        path: "/api/v1/photos/rectify",
+        raw: "INHALT-zugeschnitten.jpg",
+        headers: { "Content-Type": "image/jpeg", "X-Cropped": "true", "X-Skew": "0.0" },
+      },
+      { method: "POST", path: "/api/v1/documents", status: 201, body: { id: "neu" } },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(
+      <UploadModal opened onClose={vi.fn()} initialFiles={[{ file: foto("tisch.jpg"), source: "photo_app" }]} />,
+    );
+    await user.click(await screen.findByRole("button", { name: "Original verwenden" }));
+    expect(screen.getByText("Original")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Hochladen" }));
+    await waitFor(() => expect(uploadedNames(calls)).toEqual([["tisch.jpg"]]));
+    expect(autoCropFlags(calls)).toEqual([["false"]]);
+  });
+
+  it("Vorschau nicht moeglich: Original hochladen, Server schneidet zu", async () => {
+    const { calls } = mockFetch([
+      { method: "POST", path: "/api/v1/photos/rectify", status: 500, body: { detail: "kaputt" } },
+      { method: "POST", path: "/api/v1/documents", status: 201, body: { id: "neu" } },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(
+      <UploadModal opened onClose={vi.fn()} initialFiles={[{ file: foto("tisch.jpg"), source: "photo_app" }]} />,
+    );
+    await waitFor(() => expect(calls.some((c) => c.path === "/api/v1/photos/rectify")).toBe(true));
+    await user.click(screen.getByRole("button", { name: "Hochladen" }));
+    await waitFor(() => expect(uploadedNames(calls)).toEqual([["tisch.jpg"]]));
+    expect(autoCropFlags(calls)).toEqual([["true"]]);
+  });
 });
+
+function autoCropFlags(calls: { method: string; path: string; body: unknown }[]): string[][] {
+  return calls
+    .filter((c) => c.method === "POST" && c.path === "/api/v1/documents")
+    .map((c) => [...String(c.body).matchAll(/name="auto_crop"\r?\n\r?\n(\w+)/g)].map((m) => m[1]));
+}
