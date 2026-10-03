@@ -44,3 +44,21 @@ def save_upload(path: Path, content: bytes) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
     return hashlib.sha256(content).hexdigest()
+
+
+def replace_with_pdf(file, content: bytes) -> None:
+    """Datei eines Dokuments durch neue PDF-Bytes ersetzen (z. B. Foto -> PDF, Seiten geaendert).
+    Atomar: erst neue Datei schreiben, dann umbenennen - Lesende sehen nie eine halbe Datei."""
+    import os
+    import uuid as _uuid
+
+    old = Path(file.file_path)
+    new = old.with_suffix(".pdf")
+    tmp = new.with_name(f".{new.name}.{_uuid.uuid4().hex[:8]}.tmp")
+    tmp.write_bytes(content)
+    os.replace(tmp, new)
+    if new != old:
+        old.unlink(missing_ok=True)
+    file.file_path = str(new)
+    file.mime_type = "application/pdf"
+    file.checksum = hashlib.sha256(content).hexdigest()

@@ -9,6 +9,7 @@ import {
   Paper,
   SegmentedControl,
   Select,
+  Switch,
   Stack,
   Text,
   TextInput,
@@ -20,7 +21,7 @@ import { useForm } from "@mantine/form";
 import { IconCheck, IconCopy, IconFolder, IconWand } from "@tabler/icons-react";
 import { useEffect } from "react";
 import type { DocumentDetail, Schemas } from "../../api/client";
-import { useProperties, useUpdateDocument } from "../../api/queries";
+import { usePatchDocument, useProperties, useUpdateDocument } from "../../api/queries";
 import { notifyError, notifySuccess } from "../../lib/notify";
 import { ExtractionHint } from "../StatusBadge";
 
@@ -54,6 +55,7 @@ function valuesOf(doc: DocumentDetail): Values {
  */
 export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; readOnly?: boolean }) {
   const update = useUpdateDocument(doc.id);
+  const setInvoice = usePatchDocument();
   const properties = useProperties();
   const form = useForm<Values>({
     initialValues: valuesOf(doc),
@@ -161,19 +163,47 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
               disabled={readOnly}
               {...form.getInputProps("document_date")}
             />
-            <NumberInput
-              label="Betrag"
-              decimalSeparator=","
-              thousandSeparator="."
-              decimalScale={2}
-              fixedDecimalScale
-              min={0}
-              suffix=" €"
-              hideControls
-              disabled={readOnly}
-              {...form.getInputProps("amount")}
-            />
+            {doc.is_invoice !== false && (
+              <NumberInput
+                label="Betrag"
+                decimalSeparator=","
+                thousandSeparator="."
+                decimalScale={2}
+                fixedDecimalScale
+                min={0}
+                suffix=" €"
+                hideControls
+                disabled={readOnly}
+                {...form.getInputProps("amount")}
+              />
+            )}
           </Group>
+          <Switch
+            label="Ist eine Rechnung"
+            description={
+              doc.is_invoice === false
+                ? "Kein Betrag, keine Zahlung – Zahlungsfristen sind normale Termine"
+                : doc.is_invoice_locked
+                  ? "von Ihnen festgelegt"
+                  : doc.is_invoice
+                    ? "von der KI erkannt"
+                    : "noch nicht bestimmt"
+            }
+            checked={
+              doc.is_invoice !== false && (doc.is_invoice === true || doc.amount !== null || !!doc.payment_status)
+            }
+            disabled={readOnly || setInvoice.isPending}
+            onChange={(e) =>
+              setInvoice.mutate(
+                { id: doc.id, body: { is_invoice: e.currentTarget.checked } },
+                {
+                  onSuccess: (_, v) =>
+                    notifySuccess(v.body.is_invoice ? "Als Rechnung markiert" : "Als „Keine Rechnung“ markiert"),
+                  onError: (err) => notifyError(err),
+                },
+              )
+            }
+          />
           <TextInput
             label="Aussteller"
             placeholder="z. B. Stadtwerke"

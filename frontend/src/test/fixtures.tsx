@@ -48,6 +48,8 @@ export function doc(overrides: Partial<DocumentItem> = {}): DocumentItem {
     amount: 84.5,
     original_present: "unbekannt",
     original_location: null,
+    is_invoice: null,
+    is_invoice_locked: false,
     payment_status: null,
     paid_on: null,
     paid_assumed: false,

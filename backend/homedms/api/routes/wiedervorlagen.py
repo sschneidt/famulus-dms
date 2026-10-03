@@ -59,14 +59,17 @@ async def list_wiedervorlagen(
     if due_before:
         conditions.append(Wiedervorlage.due_date <= due_before)
 
-    base = select(Wiedervorlage, Document.title).join(Document, Document.id == Wiedervorlage.document_id).where(*conditions)
+    base = select(Wiedervorlage, Document.title, Document.is_invoice).join(Document, Document.id == Wiedervorlage.document_id).where(*conditions)
     total = await db.scalar(select(func.count()).select_from(base.subquery()))
     rows = (
         await db.execute(
             base.order_by(Wiedervorlage.due_date, Wiedervorlage.id).offset((page - 1) * page_size).limit(page_size)
         )
     ).all()
-    items = [WiedervorlageResponse.model_validate(wv).model_copy(update={"document_title": title}) for wv, title in rows]
+    items = [
+        WiedervorlageResponse.model_validate(wv).model_copy(update={"document_title": title, "document_is_invoice": invoice})
+        for wv, title, invoice in rows
+    ]
     return WiedervorlageListResponse(items=items, page=page, page_size=page_size, total=total or 0)
 
 
@@ -83,7 +86,11 @@ async def list_document_wiedervorlagen(
         select(Wiedervorlage).where(Wiedervorlage.document_id == document_id)
         .order_by(Wiedervorlage.due_date, Wiedervorlage.id)
     )
-    return list(result.scalars().all())
+    document = await db.get(Document, document_id)
+    return [
+        WiedervorlageResponse.model_validate(wv).model_copy(update={"document_is_invoice": document.is_invoice})
+        for wv in result.scalars().all()
+    ]
 
 
 async def _get_editable(db: AsyncSession, user: User, wiedervorlage_id: uuid.UUID) -> Wiedervorlage:
@@ -209,8 +216,8 @@ async def complete_wiedervorlage(
     follow_up = complete(wv, user.id, today())
     if follow_up is not None:
         db.add(follow_up)
-    if is_payment(wv.note):
-        document = await db.get(Document, wv.document_id)
+    document = await db.get(Document, wv.document_id)
+    if is_payment(wv.note) and document.is_invoice is not False:  # "Keine Rechnung" -> nur ein Termin
         document.payment_status = "bezahlt"
         document.paid_on = (payload.paid_on if payload else None) or today()
         document.paid_assumed = False

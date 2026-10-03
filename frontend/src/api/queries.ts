@@ -361,3 +361,13 @@ export function useScanNow() {
     onSuccess: () => setTimeout(() => void qc.invalidateQueries({ queryKey: keys.importSources }), 4000),
   });
 }
+
+/** Dokument aendern, wenn die ID erst beim Aufruf feststeht. */
+export function usePatchDocument() {
+  const invalidate = useInvalidateAll();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Schemas["DocumentUpdateRequest"] }) =>
+      call(api.PATCH("/api/v1/documents/{document_id}", { params: { path: { document_id: id } }, body })),
+    onSuccess: invalidate,
+  });
+}

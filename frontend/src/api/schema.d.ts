@@ -311,9 +311,11 @@ export interface paths {
     put?: never;
     /**
      * Reprocess Document
-     * @description KI-Auswertung erneut anstossen, z. B. nach einem KI-Ausfall oder nach verbesserten
-     *     Kategorien. Eine vom Nutzer bestaetigte Kategorie bleibt; Metadaten fuellen weiterhin nur leere
-     *     Felder. War die Texterkennung fehlgeschlagen, laeuft auch sie erneut.
+     * @description Alles neu auswerten - z. B. nach einem KI-Ausfall, verbesserter Texterkennung oder wenn die
+     *     KI daneben lag: Texterkennung, Kategorie (ausser vom Nutzer bestaetigt) und die von der KI
+     *     erkannten Angaben (Betreff, Absender, Datum, Betrag, Objekt, nicht bestaetigte Fristvorschlaege)
+     *     werden neu ermittelt. Ein selbst vergebener Titel, eine bestaetigte Kategorie, Zahlungsstatus
+     *     und bestaetigte Termine bleiben. Ein Foto wird dabei zur PDF.
      */
     post: operations["reprocess_document_api_v1_documents__document_id__reprocess_post"];
     delete?: never;
@@ -865,6 +867,13 @@ export interface components {
       original_present: components["schemas"]["OriginalPresent"];
       /** Original Location */
       original_location: string | null;
+      /** Is Invoice */
+      is_invoice?: boolean | null;
+      /**
+       * Is Invoice Locked
+       * @default false
+       */
+      is_invoice_locked: boolean;
       /** Payment Status */
       payment_status?: string | null;
       /** Paid On */
@@ -973,6 +982,13 @@ export interface components {
       original_present: components["schemas"]["OriginalPresent"];
       /** Original Location */
       original_location: string | null;
+      /** Is Invoice */
+      is_invoice?: boolean | null;
+      /**
+       * Is Invoice Locked
+       * @default false
+       */
+      is_invoice_locked: boolean;
       /** Payment Status */
       payment_status?: string | null;
       /** Paid On */
@@ -1027,6 +1043,8 @@ export interface components {
       payment_status?: ("offen" | "bezahlt") | null;
       /** Paid On */
       paid_on?: string | null;
+      /** Is Invoice */
+      is_invoice?: boolean | null;
       original_present?: components["schemas"]["OriginalPresent"] | null;
       /** Original Location */
       original_location?: string | null;
@@ -1405,6 +1423,8 @@ export interface components {
       updated_at: string;
       /** Document Title */
       document_title?: string | null;
+      /** Document Is Invoice */
+      document_is_invoice?: boolean | null;
     };
     /**
      * WiedervorlageUpdate

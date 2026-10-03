@@ -19,7 +19,7 @@ from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from homedms.api.deps import get_current_user
@@ -29,7 +29,7 @@ from homedms.core.pages import PageError, Part, combine, file_page_count
 from homedms.core.payments import PAYMENT_PATTERN, mark_paid
 from homedms.core.search import has_hit, like_pattern, search_terms, segments_from_marked, snippet_for_terms
 from homedms.core.retention import sync_retention
-from homedms.core.storage import document_file_path, save_upload
+from homedms.core.storage import document_file_path, replace_with_pdf, save_upload
 from homedms.core.visibility import is_document_editable, is_document_visible, visible_documents_expr
 from homedms.db import get_db
 from homedms.jobs import app as jobs_app
@@ -291,9 +291,11 @@ async def create_document(
     """Mehrere Dateien (z. B. Handy-Fotos eines zweiseitigen Briefs) werden in der gesendeten
     Reihenfolge zu einer PDF zusammengefasst (homedms/core/pages.py)."""
     uploads = [(f.filename or "", f.content_type or "", await f.read()) for f in file]
-    if len(uploads) == 1:
+    if len(uploads) == 1 and Part(uploads[0][2], uploads[0][0], uploads[0][1]).kind != "image":
         filename, mime, content = uploads[0]
     else:
+        # Mehrere Dateien -> eine PDF. Auch ein einzelnes Foto wird zur PDF (Nutzerwunsch): aufgerichtet,
+        # verkleinert, in der Ablage einheitlich - und die Texterkennung arbeitet mit der richtigen Drehung.
         try:
             content = combine([Part(c, n, m) for n, m, c in uploads])
         except PageError as exc:
@@ -379,8 +381,21 @@ async def update_document(
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Objekt nicht gefunden")
     if updates.get("title_locked") is None:
         updates.pop("title_locked", None)
+    if "is_invoice" in updates:
+        invoice = updates.pop("is_invoice")
+        if invoice is None:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "is_invoice muss true oder false sein")
+        document.is_invoice, document.is_invoice_locked = invoice, True  # Nutzer entscheidet - KI nie wieder
+        if invoice is False:  # "Keine Rechnung": Betrag und Zahlung verschwinden
+            document.amount = None
+            document.payment_status, document.paid_on, document.paid_assumed = None, None, False
+            updates.pop("amount", None)
+        elif document.payment_status is None:
+            document.payment_status = "offen"
     payment = updates.pop("payment_status", "unset")
     paid_on = updates.pop("paid_on", None)
+    if payment in ("bezahlt", "offen") and document.is_invoice is False:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Das Dokument ist als 'Keine Rechnung' markiert")
     if payment == "bezahlt":
         await mark_paid(db, document, paid_on or today(), today=today(), user_id=user.id)
     elif payment == "offen":
@@ -495,9 +510,11 @@ async def assign_category(
 async def reprocess_document(
     document_id: uuid.UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> Document:
-    """KI-Auswertung erneut anstossen, z. B. nach einem KI-Ausfall oder nach verbesserten
-    Kategorien. Eine vom Nutzer bestaetigte Kategorie bleibt; Metadaten fuellen weiterhin nur leere
-    Felder. War die Texterkennung fehlgeschlagen, laeuft auch sie erneut."""
+    """Alles neu auswerten - z. B. nach einem KI-Ausfall, verbesserter Texterkennung oder wenn die
+    KI daneben lag: Texterkennung, Kategorie (ausser vom Nutzer bestaetigt) und die von der KI
+    erkannten Angaben (Betreff, Absender, Datum, Betrag, Objekt, nicht bestaetigte Fristvorschlaege)
+    werden neu ermittelt. Ein selbst vergebener Titel, eine bestaetigte Kategorie, Zahlungsstatus
+    und bestaetigte Termine bleiben. Ein Foto wird dabei zur PDF."""
     document = await _get_editable_document(db, user, document_id)
     if document.deleted_at is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Dokument liegt im Papierkorb - erst wiederherstellen")
@@ -506,23 +523,47 @@ async def reprocess_document(
     ):
         raise HTTPException(status.HTTP_409_CONFLICT, "Das Dokument wird gerade schon verarbeitet")
 
-    redo_ocr = document.ocr_status == OcrStatus.failed
-    if redo_ocr:
-        document.ocr_status = OcrStatus.pending
+    if document.files:
+        current = document.files[0]
+        try:
+            content = Path(current.file_path).read_bytes()
+        except OSError:
+            content = b""
+        part = Part(content, Path(current.file_path).name, current.mime_type)
+        if part.kind == "image":
+            try:
+                replace_with_pdf(current, combine([part]))
+            except PageError:
+                pass  # unlesbares Bild - Texterkennung meldet das dann
+
+    # Von der KI erkannte Angaben verwerfen, damit sie neu ermittelt werden
+    document.subject = None
+    document.issuer = None
+    document.document_date = None
+    if not document.is_invoice_locked:
+        document.is_invoice = None
+        document.amount = None
+    document.property_id = None
+    await db.execute(
+        delete(Wiedervorlage).where(
+            Wiedervorlage.document_id == document.id,
+            Wiedervorlage.source == "ai_suggested",
+            Wiedervorlage.status.in_(("vorgeschlagen", "verworfen")),
+        )
+    )
+    document.ocr_status = OcrStatus.pending
     if document.classification_status != ClassificationStatus.confirmed:
         document.classification_status = ClassificationStatus.pending
     document.extraction_status = ExtractionStatus.pending
     await db.commit()
 
     async with jobs_app.open_async():
-        if redo_ocr:
-            await jobs_app.configure_task("ocr_document").defer_async(document_id=str(document.id))
-        else:
-            if document.classification_status == ClassificationStatus.pending:
-                await jobs_app.configure_task("classify_document").defer_async(document_id=str(document.id))
-            await jobs_app.configure_task("extract_metadata").defer_async(document_id=str(document.id))
+        # Texterkennung stoesst danach Kategorie, Angaben/Fristen und Ablage an (tasks/ocr.py)
+        await jobs_app.configure_task("ocr_document", queue="default").defer_async(document_id=str(document.id))
     await db.refresh(document)
-    return document
+    return DocumentDetailResponse.model_validate(document).model_copy(
+        update={"page_count": file_page_count(document.files[0].file_path) if document.files else 1}
+    )
 
 
 @router.get("/{document_id}/classification-history", response_model=list[ClassificationEventResponse])

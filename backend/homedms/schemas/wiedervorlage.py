@@ -26,6 +26,8 @@ class WiedervorlageResponse(BaseModel):
     # Nur in der haushaltsweiten Uebersicht gefuellt - damit die Oberflaeche nicht fuer jeden
     # Termin einzeln das Dokument nachladen muss.
     document_title: str | None = None
+    # False = Dokument ist "keine Rechnung" -> Zahlungsfristen sind nur Termine (kein "Bezahlt")
+    document_is_invoice: bool | None = None
 
     model_config = {"from_attributes": True}
 

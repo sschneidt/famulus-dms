@@ -7,7 +7,7 @@
   Profil abrufen -> Test-PDF und Test-Scan hochladen -> auf die Texterkennung warten ->
   erkannten Text pruefen -> automatische Klassifikation abwarten -> eine Kategorie manuell
   bestaetigen -> Metadaten und Fristvorschlaege pruefen -> wiederkehrende Wiedervorlage
-  erledigen -> Download mit dem Original vergleichen -> Testdokumente in den Papierkorb legen. Am Ende steht eine Uebersicht mit OK/FEHLER je Schritt.
+  erledigen -> Download pruefen (PDF unveraendert, Fotos als PDF) -> Testdokumente in den Papierkorb legen. Am Ende steht eine Uebersicht mit OK/FEHLER je Schritt.
 
   Gibt es noch keinen Haushalt, legt das Skript ihn mit den angegebenen Zugangsdaten an.
   Gibt es schon einen, meldet es sich mit ihnen an. Mit -PasswortZuruecksetzen wird das
@@ -397,8 +397,15 @@ foreach ($t in $testfaelle) {
     try {
         Invoke-WebRequest -Uri "$Api/documents/$($t.Id)/download" -Headers @{ Authorization = "Bearer $token" } `
             -OutFile $ziel -UseBasicParsing -TimeoutSec 30
-        $gleich = (Get-FileHash $ziel -Algorithm SHA256).Hash -eq (Get-FileHash $t.Datei -Algorithm SHA256).Hash
-        Schreibe-Schritt "Download $($t.Name)" $gleich $(if ($gleich) { "identisch mit dem Original" } else { "Inhalt weicht ab" })
+        if ($t.Mime -like "image/*") {
+            # Fotos/Bilder speichert HomeDMS als PDF (aufgerichtet, verkleinert) - Download ist also eine PDF
+            $kopf = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes($ziel), 0, 4)
+            $ok = $kopf -eq "%PDF"
+            Schreibe-Schritt "Download $($t.Name)" $ok $(if ($ok) { "als PDF gespeichert" } else { "keine PDF" })
+        } else {
+            $gleich = (Get-FileHash $ziel -Algorithm SHA256).Hash -eq (Get-FileHash $t.Datei -Algorithm SHA256).Hash
+            Schreibe-Schritt "Download $($t.Name)" $gleich $(if ($gleich) { "identisch mit dem Original" } else { "Inhalt weicht ab" })
+        }
     } catch {
         Schreibe-Schritt "Download $($t.Name)" $false $_.Exception.Message
     } finally { Remove-Item $ziel -ErrorAction SilentlyContinue }

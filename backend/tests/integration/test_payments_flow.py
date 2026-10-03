@@ -100,3 +100,33 @@ async def test_zahlungen(clean_database, monkeypatch, tmp_path):
         # Ohne Datum: heute
         r = await client.patch(f"{API}/documents/{neu}", headers=auth, json={"payment_status": "bezahlt"})
         assert r.json()["paid_on"] == TODAY.isoformat()
+
+        # --- 4. Kein Rechnung: Kreditvertrag - kein Betrag, keine Zahlung, Frist nur als Termin -----
+        kredit = await upload("""Musterbank AG
+Kreditvertrag vom 01.09.2026
+Betrag: 15000,00 EUR - zahlbar bis 15.11.2026""")
+        await run_worker()
+        doc = await detail(kredit)
+        assert (doc["is_invoice"], doc["amount"], doc["payment_status"]) == (False, None, None)
+        [termin] = await termine(kredit)
+        assert termin["document_is_invoice"] is False
+        assert (await client.post(f"{API}/wiedervorlagen/{termin['id']}/confirm", headers=auth)).status_code == 200
+        assert (await client.post(f"{API}/wiedervorlagen/{termin['id']}/complete", headers=auth)).status_code == 200
+        assert (await detail(kredit))["payment_status"] is None  # Termin erledigt, aber nichts "bezahlt"
+        r = await client.patch(f"{API}/documents/{kredit}", headers=auth, json={"payment_status": "bezahlt"})
+        assert r.status_code == 409
+
+        # Nutzer korrigiert: doch eine Rechnung -> offen; und zurueck: "Keine Rechnung" -> alles weg
+        r = await client.patch(f"{API}/documents/{kredit}", headers=auth, json={"is_invoice": True})
+        assert (r.json()["is_invoice"], r.json()["is_invoice_locked"], r.json()["payment_status"]) == (True, True, "offen")
+        r = await client.patch(f"{API}/documents/{neu2}", headers=auth, json={"is_invoice": False})
+        assert (r.json()["amount"], r.json()["payment_status"], r.json()["paid_on"]) == (None, None, None)
+        unpaid = (await client.get(f"{API}/documents/unpaid", headers=auth)).json()
+        assert neu2 not in {d["id"] for d in unpaid["items"]}
+
+        # Erneut analysieren: die Entscheidung des Nutzers bleibt
+        assert (await client.post(f"{API}/documents/{neu2}/reprocess", headers=auth)).status_code == 200
+        await run_worker()
+        doc = await detail(neu2)
+        assert (doc["is_invoice"], doc["amount"]) == (False, None)
+

@@ -24,10 +24,10 @@ from email import message_from_binary_file, policy
 from pathlib import Path
 
 import pymupdf  # PyMuPDF - neuer Modulname, "fitz" ist deprecated
-import pytesseract
 from PIL import Image
 
 from homedms.config import get_settings
+from homedms.core.ocr_image import recognize
 from homedms.jobs import app
 from homedms.models.document import Document, OcrStatus
 
@@ -46,26 +46,27 @@ UNSUPPORTED_SUFFIXES = {".doc", ".docx", ".xls", ".xlsx", ".msg"}
 
 
 def _extract_pdf_text(path: Path, lang: str) -> str:
+    """Seite fuer Seite: eingebetteter Text, wo vorhanden (digitale PDF), sonst Texterkennung.
+    So klappt auch ein gemischtes Dokument, z. B. digitale Rechnung + fotografierte Zusatzseite."""
     doc = pymupdf.open(path)
     try:
-        embedded = "\n".join(page.get_text() for page in doc)
-        if len(embedded.strip()) >= MIN_EMBEDDED_TEXT_CHARS:
-            return embedded
-
-        # Kein/zu wenig eingebetteter Text -> als Scan behandeln: Seiten rastern + Tesseract.
         parts = []
         for page in doc:
+            embedded = page.get_text()
+            if len(embedded.strip()) >= MIN_EMBEDDED_TEXT_CHARS:
+                parts.append(embedded)
+                continue
             pix = page.get_pixmap(dpi=300)
             image = Image.frombytes("RGB", (pix.width, pix.height), pix.samples)
-            parts.append(pytesseract.image_to_string(image, lang=lang))
-        return "\n".join(parts)
+            parts.append(recognize(image, lang).text)
+        return "\n\n".join(p.strip() for p in parts if p.strip())
     finally:
         doc.close()
 
 
 def _extract_image_text(path: Path, lang: str) -> str:
     with Image.open(path) as image:
-        return pytesseract.image_to_string(image, lang=lang)
+        return recognize(image, lang).text  # Drehung, Schatten, Aufloesung: core/ocr_image.py
 
 
 def _extract_eml_text(path: Path) -> str:

@@ -78,7 +78,10 @@ async def extract_metadata(document_id: str) -> None:
             document.document_date = result.document_date
         if not document.issuer:
             document.issuer = result.issuer
-        if document.amount is None:
+        if not document.is_invoice_locked and result.is_invoice is not None:
+            document.is_invoice = result.is_invoice
+        invoice = document.is_invoice is not False  # unbekannt zaehlt wie bisher als moegliche Rechnung
+        if document.amount is None and invoice:
             document.amount = result.amount
         if not document.subject:
             document.subject = result.subject
@@ -94,7 +97,7 @@ async def extract_metadata(document_id: str) -> None:
             ).limit(1)
         )
         if existing_ai is None:
-            for d in result.past_payments:
+            for d in (result.past_payments if invoice else []):
                 if assumed_paid(d.due_date, today()):
                     # Eingescannte, laengst faellige Rechnung: als bezahlt annehmen, Frist nur dokumentieren
                     if document.payment_status is None:
@@ -112,7 +115,7 @@ async def extract_metadata(document_id: str) -> None:
                     assigned_user_id=document.owner_user_id,
                 ))
             for d in result.deadlines:
-                if is_payment(d.label) and document.payment_status is None:
+                if invoice and is_payment(d.label) and document.payment_status is None:
                     document.payment_status = "offen"
                 db.add(Wiedervorlage(
                     tenant_id=document.tenant_id, document_id=document.id,

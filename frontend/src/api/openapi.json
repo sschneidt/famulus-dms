@@ -972,7 +972,7 @@
           "documents"
         ],
         "summary": "Reprocess Document",
-        "description": "KI-Auswertung erneut anstossen, z. B. nach einem KI-Ausfall oder nach verbesserten\nKategorien. Eine vom Nutzer bestaetigte Kategorie bleibt; Metadaten fuellen weiterhin nur leere\nFelder. War die Texterkennung fehlgeschlagen, laeuft auch sie erneut.",
+        "description": "Alles neu auswerten - z. B. nach einem KI-Ausfall, verbesserter Texterkennung oder wenn die\nKI daneben lag: Texterkennung, Kategorie (ausser vom Nutzer bestaetigt) und die von der KI\nerkannten Angaben (Betreff, Absender, Datum, Betrag, Objekt, nicht bestaetigte Fristvorschlaege)\nwerden neu ermittelt. Ein selbst vergebener Titel, eine bestaetigte Kategorie, Zahlungsstatus\nund bestaetigte Termine bleiben. Ein Foto wird dabei zur PDF.",
         "operationId": "reprocess_document_api_v1_documents__document_id__reprocess_post",
         "security": [
           {
@@ -2783,6 +2783,22 @@
             ],
             "title": "Original Location"
           },
+          "is_invoice": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Invoice"
+          },
+          "is_invoice_locked": {
+            "type": "boolean",
+            "title": "Is Invoice Locked",
+            "default": false
+          },
           "payment_status": {
             "anyOf": [
               {
@@ -3116,6 +3132,22 @@
             ],
             "title": "Original Location"
           },
+          "is_invoice": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Invoice"
+          },
+          "is_invoice_locked": {
+            "type": "boolean",
+            "title": "Is Invoice Locked",
+            "default": false
+          },
           "payment_status": {
             "anyOf": [
               {
@@ -3310,6 +3342,17 @@
               }
             ],
             "title": "Paid On"
+          },
+          "is_invoice": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Invoice"
           },
           "original_present": {
             "anyOf": [
@@ -4238,6 +4281,17 @@
               }
             ],
             "title": "Document Title"
+          },
+          "document_is_invoice": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Is Invoice"
           }
         },
         "type": "object",

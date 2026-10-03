@@ -82,4 +82,11 @@ describe("WiedervorlageCard", () => {
       }),
     );
   });
+
+  it("'Keine Rechnung': Zahlungsfrist ist ein normaler Termin (Erledigt statt Bezahlt)", () => {
+    mockFetch([]);
+    renderWithProviders(<WiedervorlageCard wv={wv({ status: "offen", document_is_invoice: false })} />);
+    expect(screen.getByRole("button", { name: "Erledigt" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Bezahlt" })).not.toBeInTheDocument();
+  });
 });

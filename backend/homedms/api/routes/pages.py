@@ -4,8 +4,6 @@ Jede Aenderung schreibt die PDF neu (atomar: erst neue Datei, dann umbenennen) u
 Auswertung erneut an: Texterkennung ueber alle Seiten, danach Kategorie (ausser vom Nutzer
 bestaetigt), Metadaten fuer noch leere Felder, Ablage.
 """
-import hashlib
-import os
 import uuid
 from pathlib import Path
 
@@ -17,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from homedms.api.deps import get_current_user
 from homedms.api.routes.documents import _get_editable_document, _get_visible_document
 from homedms.core import pages
+from homedms.core.storage import replace_with_pdf
 from homedms.db import get_db
 from homedms.jobs import app as jobs_app
 from homedms.models.document import (
@@ -60,16 +59,7 @@ async def _editable(db: AsyncSession, user: User, document_id: uuid.UUID) -> Doc
 
 
 async def _save(db: AsyncSession, document: Document, file: DocumentFile, content: bytes) -> PagesResponse:
-    old = Path(file.file_path)
-    new = old.with_suffix(".pdf")
-    tmp = new.with_name(f".{new.name}.{uuid.uuid4().hex[:8]}.tmp")
-    tmp.write_bytes(content)
-    os.replace(tmp, new)  # atomar: Lesende sehen entweder die alte oder die neue Datei
-    if new != old:
-        old.unlink(missing_ok=True)
-    file.file_path = str(new)
-    file.mime_type = "application/pdf"
-    file.checksum = hashlib.sha256(content).hexdigest()
+    replace_with_pdf(file, content)  # atomar, siehe core/storage.py
 
     # Neu auswerten: Text aller Seiten -> Kategorie (ausser bestaetigt) -> leere Metadaten -> Ablage
     document.ocr_status = OcrStatus.pending

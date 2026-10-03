@@ -1,6 +1,6 @@
 import { Badge, Button, Group, Paper, Stack, Text, Title } from "@mantine/core";
 import type { DocumentDetail } from "../../api/client";
-import { useSetPayment } from "../../api/queries";
+import { usePatchDocument, useSetPayment } from "../../api/queries";
 import { formatAmount, formatDate } from "../../lib/format";
 import { notifyError, notifySuccess } from "../../lib/notify";
 import { PaidButton } from "../PaidButton";
@@ -8,7 +8,9 @@ import { PaidButton } from "../PaidButton";
 /** Zahlung einer Rechnung: offen / bezahlt am ... - nur bei Dokumenten mit Betrag oder Zahlungsfrist. */
 export function PaymentPanel({ doc, readOnly = false }: { doc: DocumentDetail; readOnly?: boolean }) {
   const setPayment = useSetPayment();
-  if (!doc.payment_status && doc.amount === null) return null;
+  const setInvoice = usePatchDocument();
+  if (doc.is_invoice === false) return null;
+  if (!doc.is_invoice && !doc.payment_status && doc.amount === null) return null;
 
   async function save(status: "offen" | "bezahlt" | null, paidOn?: string) {
     try {
@@ -78,6 +80,23 @@ export function PaymentPanel({ doc, readOnly = false }: { doc: DocumentDetail; r
                 Als offen markieren
               </Button>
             )}
+            <Button
+              size="xs"
+              variant="subtle"
+              color="gray"
+              loading={setInvoice.isPending}
+              onClick={() =>
+                setInvoice.mutate(
+                  { id: doc.id, body: { is_invoice: false } },
+                  {
+                    onSuccess: () => notifySuccess("Als „Keine Rechnung“ markiert – Betrag und Zahlung entfernt"),
+                    onError: (e) => notifyError(e),
+                  },
+                )
+              }
+            >
+              Keine Rechnung
+            </Button>
           </Group>
         )}
       </Stack>

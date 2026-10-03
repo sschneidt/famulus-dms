@@ -262,3 +262,18 @@ def test_verstrichene_zahlungsfrist_wird_fuer_den_zahlungsstatus_gemerkt():
     assert result.deadlines == []
     assert [(d.label, d.due_date) for d in result.past_payments] == [("Zahlungsfrist", _date(2026, 3, 15))]
     assert any("Vergangenheit" in d for d in result.discarded)  # die Kündigungsfrist bleibt verworfen
+
+
+def test_betrag_nur_bei_rechnungen():
+    from datetime import date as _date
+
+    text = "Musterbank AG\nKreditvertrag\nNettodarlehensbetrag: 15.000,00 EUR"
+    base = {"dokumentdatum": "", "absender": "Musterbank AG", "betreff": "", "betrag": "15000.00",
+            "objektadresse": {"strasse": "", "plz": "", "ort": ""}, "fristen": []}
+    vertrag = parse_extraction({**base, "dokumenttyp": "vertrag"}, text, _date(2026, 10, 3))
+    assert (vertrag.is_invoice, vertrag.amount) == (False, None)
+    assert any("keine Rechnung" in d for d in vertrag.discarded)
+    rechnung = parse_extraction({**base, "dokumenttyp": "rechnung"}, text, _date(2026, 10, 3))
+    assert rechnung.is_invoice is True and rechnung.amount == 15000
+    unbekannt = parse_extraction({**base, "dokumenttyp": "quatsch"}, text, _date(2026, 10, 3))
+    assert unbekannt.is_invoice is None and unbekannt.amount == 15000  # wie bisher

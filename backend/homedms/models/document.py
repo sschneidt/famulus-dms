@@ -158,6 +158,9 @@ class Document(Base, UUIDPKMixin, TimestampMixin):
     )
     original_location: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
+    # Rechnung ja/nein (KI: Dokumenttyp; Nutzer: "Keine Rechnung"). None = unbekannt (aeltere Dokumente)
+    is_invoice: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    is_invoice_locked: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     # Zahlung (core/payments.py): None = keine Rechnung/unbekannt, "offen", "bezahlt"
     payment_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     paid_on: Mapped[date | None] = mapped_column(Date, nullable=True)

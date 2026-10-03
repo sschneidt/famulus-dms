@@ -130,6 +130,26 @@ function DocumentActions({ doc }: { doc: DocumentDetail }) {
   const remove = useDeleteDocument();
   const reprocess = useReprocessDocument();
 
+  function confirmReprocess() {
+    modals.openConfirmModal({
+      title: "Erneut analysieren?",
+      children: (
+        <Text size="sm">
+          Text, Kategorie und die von der KI erkannten Angaben (Betreff, Absender, Datum, Betrag, Objekt, nicht
+          bestätigte Fristvorschläge) werden neu ermittelt – dort von Ihnen geänderte Werte gehen dabei verloren. Ein
+          eigener Titel, eine bestätigte Kategorie, die Zahlung und bestätigte Termine bleiben erhalten. Ein Foto wird
+          dabei zur PDF.
+        </Text>
+      ),
+      labels: { confirm: "Neu analysieren", cancel: "Abbrechen" },
+      onConfirm: () =>
+        reprocess.mutate(doc.id, {
+          onSuccess: () => notifySuccess("KI-Auswertung läuft erneut"),
+          onError: (e) => notifyError(e),
+        }),
+    });
+  }
+
   function confirmDelete() {
     modals.openConfirmModal({
       title: "In den Papierkorb verschieben?",
@@ -158,12 +178,7 @@ function DocumentActions({ doc }: { doc: DocumentDetail }) {
           visibleFrom="sm"
           disabled={isProcessing(doc)}
           loading={reprocess.isPending}
-          onClick={() =>
-            reprocess.mutate(doc.id, {
-              onSuccess: () => notifySuccess("KI-Auswertung läuft erneut"),
-              onError: (e) => notifyError(e),
-            })
-          }
+          onClick={() => confirmReprocess()}
         >
           Erneut analysieren
         </Button>
@@ -193,12 +208,7 @@ function DocumentActions({ doc }: { doc: DocumentDetail }) {
             <Menu.Item
               leftSection={<IconRefresh size={14} />}
               disabled={isProcessing(doc)}
-              onClick={() =>
-                reprocess.mutate(doc.id, {
-                  onSuccess: () => notifySuccess("KI-Auswertung läuft erneut"),
-                  onError: (e) => notifyError(e),
-                })
-              }
+              onClick={() => confirmReprocess()}
             >
               Erneut analysieren
             </Menu.Item>

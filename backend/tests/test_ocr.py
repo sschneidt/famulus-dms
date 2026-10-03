@@ -80,3 +80,47 @@ def test_unsupported_suffix_raises_not_implemented(tmp_path):
     path.write_bytes(b"not a real docx, nur fuer den Dateiendungs-Check")
     with pytest.raises(NotImplementedError):
         extract_text(path)
+
+
+# --- Handy-Fotos (homedms/core/ocr_image.py) ---------------------------------------------------
+# Praxisfall: Foto eines Kreditvertrags ergab nur "Kauderwelsch" - das Handy hatte quer gespeichert
+# und die Drehung nur in den EXIF-Daten vermerkt; dazu Schatten auf dem Blatt.
+
+def _handy_foto(tmp_path, *, exif_drehung: bool, schatten: bool, kopfueber: bool = False):
+    from PIL import Image, ImageDraw, ImageFont
+
+    size = (1240, 1754)
+    img = Image.new("L", size, 235)
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.load_default(size=40)
+    zeilen = ["Musterbank AG", "Kreditvertrag Nr. 4711", "Nettodarlehensbetrag 15000 EUR",
+              "Laufzeit 60 Monate", "Erste Rate faellig am 01.11.2026"]
+    for i, zeile in enumerate(zeilen):
+        draw.text((100, 150 + i * 80), zeile, fill=30, font=font)
+    if schatten:
+        verlauf = Image.linear_gradient("L").resize(size).rotate(30)
+        img = Image.composite(img.point(lambda v: int(v * 0.45)), img, verlauf.point(lambda v: 255 - v))
+    img = img.convert("RGB")
+    if kopfueber:
+        img = img.rotate(180)
+    path = tmp_path / "foto.jpg"
+    if exif_drehung:
+        img = img.rotate(90, expand=True)
+        exif = img.getexif()
+        exif[0x0112] = 6
+        img.save(path, "JPEG", quality=85, exif=exif)
+    else:
+        img.save(path, "JPEG", quality=85)
+    return path
+
+
+@pytest.mark.parametrize(
+    ("exif_drehung", "schatten", "kopfueber"),
+    [(True, False, False), (False, True, False), (True, True, False), (False, False, True)],
+)
+def test_handy_foto_wird_lesbar_erkannt(tmp_path, exif_drehung, schatten, kopfueber):
+    path = _handy_foto(tmp_path, exif_drehung=exif_drehung, schatten=schatten, kopfueber=kopfueber)
+    text = extract_text(path, lang="eng")
+    assert "Kreditvertrag" in text
+    assert "Musterbank" in text
+    assert "01.11.2026" in text

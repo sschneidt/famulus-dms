@@ -81,6 +81,8 @@ class FakeOllama:
                             "textstelle": m_due.group(0), "wiederholung": "keine"})
         return {
             "dokumentdatum": f"{m_date.group(3)}-{m_date.group(2)}-{m_date.group(1)}" if m_date else "",
+            "dokumenttyp": ("vertrag" if "vertrag" in doc.lower()
+                            else "rechnung" if ("rechnung" in doc.lower() or "zahlbar" in doc) else "brief"),
             "absender": first_line,
             "betreff": ("Rechnung Wasserschaden-Reparatur" if "Wasserschaden" in doc
                         else "Stromrechnung" if "Stromrechnung" in doc

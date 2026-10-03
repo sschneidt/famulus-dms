@@ -24,6 +24,9 @@ MIN_DEADLINE_CONFIDENCE = 0.5  # Anforderungsdokument 4.4a: darunter wird ein Fu
 MAX_DEADLINES = 5
 MIN_QUOTE_OVERLAP = 0.6  # Anteil der Woerter aus "textstelle", die im Dokument vorkommen muessen
 
+DOCUMENT_TYPES = ("rechnung", "mahnung", "zahlungsaufforderung", "vertrag", "bescheid", "kontoauszug", "brief", "sonstiges")
+INVOICE_TYPES = {"rechnung", "mahnung", "zahlungsaufforderung"}  # nur hier gibt es "Betrag" und "bezahlt"
+
 RECURRENCE = {  # Antwort des Modells -> (Wiedervorlage.recurrence, Intervall in Monaten)
     "keine": ("none", None),
     "monatlich": ("monthly", 1),
@@ -43,14 +46,16 @@ def build_prompt(text: str, today: date, max_chars: int = 6000) -> tuple[str, st
     user = f"""Heutiges Datum: {today.isoformat()}
 
 Aufgaben:
+0. dokumenttyp: rechnung (fordert Geld fuer eine Leistung/Ware), mahnung, zahlungsaufforderung,
+   vertrag (auch Kredit-, Miet-, Versicherungsvertrag), bescheid, kontoauszug, brief oder sonstiges.
 1. dokumentdatum: Datum des Dokuments (Rechnungs- oder Briefdatum) als JJJJ-MM-TT - nur wenn es
    im Text steht, sonst "". Niemals das heutige Datum einsetzen.
 2. absender: Firma, Behoerde oder Person, von der das Dokument stammt, sonst "".
 3. betreff: worum es im Dokument geht, in 2 bis 6 Woertern nach dem Muster
    "<Art des Dokuments> <Anlass oder Gegenstand>" - nur mit Woertern aus dem Text, ohne Absender,
    ohne Datum, ohne Betrag.
-4. betrag: Gesamtbetrag in Euro als Zahl mit Punkt (z. B. "42.00"), nur bei Rechnungen oder
-   Zahlungsaufforderungen, sonst "".
+4. betrag: zu zahlender Gesamtbetrag in Euro als Zahl mit Punkt (z. B. "42.00") - NUR bei
+   rechnung, mahnung oder zahlungsaufforderung, sonst "" (z. B. kein Darlehens- oder Vertragsbetrag).
 5. objektadresse: Adresse des Hauses oder der Wohnung, um die es im Dokument geht (z. B. bei
    "Objekt", "Leistungsort", "Baustelle", "Verbrauchsstelle", "Versicherungsort"). Steht keine
    eigene Objektadresse im Text, die Anschrift des Empfaengers. NIEMALS die Adresse des Absenders
@@ -73,6 +78,7 @@ Dokumenttext:
     schema = {
         "type": "object",
         "properties": {
+            "dokumenttyp": {"type": "string", "enum": list(DOCUMENT_TYPES)},
             "dokumentdatum": {"type": "string"},
             "absender": {"type": "string"},
             "betreff": {"type": "string"},
@@ -97,7 +103,7 @@ Dokumenttext:
                 },
             },
         },
-        "required": ["dokumentdatum", "absender", "betreff", "betrag", "objektadresse", "fristen"],
+        "required": ["dokumenttyp", "dokumentdatum", "absender", "betreff", "betrag", "objektadresse", "fristen"],
     }
     return SYSTEM_PROMPT, user, schema
 
@@ -317,6 +323,7 @@ class DeadlineProposal:
 class ExtractionResult:
     document_date: date | None = None
     issuer: str | None = None
+    is_invoice: bool | None = None  # None = Modell hat keinen gueltigen Dokumenttyp geliefert
     subject: str | None = None
     address: Address | None = None
     amount: Decimal | None = None
@@ -345,7 +352,13 @@ def parse_extraction(answer: dict[str, Any], document_text: str, today: date) ->
     result.address = parse_address(answer.get("objektadresse"), document_text, result.issuer)
     if result.address is None and isinstance(answer.get("objektadresse"), dict) and any(answer["objektadresse"].values()):
         result.discarded.append(f"Objektadresse {answer['objektadresse']!r} nicht belegt oder Absenderadresse")
-    result.amount = parse_amount(answer.get("betrag"))
+    doc_type = str(answer.get("dokumenttyp") or "").strip().lower()
+    result.is_invoice = (doc_type in INVOICE_TYPES) if doc_type in DOCUMENT_TYPES else None
+    amount = parse_amount(answer.get("betrag"))
+    # Betrag nur bei Rechnungen - ein Darlehens- oder Vertragsbetrag ist keine offene Forderung
+    result.amount = amount if result.is_invoice is not False else None
+    if amount is not None and result.is_invoice is False:
+        result.discarded.append(f"Betrag {amount} verworfen - Dokumenttyp {doc_type!r} ist keine Rechnung")
 
     seen: set[tuple[date, str]] = set()
     fristen = answer.get("fristen") or []

@@ -24,7 +24,8 @@ export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
   const active = wv.status === "offen" || wv.status === "vorgeschlagen";
   const overdue = active && due.overdue;
   const setPayment = useSetPayment();
-  const payment = isPaymentNote(wv.note);
+  // "Bezahlt" nur bei Rechnungen - bei "Keine Rechnung" ist eine Zahlungsfrist ein normaler Termin
+  const payment = isPaymentNote(wv.note) && wv.document_is_invoice !== false;
   const busy = action.isPending || remove.isPending || setPayment.isPending;
 
   async function run(kind: "confirm" | "reject" | "complete", paidOn?: string) {

@@ -58,6 +58,8 @@ class DocumentResponse(BaseModel):
     original_present: OriginalPresent
     original_location: str | None
 
+    is_invoice: bool | None = None  # None = unbekannt; False = "Keine Rechnung" (kein Betrag/Bezahlt)
+    is_invoice_locked: bool = False  # vom Nutzer festgelegt
     payment_status: str | None = None  # None (keine Rechnung) | offen | bezahlt
     paid_on: date | None = None
     paid_assumed: bool = False  # automatisch angenommen: Frist lag beim Einlesen > 3 Monate zurueck
@@ -111,6 +113,8 @@ class DocumentUpdateRequest(BaseModel):
     # "offen" setzt zurueck; null = keine Rechnung
     payment_status: Literal["offen", "bezahlt"] | None = None
     paid_on: date | None = None
+    # Rechnung ja/nein festlegen (ueberschreibt die KI dauerhaft); False entfernt Betrag und Zahlung
+    is_invoice: bool | None = None
     original_present: OriginalPresent | None = None
     original_location: str | None = None
     # Von der KI erkannte Metadaten korrigieren (null = Feld leeren)

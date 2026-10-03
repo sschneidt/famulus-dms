@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       tesseract-ocr \
       tesseract-ocr-deu \
       tesseract-ocr-eng \
+      tesseract-ocr-osd \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir uv
