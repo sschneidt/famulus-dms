@@ -38,6 +38,8 @@ class FakeOllama:
     def handler(self, request: httpx.Request) -> httpx.Response:
         if self.down:
             raise httpx.ConnectError("Verbindung abgelehnt", request=request)
+        if request.url.path == "/api/version":
+            return httpx.Response(200, json={"version": "attrappe"})
         body = json.loads(request.content)
         if request.url.path == "/api/embed":
             self.embed_calls += 1

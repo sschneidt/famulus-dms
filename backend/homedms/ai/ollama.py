@@ -52,6 +52,14 @@ class OllamaClient:
             raise OllamaError(f"Ollama {path} antwortete {resp.status_code}: {resp.text[:300]}{hint}")
         return resp.json()
 
+    async def available(self) -> bool:
+        """Antwortet Ollama ueberhaupt? (fuer "Nicht analysiert": vor dem Neustart warnen)"""
+        try:
+            async with self._client(3) as client:
+                return (await client.get("/api/version")).status_code == 200
+        except httpx.HTTPError:
+            return False
+
     async def embed(self, text: str) -> list[float]:
         # nomic-embed-text erwartet ein Aufgaben-Praefix; dasselbe fuer Exemplare und neue
         # Dokumente, damit die Vektoren vergleichbar sind.

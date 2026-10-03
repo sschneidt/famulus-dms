@@ -1,6 +1,7 @@
 import {
   Alert,
   Anchor,
+  Badge,
   Button,
   Card,
   Center,
@@ -9,31 +10,81 @@ import {
   Select,
   SimpleGrid,
   Stack,
+  Tabs,
   Text,
   ThemeIcon,
   Title,
 } from "@mantine/core";
-import { IconCheck, IconConfetti } from "@tabler/icons-react";
+import { IconAlertTriangle, IconCheck, IconConfetti, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import type { DocumentItem } from "../api/client";
-import { useAssignCategory, useNeedsReview } from "../api/queries";
+import { useAnalyzeAll, useAssignCategory, useNeedsReview, useUnanalyzed } from "../api/queries";
 import { useCategoryOptions } from "../lib/categories";
 import { formatDate, formatPercent, stageLabels } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
 
-/** Dokumente, bei denen die KI unsicher war - hier schnell bestaetigen oder korrigieren. */
+/**
+ * Pruefen: (1) Dokumente, bei denen die KI unsicher war - schnell bestaetigen oder korrigieren;
+ * (2) Dokumente, die nicht analysiert werden konnten (KI nicht erreichbar, Auftrag verloren) -
+ * mit "Alle analysieren" nachholen.
+ */
 export function ReviewPage() {
   const review = useNeedsReview();
+  const unanalyzed = useUnanalyzed();
+  const [params, setParams] = useSearchParams();
+  const reviewCount = review.data?.total ?? 0;
+  const unanalyzedCount = unanalyzed.data?.total ?? 0;
+  // Ohne Auswahl: dort beginnen, wo etwas zu tun ist
+  const tab = params.get("ansicht") ?? (reviewCount === 0 && unanalyzedCount > 0 ? "nicht-analysiert" : "kategorie");
 
   return (
     <Stack>
-      <div>
-        <Title order={2}>Prüfen</Title>
-        <Text c="dimmed" size="sm">
-          Bei diesen Dokumenten war sich die KI nicht sicher. Jede Bestätigung verbessert die künftige Einordnung.
-        </Text>
-      </div>
+      <Title order={2}>Prüfen</Title>
+      <Tabs value={tab} onChange={(v) => v && setParams({ ansicht: v }, { replace: true })} keepMounted={false}>
+        <Tabs.List>
+          <Tabs.Tab
+            value="kategorie"
+            rightSection={
+              reviewCount ? (
+                <Badge size="sm" color="orange" circle={reviewCount < 10}>
+                  {reviewCount}
+                </Badge>
+              ) : null
+            }
+          >
+            Kategorie prüfen
+          </Tabs.Tab>
+          <Tabs.Tab
+            value="nicht-analysiert"
+            rightSection={
+              unanalyzedCount ? (
+                <Badge size="sm" color="red" circle={unanalyzedCount < 10}>
+                  {unanalyzedCount}
+                </Badge>
+              ) : null
+            }
+          >
+            Nicht analysiert
+          </Tabs.Tab>
+        </Tabs.List>
+        <Tabs.Panel value="kategorie" pt="md">
+          <ReviewList review={review} />
+        </Tabs.Panel>
+        <Tabs.Panel value="nicht-analysiert" pt="md">
+          <UnanalyzedList query={unanalyzed} />
+        </Tabs.Panel>
+      </Tabs>
+    </Stack>
+  );
+}
+
+function ReviewList({ review }: { review: ReturnType<typeof useNeedsReview> }) {
+  return (
+    <Stack>
+      <Text c="dimmed" size="sm">
+        Bei diesen Dokumenten war sich die KI nicht sicher. Jede Bestätigung verbessert die künftige Einordnung.
+      </Text>
       {review.isPending ? (
         <Center py="xl">
           <Loader />
@@ -98,7 +149,11 @@ function ReviewCard({ doc }: { doc: DocumentItem }) {
         </div>
         <Select
           label={
-            doc.category_id ? `Vorschlag der KI${suggestion ? ` (${suggestion})` : ""}` : "Keine Kategorie erkannt"
+            doc.classification_error
+              ? "KI war nicht erreichbar – selbst wählen oder unter „Nicht analysiert“ nachholen"
+              : doc.category_id
+                ? `Vorschlag der KI${suggestion ? ` (${suggestion})` : ""}`
+                : "Keine Kategorie erkannt"
           }
           placeholder="Kategorie wählen"
           data={options}
@@ -119,5 +174,91 @@ function ReviewCard({ doc }: { doc: DocumentItem }) {
         </Group>
       </Stack>
     </Card>
+  );
+}
+
+function UnanalyzedList({ query }: { query: ReturnType<typeof useUnanalyzed> }) {
+  const analyze = useAnalyzeAll();
+
+  if (query.isPending) {
+    return (
+      <Center py="xl">
+        <Loader />
+      </Center>
+    );
+  }
+  if (query.isError) return <Alert color="red">{query.error.message}</Alert>;
+  const { items, ai_available: aiAvailable } = query.data;
+
+  if (items.length === 0) {
+    return (
+      <Card withBorder padding="xl" radius="md">
+        <Stack align="center" gap="xs">
+          <ThemeIcon size={48} radius="xl" variant="light" color="green">
+            <IconConfetti size={28} />
+          </ThemeIcon>
+          <Text fw={500}>Alles analysiert</Text>
+          <Text size="sm" c="dimmed">
+            Texterkennung, Kategorie und Angaben sind bei allen Dokumenten durchgelaufen.
+          </Text>
+        </Stack>
+      </Card>
+    );
+  }
+
+  function start() {
+    analyze.mutate(undefined, {
+      onSuccess: (r) =>
+        notifySuccess(
+          r.queued
+            ? `${r.queued} ${r.queued === 1 ? "Dokument wird" : "Dokumente werden"} analysiert – das kann je nach KI einige Minuten dauern.`
+            : "Nichts mehr zu tun.",
+        ),
+      onError: (e) => notifyError(e, "Analyse konnte nicht gestartet werden"),
+    });
+  }
+
+  const needsAi = items.some((d) => d.reasons.some((r) => !r.startsWith("Texterkennung")));
+  return (
+    <Stack>
+      <Group justify="space-between" align="flex-start" wrap="wrap">
+        <Text c="dimmed" size="sm" maw={640}>
+          Bei diesen Dokumenten fehlt ein Teil der Auswertung – meist, weil die KI (Ollama) nicht lief, oder weil die
+          Verarbeitung unterbrochen wurde. Nachgeholt wird nur, was fehlt; deine Eingaben bleiben.
+        </Text>
+        <Button leftSection={<IconRefresh size={16} />} onClick={start} loading={analyze.isPending}>
+          Alle analysieren ({items.length})
+        </Button>
+      </Group>
+      {!aiAvailable && needsAi && (
+        <Alert color="yellow" icon={<IconAlertTriangle />} title="Die KI antwortet gerade nicht">
+          Kategorie, Betreff und Fristen lassen sich erst nachholen, wenn Ollama läuft (unter Windows: am PC anmelden
+          bzw. Ollama starten; auf der NAS: Container „ollama“ prüfen). Die Texterkennung klappt auch ohne.
+        </Alert>
+      )}
+      <Stack gap="xs">
+        {items.map((doc) => (
+          <Card key={doc.id} withBorder padding="sm" radius="md" data-testid="unanalyzed">
+            <Group justify="space-between" wrap="nowrap" align="flex-start">
+              <div style={{ minWidth: 0 }}>
+                <Anchor component={Link} to={`/dokumente/${doc.id}`} fw={600} style={{ overflowWrap: "anywhere" }}>
+                  {doc.title || "Ohne Titel"}
+                </Anchor>
+                <Text size="xs" c="dimmed">
+                  hochgeladen {formatDate(doc.created_at)}
+                </Text>
+              </div>
+            </Group>
+            <Group gap={6} mt={6}>
+              {doc.reasons.map((reason) => (
+                <Badge key={reason} variant="light" color="orange" size="sm" tt="none">
+                  {reason}
+                </Badge>
+              ))}
+            </Group>
+          </Card>
+        ))}
+      </Stack>
+    </Stack>
   );
 }

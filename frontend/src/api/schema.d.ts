@@ -283,6 +283,47 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/documents/unanalyzed": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Unanalyzed
+     * @description Nicht (vollstaendig) analysierte Dokumente - Regeln in homedms/core/analysis.py.
+     */
+    get: operations["list_unanalyzed_api_v1_documents_unanalyzed_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/documents/unanalyzed/analyze": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Analyze Unanalyzed
+     * @description "Alle analysieren": fuer jedes nicht analysierte Dokument (mit Bearbeitungsrecht) genau die
+     *     fehlenden Schritte neu einreihen. Vorhandene Angaben und Nutzer-Eingaben bleiben.
+     */
+    post: operations["analyze_unanalyzed_api_v1_documents_unanalyzed_analyze_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/documents/unpaid": {
     parameters: {
       query?: never;
@@ -849,6 +890,13 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** AnalyzeAllResponse */
+    AnalyzeAllResponse: {
+      /** Queued */
+      queued: number;
+      /** Jobs */
+      jobs: number;
+    };
     /** Body_add_pages_api_v1_documents__document_id__pages_post */
     Body_add_pages_api_v1_documents__document_id__pages_post: {
       /**
@@ -1054,6 +1102,8 @@ export interface components {
       /** Classification Confidence */
       classification_confidence: number | null;
       classification_stage: components["schemas"]["ClassificationStage"] | null;
+      /** Classification Error */
+      classification_error?: string | null;
       extraction_status: components["schemas"]["ExtractionStatus"];
       /** Document Date */
       document_date: string | null;
@@ -1169,6 +1219,8 @@ export interface components {
       /** Classification Confidence */
       classification_confidence: number | null;
       classification_stage: components["schemas"]["ClassificationStage"] | null;
+      /** Classification Error */
+      classification_error?: string | null;
       extraction_status: components["schemas"]["ExtractionStatus"];
       /** Document Date */
       document_date: string | null;
@@ -1546,6 +1598,101 @@ export interface components {
        * @default bearer
        */
       token_type: string;
+    };
+    /** UnanalyzedItem */
+    UnanalyzedItem: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Title */
+      title: string;
+      /**
+       * Title Locked
+       * @default false
+       */
+      title_locked: boolean;
+      /** Subject */
+      subject?: string | null;
+      /** Property Id */
+      property_id?: string | null;
+      /** Category Id */
+      category_id: string | null;
+      /** Owner User Id */
+      owner_user_id: string | null;
+      source: components["schemas"]["DocumentSource"];
+      ocr_status: components["schemas"]["OcrStatus"];
+      classification_status: components["schemas"]["ClassificationStatus"];
+      /** Classification Confidence */
+      classification_confidence: number | null;
+      classification_stage: components["schemas"]["ClassificationStage"] | null;
+      /** Classification Error */
+      classification_error?: string | null;
+      extraction_status: components["schemas"]["ExtractionStatus"];
+      /** Document Date */
+      document_date: string | null;
+      /** Issuer */
+      issuer: string | null;
+      /** Amount */
+      amount: number | null;
+      original_present: components["schemas"]["OriginalPresent"];
+      /** Original Location */
+      original_location: string | null;
+      /** Is Invoice */
+      is_invoice?: boolean | null;
+      /**
+       * Is Invoice Locked
+       * @default false
+       */
+      is_invoice_locked: boolean;
+      /** Payment Status */
+      payment_status?: string | null;
+      /** Paid On */
+      paid_on?: string | null;
+      /**
+       * Paid Assumed
+       * @default false
+       */
+      paid_assumed: boolean;
+      /** Payment Due */
+      payment_due?: string | null;
+      /** Deleted At */
+      deleted_at: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
+      /**
+       * Files
+       * @default []
+       */
+      files: components["schemas"]["DocumentFileResponse"][];
+      /** Search Snippet */
+      search_snippet?: components["schemas"]["SearchSegment"][] | null;
+      /**
+       * Reasons
+       * @default []
+       */
+      reasons: string[];
+    };
+    /**
+     * UnanalyzedListResponse
+     * @description GET /documents/unanalyzed - Dokumente, die (noch) nicht vollstaendig analysiert sind.
+     */
+    UnanalyzedListResponse: {
+      /** Items */
+      items: components["schemas"]["UnanalyzedItem"][];
+      /** Total */
+      total: number;
+      /** Ai Available */
+      ai_available: boolean;
     };
     /**
      * UnpaidListResponse
@@ -2350,6 +2497,46 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_unanalyzed_api_v1_documents_unanalyzed_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnanalyzedListResponse"];
+        };
+      };
+    };
+  };
+  analyze_unanalyzed_api_v1_documents_unanalyzed_analyze_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AnalyzeAllResponse"];
         };
       };
     };

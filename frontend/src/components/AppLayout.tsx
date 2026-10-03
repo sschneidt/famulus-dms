@@ -35,7 +35,7 @@ import {
 import dayjs from "dayjs";
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { NavLink as RouterNavLink, Outlet, useLocation } from "react-router";
-import { useNeedsReview, useUnpaid, useWiedervorlagen } from "../api/queries";
+import { useNeedsReview, useUnanalyzed, useUnpaid, useWiedervorlagen } from "../api/queries";
 import { useAuth, useUser } from "../auth/AuthContext";
 import { Logo } from "./Logo";
 import { ProfileModal } from "./ProfileModal";
@@ -66,6 +66,7 @@ export function AppLayout() {
   }, []);
 
   const review = useNeedsReview();
+  const unanalyzed = useUnanalyzed();
   const proposals = useWiedervorlagen("vorgeschlagen");
   const open = useWiedervorlagen("offen");
   const today = dayjs().format("YYYY-MM-DD");
@@ -79,11 +80,24 @@ export function AppLayout() {
       to: "/pruefen",
       label: "Prüfen",
       icon: <IconChecklist size={20} />,
-      badge: review.data?.total ? (
-        <Badge size="sm" color="orange" circle={review.data.total < 10}>
-          {review.data.total}
-        </Badge>
-      ) : null,
+      badge: (
+        <Group gap={4}>
+          {review.data?.total ? (
+            <Tooltip label="Kategorie prüfen">
+              <Badge size="sm" color="orange" circle={review.data.total < 10}>
+                {review.data.total}
+              </Badge>
+            </Tooltip>
+          ) : null}
+          {unanalyzed.data?.total ? (
+            <Tooltip label="nicht analysiert">
+              <Badge size="sm" color="red" variant="light" circle={unanalyzed.data.total < 10}>
+                {unanalyzed.data.total}
+              </Badge>
+            </Tooltip>
+          ) : null}
+        </Group>
+      ),
     },
     {
       to: "/termine",

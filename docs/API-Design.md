@@ -61,6 +61,8 @@ REST-API auf Basis von FastAPI, Base-Path `/api/v1`. Alle Endpunkte sind implizi
 | GET | `/documents` | Liste/Suche/Filter (siehe Konventionen), respektiert Sichtbarkeitsmodell, zeigt standardmäßig keine gelöschten Dokumente | angemeldet |
 | POST | `/documents` | Neues Dokument anlegen (Multipart-Upload: Datei(en) + optionale Metadaten) – deckt Foto-Import, manuellen Upload ab | angemeldet |
 | GET | `/documents/needs-review` | Feedback-Loop-Warteschlange (`classification_status = needs_review`) | angemeldet (gefiltert auf sichtbare Dokumente) |
+| GET | `/documents/unanalyzed` | Nicht (vollständig) analysierte Dokumente mit Gründen (`reasons`) und `ai_available` (antwortet Ollama gerade?): Texterkennung fehlgeschlagen, Einordnung/Angaben wegen KI-Ausfall offen (`classification_error`, `extraction_status = failed`), oder ein Schritt „läuft“ seit ≥ 10 Min. ohne Auftrag in der Warteschlange – umgesetzt 03.10.2026 (`core/analysis.py`) | angemeldet (sichtbare Dokumente) |
+| POST | `/documents/unanalyzed/analyze` | „Alle analysieren“: für jedes dieser Dokumente genau die fehlenden Schritte neu einreihen (Texterkennung bzw. Einordnung und/oder Angaben); vorhandene Angaben und Nutzer-Eingaben bleiben. Antwort `{queued, jobs}` | angemeldet (Dokumente mit Edit-Recht) |
 | GET | `/documents/trash` | Papierkorb: Dokumente mit gesetztem `deleted_at` (siehe Datenmodell 3.5), max. 30 Tage sichtbar | angemeldet + Sichtbarkeit |
 | GET | `/documents/{id}` | Dokumentdetails inkl. Metadaten, Kategorie, Tags | angemeldet + Sichtbarkeit |
 | PATCH | `/documents/{id}` | Titel, Tags, Original-Tracking-Felder etc. ändern | angemeldet + Sichtbarkeit/Edit-Recht |

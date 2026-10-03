@@ -49,6 +49,7 @@ class DocumentResponse(BaseModel):
     classification_status: ClassificationStatus
     classification_confidence: float | None
     classification_stage: ClassificationStage | None
+    classification_error: str | None = None  # Einordnung lief nicht, weil die KI nicht erreichbar war
     extraction_status: ExtractionStatus
 
     document_date: date | None
@@ -90,6 +91,23 @@ class DocumentListResponse(BaseModel):
     page: int
     page_size: int
     total: int
+
+
+class UnanalyzedItem(DocumentResponse):
+    reasons: list[str] = []  # was fehlt, z. B. "Kategorie: KI war nicht erreichbar"
+
+
+class UnanalyzedListResponse(BaseModel):
+    """GET /documents/unanalyzed - Dokumente, die (noch) nicht vollstaendig analysiert sind."""
+
+    items: list[UnanalyzedItem]
+    total: int
+    ai_available: bool  # antwortet die KI (Ollama) gerade? Sonst wuerde "Alle analysieren" erneut scheitern
+
+
+class AnalyzeAllResponse(BaseModel):
+    queued: int  # Dokumente, fuer die neue Auftraege eingereiht wurden
+    jobs: int  # Auftraege insgesamt (Texterkennung, Einordnung, Angaben)
 
 
 class UnpaidListResponse(BaseModel):

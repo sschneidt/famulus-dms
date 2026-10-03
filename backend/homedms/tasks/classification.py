@@ -122,6 +122,12 @@ async def classify_document(document_id: str) -> None:
         )
         client = ollama.client_for(config)
 
+        document.classification_error = None  # wird unten nur bei einem KI-Ausfall wieder gesetzt
+
+        def ai_unavailable(stage: str, note: str, exc: OllamaError) -> None:
+            needs_review(stage, note)
+            document.classification_error = f"KI nicht erreichbar: {exc}"[:500]
+
         def needs_review(stage: str, note: str, confidence: float | None = None) -> None:
             _record(db, document, new_category_id=None, stage=stage, confidence=confidence, note=note)
             document.classification_status = ClassificationStatus.needs_review
@@ -139,7 +145,7 @@ async def classify_document(document_id: str) -> None:
             embedding = await client.embed(text)
         except OllamaError as exc:
             logger.warning("Embedding fehlgeschlagen fuer %s: %s", document_id, exc)
-            needs_review("embedding", f"KI nicht verfuegbar: {exc}")
+            ai_unavailable("embedding", f"KI nicht verfuegbar: {exc}", exc)
             await db.commit()
             return
 
@@ -166,7 +172,7 @@ async def classify_document(document_id: str) -> None:
             raw = await client.chat_json(system, user, schema)
         except OllamaError as exc:
             logger.warning("Sprachmodell fehlgeschlagen fuer %s: %s", document_id, exc)
-            needs_review("llm", f"Stufe 1: {stage1.reason}. Sprachmodell nicht verfuegbar: {exc}")
+            ai_unavailable("llm", f"Stufe 1: {stage1.reason}. Sprachmodell nicht verfuegbar: {exc}", exc)
             await db.commit()
             return
 

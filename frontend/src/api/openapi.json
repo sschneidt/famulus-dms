@@ -921,6 +921,60 @@
         }
       }
     },
+    "/api/v1/documents/unanalyzed": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "List Unanalyzed",
+        "description": "Nicht (vollstaendig) analysierte Dokumente - Regeln in homedms/core/analysis.py.",
+        "operationId": "list_unanalyzed_api_v1_documents_unanalyzed_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnanalyzedListResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/documents/unanalyzed/analyze": {
+      "post": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Analyze Unanalyzed",
+        "description": "\"Alle analysieren\": fuer jedes nicht analysierte Dokument (mit Bearbeitungsrecht) genau die\nfehlenden Schritte neu einreihen. Vorhandene Angaben und Nutzer-Eingaben bleiben.",
+        "operationId": "analyze_unanalyzed_api_v1_documents_unanalyzed_analyze_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyzeAllResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/documents/unpaid": {
       "get": {
         "tags": [
@@ -2785,6 +2839,24 @@
   },
   "components": {
     "schemas": {
+      "AnalyzeAllResponse": {
+        "properties": {
+          "queued": {
+            "type": "integer",
+            "title": "Queued"
+          },
+          "jobs": {
+            "type": "integer",
+            "title": "Jobs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "queued",
+          "jobs"
+        ],
+        "title": "AnalyzeAllResponse"
+      },
       "Body_add_pages_api_v1_documents__document_id__pages_post": {
         "properties": {
           "file": {
@@ -3248,6 +3320,17 @@
               }
             ]
           },
+          "classification_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification Error"
+          },
           "extraction_status": {
             "$ref": "#/components/schemas/ExtractionStatus"
           },
@@ -3596,6 +3679,17 @@
                 "type": "null"
               }
             ]
+          },
+          "classification_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification Error"
           },
           "extraction_status": {
             "$ref": "#/components/schemas/ExtractionStatus"
@@ -4591,6 +4685,320 @@
           "refresh_token"
         ],
         "title": "TokenResponse"
+      },
+      "UnanalyzedItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "title_locked": {
+            "type": "boolean",
+            "title": "Title Locked",
+            "default": false
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "owner_user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner User Id"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DocumentSource"
+          },
+          "ocr_status": {
+            "$ref": "#/components/schemas/OcrStatus"
+          },
+          "classification_status": {
+            "$ref": "#/components/schemas/ClassificationStatus"
+          },
+          "classification_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification Confidence"
+          },
+          "classification_stage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClassificationStage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "classification_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification Error"
+          },
+          "extraction_status": {
+            "$ref": "#/components/schemas/ExtractionStatus"
+          },
+          "document_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Date"
+          },
+          "issuer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issuer"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "original_present": {
+            "$ref": "#/components/schemas/OriginalPresent"
+          },
+          "original_location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Location"
+          },
+          "is_invoice": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Invoice"
+          },
+          "is_invoice_locked": {
+            "type": "boolean",
+            "title": "Is Invoice Locked",
+            "default": false
+          },
+          "payment_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Status"
+          },
+          "paid_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid On"
+          },
+          "paid_assumed": {
+            "type": "boolean",
+            "title": "Paid Assumed",
+            "default": false
+          },
+          "payment_due": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Due"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentFileResponse"
+            },
+            "type": "array",
+            "title": "Files",
+            "default": []
+          },
+          "search_snippet": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SearchSegment"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Snippet"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reasons",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "category_id",
+          "owner_user_id",
+          "source",
+          "ocr_status",
+          "classification_status",
+          "classification_confidence",
+          "classification_stage",
+          "extraction_status",
+          "document_date",
+          "issuer",
+          "amount",
+          "original_present",
+          "original_location",
+          "deleted_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "UnanalyzedItem"
+      },
+      "UnanalyzedListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UnanalyzedItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "ai_available": {
+            "type": "boolean",
+            "title": "Ai Available"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "ai_available"
+        ],
+        "title": "UnanalyzedListResponse",
+        "description": "GET /documents/unanalyzed - Dokumente, die (noch) nicht vollstaendig analysiert sind."
       },
       "UnpaidListResponse": {
         "properties": {

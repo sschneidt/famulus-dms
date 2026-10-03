@@ -24,17 +24,23 @@ from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from homedms.api.deps import get_current_user
-from homedms.core import meili
+from homedms.ai import ollama
+from homedms.core import analysis, meili
 from homedms.core.naming import refresh_title
 from homedms.core.pages import PageError, Part, combine, file_page_count
 from homedms.core.payments import PAYMENT_PATTERN, mark_paid
 from homedms.core.search import has_hit, like_pattern, search_terms, segments_from_marked, snippet_for_terms
 from homedms.core.retention import sync_retention
 from homedms.core.storage import document_file_path, replace_with_pdf, save_upload
-from homedms.core.visibility import is_document_editable, is_document_visible, visible_documents_expr
+from homedms.core.visibility import (
+    editable_documents_expr,
+    is_document_editable,
+    is_document_visible,
+    visible_documents_expr,
+)
 from homedms.db import get_db
 from homedms.jobs import app as jobs_app
-from homedms.models.classification import ClassificationEvent
+from homedms.models.classification import AIModelConfig, ClassificationEvent
 from homedms.models.document import (
     Category,
     CategoryAccess,
@@ -60,7 +66,10 @@ from homedms.schemas.document import (
     DocumentResponse,
     DocumentUpdateRequest,
     SearchSegment,
+    UnanalyzedItem,
+    UnanalyzedListResponse,
     UnpaidListResponse,
+    AnalyzeAllResponse,
 )
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -219,6 +228,58 @@ async def list_needs_review(
     )
     items = list(result.scalars().all())
     return DocumentListResponse(items=items, page=page, page_size=page_size, total=total or 0)
+
+
+MAX_ANALYZE_ALL = 500
+
+
+async def _ai_available(db: AsyncSession, tenant_id: uuid.UUID) -> bool:
+    config = await db.scalar(select(AIModelConfig).where(AIModelConfig.tenant_id == tenant_id))
+    return await ollama.client_for(config).available()
+
+
+@router.get("/unanalyzed", response_model=UnanalyzedListResponse)
+async def list_unanalyzed(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> UnanalyzedListResponse:
+    """Nicht (vollstaendig) analysierte Dokumente - Regeln in homedms/core/analysis.py."""
+    rows = (await db.execute(
+        select(Document)
+        .where(
+            Document.tenant_id == user.tenant_id,
+            Document.deleted_at.is_(None),
+            visible_documents_expr(user),
+            analysis.unanalyzed_expr(),
+        )
+        .order_by(Document.created_at.asc())
+        .limit(MAX_ANALYZE_ALL)
+    )).scalars().all()
+    items = [UnanalyzedItem.model_validate(d).model_copy(update={"reasons": analysis.reasons(d)}) for d in rows]
+    return UnanalyzedListResponse(items=items, total=len(items), ai_available=await _ai_available(db, user.tenant_id))
+
+
+@router.post("/unanalyzed/analyze", response_model=AnalyzeAllResponse)
+async def analyze_unanalyzed(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> AnalyzeAllResponse:
+    """"Alle analysieren": fuer jedes nicht analysierte Dokument (mit Bearbeitungsrecht) genau die
+    fehlenden Schritte neu einreihen. Vorhandene Angaben und Nutzer-Eingaben bleiben."""
+    rows = (await db.execute(
+        select(Document)
+        .where(
+            Document.tenant_id == user.tenant_id,
+            Document.deleted_at.is_(None),
+            editable_documents_expr(user),
+            analysis.unanalyzed_expr(),
+        )
+        .order_by(Document.created_at.asc())
+        .limit(MAX_ANALYZE_ALL)
+    )).scalars().all()
+    plans = [(d.id, analysis.plan(d)) for d in rows]
+    await db.commit()
+    jobs = 0
+    async with jobs_app.open_async():
+        for document_id, tasks in plans:
+            for task in tasks:
+                await jobs_app.configure_task(task, queue=analysis.QUEUES[task]).defer_async(document_id=str(document_id))
+                jobs += 1
+    return AnalyzeAllResponse(queued=sum(1 for _, t in plans if t), jobs=jobs)
 
 
 @router.get("/unpaid", response_model=UnpaidListResponse)

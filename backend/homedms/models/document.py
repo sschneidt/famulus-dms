@@ -139,6 +139,9 @@ class Document(Base, UUIDPKMixin, TimestampMixin):
     classification_stage: Mapped[ClassificationStage | None] = mapped_column(
         SAEnum(ClassificationStage, name="classification_stage"), nullable=True
     )
+    # Gesetzt, wenn die Einordnung nicht laufen konnte, weil die KI (Ollama) nicht erreichbar war -
+    # solche Dokumente zeigt "Prüfen > Nicht analysiert" zum erneuten Analysieren (Migration 0011)
+    classification_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     extraction_status: Mapped[ExtractionStatus] = mapped_column(
         SAEnum(ExtractionStatus, name="extraction_status"),
         default=ExtractionStatus.pending,

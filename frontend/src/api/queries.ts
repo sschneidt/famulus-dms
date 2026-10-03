@@ -12,6 +12,7 @@ export const keys = {
   history: (id: string) => ["document", id, "history"] as const,
   documentWiedervorlagen: (id: string) => ["document", id, "wiedervorlagen"] as const,
   needsReview: ["documents", "needs-review"] as const,
+  unanalyzed: ["documents", "unanalyzed"] as const,
   trash: ["documents", "trash"] as const,
   wiedervorlagen: (filters: object) => ["wiedervorlagen", filters] as const,
   retentionRules: ["retention-rules"] as const,
@@ -82,6 +83,24 @@ export function useNeedsReview() {
     queryKey: keys.needsReview,
     queryFn: () => call(api.GET("/api/v1/documents/needs-review", { params: { query: { page_size: 100 } } })),
     refetchInterval: 30_000,
+  });
+}
+
+/** Nicht (vollstaendig) analysierte Dokumente - z. B. weil die KI nicht erreichbar war. */
+export function useUnanalyzed() {
+  return useQuery({
+    queryKey: keys.unanalyzed,
+    queryFn: () => call(api.GET("/api/v1/documents/unanalyzed")),
+    refetchInterval: 30_000,
+  });
+}
+
+/** "Alle analysieren": fehlende Schritte fuer alle nicht analysierten Dokumente neu einreihen. */
+export function useAnalyzeAll() {
+  const invalidate = useInvalidateAll();
+  return useMutation({
+    mutationFn: () => call(api.POST("/api/v1/documents/unanalyzed/analyze")),
+    onSuccess: invalidate,
   });
 }
 
