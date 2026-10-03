@@ -40,6 +40,10 @@ class FakeOllama:
             raise httpx.ConnectError("Verbindung abgelehnt", request=request)
         if request.url.path == "/api/version":
             return httpx.Response(200, json={"version": "attrappe"})
+        if request.url.path == "/api/tags":
+            return httpx.Response(200, json={"models": [{"name": "llama3.2:3b"}, {"name": "nomic-embed-text:latest"}]})
+        if request.url.path == "/api/ps":
+            return httpx.Response(200, json={"models": []})
         body = json.loads(request.content)
         if request.url.path == "/api/embed":
             self.embed_calls += 1

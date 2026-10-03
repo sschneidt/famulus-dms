@@ -23,6 +23,18 @@ from homedms.jobs import app
 # Uploads auf (Smoke-Test: "Texterkennung Scan - Status pending").
 QUEUES = {"dateien": ["default", "builtin"], "ki": ["ai"]}  # builtin: Procrastinate-eigene Wartungsauftraege
 
+_stop = None  # gesetzt, solange der Worker laeuft - fuer request_restart()
+
+
+def request_restart() -> bool:
+    """Seite "Diagnose" > "Worker neu starten": Der Worker beendet sich kurz nach diesem Aufruf
+    selbst; Docker (restart: unless-stopped) bzw. der Starter (server.py) startet ihn sofort neu.
+    Die Verzoegerung laesst den ausloesenden Auftrag noch sauber als erledigt abschliessen."""
+    if _stop is None:
+        return False
+    asyncio.get_running_loop().call_later(1.0, _stop)
+    return True
+
 
 async def _main() -> None:
     runtime.setup_logging("worker")
@@ -37,6 +49,9 @@ async def _main() -> None:
 
         def stop(*_args) -> None:
             loop.call_soon_threadsafe(lambda: [w.cancel() for w in workers])  # sauber beenden
+
+        global _stop
+        _stop = stop
 
         for sig in (signal.SIGTERM, signal.SIGINT):
             try:

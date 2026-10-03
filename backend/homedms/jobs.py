@@ -23,3 +23,4 @@ from homedms.tasks import classification as _classification  # noqa: E402,F401  
 from homedms.tasks import extraction as _extraction  # noqa: E402,F401  (extract_metadata)
 from homedms.tasks import filing as _filing  # noqa: E402,F401  (file_document)
 from homedms.tasks import scanfolder as _scanfolder  # noqa: E402,F401  (scan_folders, jede Minute)
+from homedms.tasks import system as _system  # noqa: E402,F401  (restart_worker, pull_model - Seite Diagnose)

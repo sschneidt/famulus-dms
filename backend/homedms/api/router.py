@@ -15,6 +15,7 @@ from homedms.api.routes import (
     properties,
     retention_rules,
     setup,
+    system,
     users,
     wiedervorlagen,
 )
@@ -32,3 +33,4 @@ api_router.include_router(wiedervorlagen.router)
 api_router.include_router(retention_rules.router)
 api_router.include_router(properties.router)
 api_router.include_router(import_sources.router)
+api_router.include_router(system.router)

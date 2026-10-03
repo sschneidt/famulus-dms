@@ -21,6 +21,7 @@ export const keys = {
   importSources: ["import-sources"] as const,
   scanFolderInfo: ["import-sources", "scan-folder"] as const,
   users: ["users"] as const,
+  diagnostics: ["system", "diagnostics"] as const,
 };
 
 export interface DocumentFilters {
@@ -429,5 +430,27 @@ export function useResetPassword() {
   return useMutation({
     mutationFn: ({ id, password }: { id: string; password: string }) =>
       call(api.PUT("/api/v1/users/{user_id}/password", { params: { path: { user_id: id } }, body: { password } })),
+  });
+}
+
+// --- Diagnose (nur Admin) ------------------------------------------------------------------------
+
+export function useDiagnostics() {
+  return useQuery({
+    queryKey: keys.diagnostics,
+    queryFn: () => call(api.GET("/api/v1/system/diagnostics")),
+    refetchInterval: 10_000,
+  });
+}
+
+export function useSystemAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (action: string) => call(api.POST("/api/v1/system/actions/{action}", { params: { path: { action } } })),
+    // kurz danach neu pruefen (z. B. Worker wieder da)
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.diagnostics });
+      setTimeout(() => void qc.invalidateQueries({ queryKey: keys.diagnostics }), 5000);
+    },
   });
 }

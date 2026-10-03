@@ -31,6 +31,7 @@ import {
   IconUpload,
   IconUserEdit,
   IconUsers,
+  IconStethoscope,
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { useCallback, useRef, useState, type ReactNode } from "react";
@@ -139,6 +140,7 @@ export function AppLayout() {
     items.push({ to: "/aufbewahrung", label: "Aufbewahrung", icon: <IconShieldCheck size={20} /> });
     items.push({ to: "/scan-ordner", label: "Scan-Ordner", icon: <IconFolderSearch size={20} /> });
     items.push({ to: "/benutzer", label: "Benutzer", icon: <IconUsers size={20} /> });
+    items.push({ to: "/diagnose", label: "Diagnose", icon: <IconStethoscope size={20} /> });
   }
 
   const isActive = (item: NavItem) =>

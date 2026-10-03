@@ -2835,10 +2835,96 @@
           }
         }
       }
+    },
+    "/api/v1/system/diagnostics": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Get Diagnostics",
+        "operationId": "get_diagnostics_api_v1_system_diagnostics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiagnosticsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/actions/{action}": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Run Action",
+        "operationId": "run_action_api_v1_system_actions__action__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Action"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "ActionResult": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "ActionResult"
+      },
       "AnalyzeAllResponse": {
         "properties": {
           "queued": {
@@ -3226,6 +3312,154 @@
           "confirmed"
         ],
         "title": "ClassificationStatus"
+      },
+      "DiagnosticAction": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "confirm": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "DiagnosticAction"
+      },
+      "DiagnosticComponent": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "warning",
+              "error",
+              "disabled"
+            ],
+            "title": "Status"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticDetail"
+            },
+            "type": "array",
+            "title": "Details",
+            "default": []
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
+          },
+          "actions": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticAction"
+            },
+            "type": "array",
+            "title": "Actions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name",
+          "status",
+          "summary"
+        ],
+        "title": "DiagnosticComponent"
+      },
+      "DiagnosticDetail": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "DiagnosticDetail"
+      },
+      "DiagnosticsResponse": {
+        "properties": {
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          },
+          "overall": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "warning",
+              "error"
+            ],
+            "title": "Overall"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticComponent"
+            },
+            "type": "array",
+            "title": "Components"
+          },
+          "recent_failures": {
+            "items": {
+              "$ref": "#/components/schemas/FailedJob"
+            },
+            "type": "array",
+            "title": "Recent Failures"
+          }
+        },
+        "type": "object",
+        "required": [
+          "checked_at",
+          "overall",
+          "components",
+          "recent_failures"
+        ],
+        "title": "DiagnosticsResponse"
       },
       "DocumentDetailResponse": {
         "properties": {
@@ -4038,6 +4272,53 @@
           "failed"
         ],
         "title": "ExtractionStatus"
+      },
+      "FailedJob": {
+        "properties": {
+          "job_id": {
+            "type": "integer",
+            "title": "Job Id"
+          },
+          "task": {
+            "type": "string",
+            "title": "Task"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "document_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "task",
+          "at"
+        ],
+        "title": "FailedJob"
       },
       "HTTPValidationError": {
         "properties": {

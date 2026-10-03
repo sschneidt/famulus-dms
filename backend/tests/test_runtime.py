@@ -70,3 +70,21 @@ def test_abgestuerzter_hilfsprozess_wird_neu_gestartet(tmp_path):
         time.sleep(0.2)
     child.stop()
     assert len(marker.read_text()) >= 2  # erster Start + mindestens ein Neustart
+
+
+def test_worker_neustart_beendet_die_arbeitsstraenge():
+    import asyncio
+
+    from homedms import worker
+
+    async def main():
+        stopped = asyncio.Event()
+        worker._stop = lambda *_: stopped.set()
+        try:
+            assert worker.request_restart() is True
+            await asyncio.wait_for(stopped.wait(), timeout=3)
+        finally:
+            worker._stop = None
+        assert worker.request_restart() is False  # ausserhalb des Workers: nichts zu tun
+
+    runtime.run(main())

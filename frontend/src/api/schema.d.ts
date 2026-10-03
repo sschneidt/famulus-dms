@@ -886,10 +886,49 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/system/diagnostics": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Diagnostics */
+    get: operations["get_diagnostics_api_v1_system_diagnostics_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/system/actions/{action}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Run Action */
+    post: operations["run_action_api_v1_system_actions__action__post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** ActionResult */
+    ActionResult: {
+      /** Message */
+      message: string;
+    };
     /** AnalyzeAllResponse */
     AnalyzeAllResponse: {
       /** Queued */
@@ -1070,6 +1109,65 @@ export interface components {
      * @enum {string}
      */
     ClassificationStatus: "pending" | "auto_assigned" | "needs_review" | "confirmed";
+    /** DiagnosticAction */
+    DiagnosticAction: {
+      /** Id */
+      id: string;
+      /** Label */
+      label: string;
+      /** Confirm */
+      confirm?: string | null;
+    };
+    /** DiagnosticComponent */
+    DiagnosticComponent: {
+      /** Key */
+      key: string;
+      /** Name */
+      name: string;
+      /**
+       * Status
+       * @enum {string}
+       */
+      status: "ok" | "warning" | "error" | "disabled";
+      /** Summary */
+      summary: string;
+      /**
+       * Details
+       * @default []
+       */
+      details: components["schemas"]["DiagnosticDetail"][];
+      /** Hint */
+      hint?: string | null;
+      /**
+       * Actions
+       * @default []
+       */
+      actions: components["schemas"]["DiagnosticAction"][];
+    };
+    /** DiagnosticDetail */
+    DiagnosticDetail: {
+      /** Label */
+      label: string;
+      /** Value */
+      value: string;
+    };
+    /** DiagnosticsResponse */
+    DiagnosticsResponse: {
+      /**
+       * Checked At
+       * Format: date-time
+       */
+      checked_at: string;
+      /**
+       * Overall
+       * @enum {string}
+       */
+      overall: "ok" | "warning" | "error";
+      /** Components */
+      components: components["schemas"]["DiagnosticComponent"][];
+      /** Recent Failures */
+      recent_failures: components["schemas"]["FailedJob"][];
+    };
     /**
      * DocumentDetailResponse
      * @description Detailansicht (GET /documents/{id}) - zusaetzlich mit dem erkannten Text. In Listen bewusst
@@ -1309,6 +1407,22 @@ export interface components {
      * @enum {string}
      */
     ExtractionStatus: "pending" | "done" | "failed";
+    /** FailedJob */
+    FailedJob: {
+      /** Job Id */
+      job_id: number;
+      /** Task */
+      task: string;
+      /**
+       * At
+       * Format: date-time
+       */
+      at: string;
+      /** Document Id */
+      document_id?: string | null;
+      /** Document Title */
+      document_title?: string | null;
+    };
     /** HTTPValidationError */
     HTTPValidationError: {
       /** Detail */
@@ -3674,6 +3788,57 @@ export interface operations {
           "application/json": {
             [key: string]: unknown;
           };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_diagnostics_api_v1_system_diagnostics_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DiagnosticsResponse"];
+        };
+      };
+    };
+  };
+  run_action_api_v1_system_actions__action__post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        action: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionResult"];
         };
       };
       /** @description Validation Error */
