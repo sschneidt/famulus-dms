@@ -17,7 +17,10 @@ fi
 
 case "$APP_ROLE" in
   api)
-    exec uvicorn homedms.main:app --host 0.0.0.0 --port 8000
+    # Starter statt uvicorn direkt: HTTPS mit eigener Zertifizierungsstelle (TLS_MODE=auto) auf 8443,
+    # Port 8000 fuer Umleitung + Zertifikat-Hilfe + Healthcheck (homedms/server.py, cert_page.py).
+    # Migrationen/Ablage sind oben schon erledigt, der Worker laeuft in seinem eigenen Container.
+    exec python -m homedms.server --no-worker --no-migrate --host 0.0.0.0 --port 8000
     ;;
   worker)
     exec python -m homedms.worker

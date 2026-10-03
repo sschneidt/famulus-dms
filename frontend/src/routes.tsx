@@ -12,6 +12,7 @@ import { TerminePage } from "./pages/TerminePage";
 import { ScanFolderPage } from "./pages/ScanFolderPage";
 import { UsersPage } from "./pages/UsersPage";
 import { DiagnosePage } from "./pages/DiagnosePage";
+import { AccountPage } from "./pages/AccountPage";
 import { TrashPage } from "./pages/TrashPage";
 import { UnpaidPage } from "./pages/UnpaidPage";
 
@@ -35,6 +36,7 @@ export const routes: RouteObject[] = [
       { path: "scan-ordner", element: <ScanFolderPage /> },
       { path: "benutzer", element: <UsersPage /> },
       { path: "diagnose", element: <DiagnosePage /> },
+      { path: "konto", element: <AccountPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

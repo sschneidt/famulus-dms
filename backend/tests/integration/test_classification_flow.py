@@ -12,6 +12,7 @@ import pymupdf
 from sqlalchemy import select, text
 
 from homedms.ai import ollama
+from homedms.core import setup_code
 from homedms.db import async_session_factory
 from homedms.jobs import app as jobs_app
 from homedms.main import app
@@ -63,7 +64,7 @@ async def test_classification_learns_from_confirmations(clean_database, monkeypa
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
         await client.post(f"{API}/setup/bootstrap", json={
             "household_name": "Familie Test", "admin_email": "admin@example.com",
-            "admin_password": "admin-passwort", "admin_display_name": "Admin",
+            "admin_password": "admin-passwort", "admin_display_name": "Admin", "setup_code": setup_code.get_or_create(),
         })
         token = (await client.post(f"{API}/auth/login", json={
             "email": "admin@example.com", "password": "admin-passwort"})).json()["access_token"]

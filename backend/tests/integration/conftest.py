@@ -64,5 +64,8 @@ async def clean_database(migrated_database):
             )
         ).scalars().all()
         await conn.execute(text("TRUNCATE " + ", ".join(f'"{t}"' for t in tables) + " RESTART IDENTITY CASCADE"))
+    from homedms.core import login_guard
+
+    login_guard._ip_failures.clear()  # Fehlversuche frueherer Tests zaehlen nicht
     yield
     await engine.dispose()

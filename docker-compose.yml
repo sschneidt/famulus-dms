@@ -7,6 +7,9 @@ volumes:
   pgdata:
   meilidata:
   ollama_models:
+  # Zertifizierungsstelle + Server-Zertifikat (privater Schluessel!) - bewusst NICHT im
+  # Dokumente-Ordner, der evtl. per Netzwerkfreigabe fuer die Familie sichtbar ist.
+  tls:
 
 services:
   # ---------------------------------------------------------------------------
@@ -128,14 +131,26 @@ services:
       # Nur zur Anzeige auf der Seite "Scan-Ordner": wo der Ordner auf dem NAS/PC liegt
       SCAN_HOST_PATH: ${SCAN_FOLDER_PATH:-./data/scan}
       TZ: ${TZ:-Europe/Berlin}
+      # --- Sicherheit (docs/Sicherheitskonzept.md) ---
+      # auto = HTTPS mit eigener Zertifizierungsstelle; off = nur hinter einem Reverse Proxy mit HTTPS
+      TLS_MODE: ${TLS_MODE:-auto}
+      # Name und IP-Adresse des NAS im Heimnetz - der Container kennt sie nicht selbst
+      TLS_HOSTNAMES: ${TLS_HOSTNAMES:-}
+      TLS_DIR: /data/tls
+      HTTPS_PORT: 8443
+      PORT: 8000
+      # Einmal-Code fuer die Ersteinrichtung; leer = zufaellig, steht dann im Protokoll
+      # (docker compose logs app-api | grep Einrichtungscode)
+      SETUP_CODE: ${SETUP_CODE:-}
     volumes:
       - ${DOCUMENTS_PATH:-./data/documents}:/data/documents
+      - tls:/data/tls
     ports:
-      # Nur dieser eine Port verlässt den internen Docker-Netzwerk-Bereich.
-      # Synology Reverse Proxy (DSM-Systemsteuerung) zeigt auf diesen Port und
-      # übernimmt TLS/HTTPS (Anforderungsdokument 4.7/5) – kein eigener
-      # Reverse-Proxy-Container im Standard-Setup nötig.
-      - "${APP_HTTP_PORT:-8000}:8000"
+      # 8443: HomeDMS per HTTPS. 8000: nur Umleitung auf HTTPS + Zertifikat-Hilfe fuer neue Geraete
+      # (http://<nas>:8000/zertifikat). Mit TLS_MODE=off (Synology Reverse Proxy macht HTTPS) besser
+      # APP_BIND=127.0.0.1 setzen, damit niemand am Proxy vorbei per HTTP zugreift.
+      - "${APP_BIND:-0.0.0.0}:${APP_HTTP_PORT:-8000}:8000"
+      - "${APP_BIND:-0.0.0.0}:${APP_HTTPS_PORT:-8443}:8443"
     healthcheck:
       # python:3.12-slim enthaelt weder wget noch curl - Python selbst ist aber da.
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=4)"]

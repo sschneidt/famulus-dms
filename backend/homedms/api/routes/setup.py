@@ -3,10 +3,14 @@
 Legt einmalig Tenant + ersten Admin-User + Basis-Kategorien-Set an. Danach uebernimmt der
 Web-Einrichtungsassistent (separates Frontend-Kapitel) die weiteren inhaltlichen Schritte.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from homedms.config import get_settings
+from homedms.core import login_guard, setup_code
 from homedms.core.security import hash_password
 from homedms.db import get_db
 from homedms.models.document import Category
@@ -18,13 +22,27 @@ router = APIRouter(prefix="/setup", tags=["setup"])
 
 @router.get("/status")
 async def setup_status(db: AsyncSession = Depends(get_db)) -> dict:
+    """Oeffentlich (vor der Anmeldung): eingerichtet? und Verbindungsdaten fuer die Zertifikat-Hilfe."""
     tenant_count = await db.scalar(select(func.count()).select_from(Tenant))
-    return {"bootstrapped": (tenant_count or 0) > 0}
+    settings = get_settings()
+    return {
+        "bootstrapped": (tenant_count or 0) > 0,
+        "tls": settings.tls_mode == "auto",  # eigene Zertifizierungsstelle -> Geraete muessen ihr vertrauen
+        "http_port": int(os.environ.get("PORT", "8000")),
+        "https_port": settings.https_port,
+    }
 
 
 @router.post("/bootstrap", response_model=BootstrapResponse, status_code=status.HTTP_201_CREATED)
-async def bootstrap(payload: BootstrapRequest, db: AsyncSession = Depends(get_db)) -> BootstrapResponse:
-    """Nur erlaubt, solange noch kein Tenant existiert (einmaliger Ersteinrichtungs-Schritt)."""
+async def bootstrap(payload: BootstrapRequest, request: Request, db: AsyncSession = Depends(get_db)) -> BootstrapResponse:
+    """Nur erlaubt, solange noch kein Tenant existiert (einmaliger Ersteinrichtungs-Schritt) - und nur
+    mit dem Einrichtungscode, den der Server beim Start ins Protokoll schreibt (core/setup_code.py)."""
+    ip = request.client.host if request.client else "?"
+    login_guard.check_ip(ip)
+    if not setup_code.matches(payload.setup_code):
+        login_guard.record_ip_failure(ip)
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Der Einrichtungscode stimmt nicht - er steht im Protokoll des "
+                            "Servers und in der Datei .einrichtungscode im Dokumente-Ordner")
     existing = await db.scalar(select(func.count()).select_from(Tenant))
     if (existing or 0) > 0:
         raise HTTPException(
@@ -60,6 +78,7 @@ async def bootstrap(payload: BootstrapRequest, db: AsyncSession = Depends(get_db
         )
 
     await db.commit()
+    setup_code.remove()  # einmalig - danach nicht mehr noetig
 
     return BootstrapResponse(
         tenant_id=str(tenant.id),

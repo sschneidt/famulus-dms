@@ -34,9 +34,12 @@ async def run_worker() -> None:
 
 
 async def bootstrap_and_login(client: httpx.AsyncClient) -> dict:
+    from homedms.core import setup_code
+
     r = await client.post(f"{API}/setup/bootstrap", json={
         "household_name": "Familie Test", "admin_email": "admin@example.com",
         "admin_password": "admin-passwort", "admin_display_name": "Admin",
+        "setup_code": setup_code.get_or_create(),
     })
     assert r.status_code == 201, r.text
     token = (await client.post(f"{API}/auth/login", json={

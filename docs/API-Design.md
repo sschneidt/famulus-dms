@@ -18,14 +18,20 @@ REST-API auf Basis von FastAPI, Base-Path `/api/v1`. Alle Endpunkte sind implizi
 
 | Methode | Pfad | Zweck | Rolle |
 |---|---|---|---|
-| POST | `/auth/login` | Login mit E-Mail/Passwort, liefert Access- + Refresh-Token | öffentlich |
-| POST | `/auth/refresh` | Neues Access-Token gegen gültiges Refresh-Token | öffentlich (Token-Besitz) |
-| POST | `/auth/logout` | Refresh-Token widerrufen | angemeldet |
+| POST | `/auth/login` | Login mit E-Mail/Passwort → Access-Token (15 Min., mit Sitzungs-ID) + Refresh-Token. Mit Kopfzeile `X-HomeDMS-Session: cookie` (Weboberfläche) kommt das Refresh-Token nur als HttpOnly-Cookie. Mit Zwei-Faktor zuerst nur `two_factor_required` + `challenge` (5 Min.). Sperre nach Fehlversuchen: 429 – Details `Sicherheitskonzept.md` | öffentlich |
+| POST | `/auth/login/2fa` | Zweiter Schritt: `{challenge, code}` – Code aus der Authenticator-App oder Wiederherstellungscode (`notice`: verbleibende Codes) | öffentlich (challenge) |
+| POST | `/auth/refresh` | Neues Access-Token; Refresh-Token aus dem Cookie oder `{refresh_token}`. Rotation: ein längst ersetztes Token beendet die ganze Sitzung (Diebstahl-Erkennung) | öffentlich (Token-Besitz) |
+| POST | `/auth/logout` | Sitzung beenden (Cookie oder `{refresh_token}`), Cookie löschen | angemeldet |
+| GET | `/auth/sessions` | Angemeldete Geräte (Gerät/Browser, IP, letzte Nutzung, `current`) | angemeldet |
+| DELETE | `/auth/sessions/{id}` / `/auth/sessions` | Ein Gerät bzw. alle anderen abmelden – wirkt sofort | angemeldet |
+| GET/POST | `/auth/2fa`, `/auth/2fa/setup` (Passwort → QR-Code), `/auth/2fa/enable` (erster Code → 10 Wiederherstellungscodes), `/auth/2fa/disable`, `/auth/2fa/recovery-codes` | Zwei-Faktor-Anmeldung (TOTP) verwalten – umgesetzt 03.10.2026 | angemeldet |
 | GET | `/auth/me` | Eigenes Nutzerprofil + Rolle + Tenant-Info (`household_name`) | angemeldet |
-| PUT | `/auth/password` | Eigenes Passwort ändern (`current_password`, `new_password`); alle Anmeldungen werden beendet, die Oberfläche meldet sich gleich neu an – umgesetzt 03.10.2026 | angemeldet |
-| PATCH | `/auth/me` | Eigenen Anzeigenamen ändern (`{"display_name": "..."}`) – umgesetzt 03.10.2026, im Benutzermenü unter „Profil & Haushalt“ | angemeldet |
-| POST | `/setup/bootstrap` | Einmaliger Ersteinrichtungs-Schritt: legt Tenant + ersten Admin-User an (Einrichtungsassistent, Anforderungsdokument 4.7) | öffentlich, nur wenn noch kein Tenant existiert |
-| GET | `/setup/status` | Fortschritt der Ersteinrichtung (u. a. Ollama-Modell-Download-Status) | angemeldet (Admin) |
+| PUT | `/auth/password` | Eigenes Passwort ändern (`current_password`, `new_password`); alle ANDEREN Geräte werden abgemeldet, dieses bleibt angemeldet | angemeldet |
+| PATCH | `/auth/me` | Eigenen Anzeigenamen ändern (`{"display_name": "..."}`) – Seite „Konto & Sicherheit“ | angemeldet |
+| POST | `/setup/bootstrap` | Einmaliger Ersteinrichtungs-Schritt: legt Tenant + ersten Admin-User an – nur mit `setup_code` (Einmal-Code aus dem Server-Protokoll bzw. `.einrichtungscode`) | öffentlich, nur wenn noch kein Tenant existiert |
+| GET | `/setup/status` | `bootstrapped`, dazu `tls`/`http_port`/`https_port` für die Zertifikat-Hilfe neuer Geräte | öffentlich |
+
+HTTP-Seite (Port 8000, nicht unter `/api`): `/zertifikat` (Anleitung + QR-Code), `/homedms-ca.crt` (CA-Zertifikat), `/health`, alles andere 308 → HTTPS. Die API-Dokumentation (`/docs`, `/openapi.json`) ist nur mit `API_DOCS=true` erreichbar.
 
 ## 3. Nutzer & Haushalt
 

@@ -32,6 +32,7 @@ describe("LoginPage", () => {
     renderWithProviders(<LoginPage />, { path: "/login", routes });
 
     expect(await screen.findByText("Ersteinrichtung")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Einrichtungscode"), "ABCD-EFGH-JKLM");
     await user.type(screen.getByLabelText("Name des Haushalts"), "Familie Muster");
     await user.type(screen.getByLabelText("Ihr Name"), "Anna");
     await user.type(screen.getByLabelText("E-Mail"), "anna@example.com");
@@ -52,7 +53,11 @@ describe("LoginPage", () => {
       admin_display_name: "Anna",
       admin_email: "anna@example.com",
       admin_password: "geheim123",
+      setup_code: "ABCD-EFGH-JKLM",
     });
+    // Anmeldung als Weboberflaeche: Refresh-Token nur als HttpOnly-Cookie
+    const loginCall = calls.find((c) => c.path === "/api/v1/auth/login");
+    expect(loginCall).toBeDefined();
     expect(tokenStore.access).toBe("a");
   });
 
@@ -70,5 +75,32 @@ describe("LoginPage", () => {
 
     expect(await screen.findByText("E-Mail oder Passwort falsch")).toBeInTheDocument();
     await waitFor(() => expect(tokenStore.access).toBeNull());
+  });
+
+  it("fragt bei Zwei-Faktor-Konten nach dem Code aus der App", async () => {
+    const { calls } = mockFetch([
+      { path: "/api/v1/setup/status", body: { bootstrapped: true } },
+      {
+        method: "POST",
+        path: "/api/v1/auth/login",
+        body: { access_token: "", two_factor_required: true, challenge: "ch-1" },
+      },
+      { method: "POST", path: "/api/v1/auth/login/2fa", body: { access_token: "a2", notice: null } },
+      { path: "/api/v1/auth/me", body: me },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(<LoginPage />, { path: "/login", routes });
+
+    await user.type(await screen.findByLabelText("E-Mail"), "anna@example.com");
+    await user.type(screen.getByLabelText("Passwort"), "geheim123");
+    await user.click(screen.getByRole("button", { name: "Anmelden" }));
+    expect(await screen.findByText("Bestätigungscode")).toBeInTheDocument();
+    expect(tokenStore.access).toBeNull();
+
+    await user.type(screen.getByLabelText("Code"), "123456");
+    await user.click(screen.getByRole("button", { name: "Bestätigen" }));
+    expect(await screen.findByText("Startseite")).toBeInTheDocument();
+    expect(calls.find((c) => c.path === "/api/v1/auth/login/2fa")?.body).toEqual({ challenge: "ch-1", code: "123456" });
+    expect(tokenStore.access).toBe("a2");
   });
 });

@@ -24,6 +24,7 @@ import {
   IconCpu,
   IconDatabase,
   IconFolder,
+  IconLock,
   IconRefresh,
   IconScan,
   IconSearch,
@@ -55,6 +56,7 @@ const ICONS: Record<string, ReactNode> = {
   search: <IconSearch size={20} />,
   ocr: <IconScan size={20} />,
   storage: <IconFolder size={20} />,
+  tls: <IconLock size={20} />,
 };
 
 /**

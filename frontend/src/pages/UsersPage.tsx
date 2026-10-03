@@ -28,6 +28,8 @@ import {
   IconKey,
   IconRefresh,
   IconShield,
+  IconShieldCheck,
+  IconShieldOff,
   IconUser,
   IconUserOff,
   IconUserPlus,
@@ -38,6 +40,7 @@ import { useCreateUser, useResetPassword, useUpdateUser, useUsers } from "../api
 import { useUser } from "../auth/AuthContext";
 import { formatDateTime } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
+import { certificatePageUrl, useSetupStatus } from "../lib/connection";
 import { generatePassword } from "../lib/password";
 
 type Member = Schemas["UserResponse"];
@@ -140,6 +143,19 @@ function MemberCard({ member, isMe, onResetPassword }: { member: Member; isMe: b
                   deaktiviert
                 </Badge>
               )}
+              {member.two_factor_enabled ? (
+                <Badge size="xs" color="green" variant="light" leftSection={<IconShieldCheck size={10} />}>
+                  2FA
+                </Badge>
+              ) : (
+                isAdmin && (
+                  <Tooltip label="Admin ohne Zwei-Faktor-Anmeldung – unter „Konto & Sicherheit“ einschalten">
+                    <Badge size="xs" color="orange" variant="light">
+                      ohne 2FA
+                    </Badge>
+                  </Tooltip>
+                )
+              )}
             </Group>
             <Text size="sm" c="dimmed" truncate>
               {member.email}
@@ -186,6 +202,27 @@ function MemberCard({ member, isMe, onResetPassword }: { member: Member; isMe: b
                   <Menu.Item leftSection={<IconKey size={16} />} onClick={onResetPassword}>
                     Passwort zurücksetzen …
                   </Menu.Item>
+                  {member.two_factor_enabled && (
+                    <Menu.Item
+                      leftSection={<IconShieldOff size={16} />}
+                      onClick={() =>
+                        modals.openConfirmModal({
+                          title: `Zwei-Faktor von ${member.display_name} zurücksetzen?`,
+                          children: (
+                            <Text size="sm">
+                              Für den Fall, dass das Handy verloren ist: {member.display_name} meldet sich danach nur
+                              mit dem Passwort an und sollte die Zwei-Faktor-Anmeldung neu einrichten.
+                            </Text>
+                          ),
+                          labels: { confirm: "Zurücksetzen", cancel: "Abbrechen" },
+                          confirmProps: { color: "red" },
+                          onConfirm: () => change({ reset_two_factor: true }, "Zwei-Faktor zurückgesetzt"),
+                        })
+                      }
+                    >
+                      Zwei-Faktor zurücksetzen …
+                    </Menu.Item>
+                  )}
                   <Menu.Divider />
                   <Menu.Item color="red" leftSection={<IconUserOff size={16} />} onClick={confirmDeactivate}>
                     Deaktivieren …
@@ -364,7 +401,15 @@ function Credentials({
   password: string;
   onClose(): void;
 }) {
-  const text = `HomeDMS – ${window.location.origin}\nE-Mail: ${email}\nPasswort: ${password}`;
+  const certificatePage = certificatePageUrl(useSetupStatus().data);
+  const text = [
+    `HomeDMS – ${window.location.origin}`,
+    `E-Mail: ${email}`,
+    `Passwort: ${password}`,
+    certificatePage ? `Neues Gerät zuerst einrichten: ${certificatePage}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
   return (
     <Stack>
       <Alert color="teal" icon={<IconCheck />}>
@@ -380,6 +425,11 @@ function Credentials({
         <Text size="sm">
           Passwort: <Code data-testid="credential-password">{password}</Code>
         </Text>
+        {certificatePage && (
+          <Text size="sm">
+            Neues Gerät zuerst einrichten: <Code>{certificatePage}</Code>
+          </Text>
+        )}
       </Stack>
       <Group justify="flex-end">
         <CopyButton value={text}>

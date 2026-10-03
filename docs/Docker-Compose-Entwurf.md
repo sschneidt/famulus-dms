@@ -13,12 +13,14 @@ Dieses Dokument erklärt die Container-Struktur (`docker-compose.yml`, `.env.exa
 | `meilisearch` | Volltextsuche | ja, leichtgewichtig | nein, nur intern |
 | `ollama` | Lokales KI-Modell (Server-Prozess) | ja, leichtgewichtig; Modell selbst nur bei Bedarf im RAM | nein, nur intern |
 | `ollama-init` | Lädt beim ersten Start die konfigurierten Modelle herunter, beendet sich danach | nein, einmalig | nein |
-| `app-api` | FastAPI-Backend + ausgelieferte PWA-Frontend-Dateien | ja, leichtgewichtig | **ja**, einziger veröffentlichter Port |
+| `app-api` | FastAPI-Backend + ausgelieferte PWA-Frontend-Dateien | ja, leichtgewichtig | **ja**, als einziger Container: 8443 (HTTPS) und 8000 (nur Umleitung + Zertifikat-Hilfe), siehe `Sicherheitskonzept.md` |
 | `app-worker` | OCR, Klassifikation, Extraktion, Wiedervorlage-Wiederholungen, Benachrichtigungs-Versand | ja, aber rechenintensive Arbeit nur on-demand | nein |
 
 Das sind 5 dauerhafte Container plus ein einmaliger Init-Job – passend zum in 4.7 festgelegten Ressourcenschema: alles außer `app-worker`s tatsächlicher Verarbeitung und `ollama`s Modell-Inferenz ist im Leerlauf minimal.
 
 **Warum kein separater Frontend-Container?** Die gebaute PWA (React/Vue) wird als statische Dateien direkt vom `app-api`-Container mitausgeliefert (FastAPI `StaticFiles`) – ein Container weniger, ohne Funktionalität zu verlieren.
+
+**Stand 03.10.2026:** HomeDMS macht HTTPS standardmäßig selbst (`TLS_MODE=auto`, eigene Zertifizierungsstelle im Volume `tls`, in der `.env` `TLS_HOSTNAMES` mit Name/IP des NAS setzen). Der Synology-Reverse-Proxy bleibt als Alternative (`TLS_MODE=off`, `APP_BIND=127.0.0.1`) – vor allem, wenn eine eigene Domain mit Let's Encrypt gewünscht ist.
 
 **Warum kein Reverse-Proxy-Container im Standard-Setup?** Nur `app-api` veröffentlicht einen Port zum NAS-Host. Da auf dem NAS bereits Docker/Container Manager läuft (Anforderungsdokument 2), zeigt Synologys **eigener, bereits vorhandener Reverse Proxy** (DSM-Systemsteuerung → Anmeldeportal → Erweiterter Reverse Proxy) auf diesen Port und übernimmt HTTPS/TLS – kostet keinen zusätzlichen Container und nutzt vorhandene NAS-Bordmittel. Für Nutzer ohne Synology (oder ohne Lust auf DSM-Klicks) ließe sich optional ein Caddy-Container als eigenes Compose-Profil ergänzen; im Basis-Setup bewusst weggelassen.
 

@@ -8,7 +8,7 @@ import { mockFetch, renderWithProviders } from "./test/render";
 
 describe("App (angemeldet)", () => {
   it("zeigt Dokumentliste, Kategorien und Zaehler in der Navigation", async () => {
-    tokenStore.set("a", "r");
+    tokenStore.set("a");
     mockFetch([
       { path: "/api/v1/auth/me", body: me },
       { path: "/api/v1/categories", body: categories },
@@ -34,7 +34,7 @@ describe("App (angemeldet)", () => {
   });
 
   it("Suche schickt q und zeigt den Textausschnitt mit markiertem Treffer", async () => {
-    tokenStore.set("a", "r");
+    tokenStore.set("a");
     const { calls } = mockFetch([
       { path: "/api/v1/auth/me", body: me },
       { path: "/api/v1/categories", body: categories },

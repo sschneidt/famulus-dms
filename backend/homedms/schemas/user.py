@@ -15,6 +15,7 @@ class UserResponse(BaseModel):
     is_active: bool
     last_login_at: datetime | None = None
     created_at: datetime
+    two_factor_enabled: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -30,6 +31,7 @@ class UserUpdate(BaseModel):
     display_name: str | None = Field(None, min_length=1, max_length=200)
     role: str | None = Field(None, pattern="^(admin|member)$")
     is_active: bool | None = None
+    reset_two_factor: bool | None = None  # Handy verloren: Zwei-Faktor des Mitglieds ausschalten
 
 
 class PasswordReset(BaseModel):

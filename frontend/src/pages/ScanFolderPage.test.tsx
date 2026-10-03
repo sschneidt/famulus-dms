@@ -29,7 +29,7 @@ const source = {
 
 describe("ScanFolderPage", () => {
   it("zeigt Status und letzte Importe, 'Jetzt prüfen' stoesst einen Durchlauf an", async () => {
-    tokenStore.set("a", "r");
+    tokenStore.set("a");
     const { calls } = mockFetch([
       { path: "/api/v1/auth/me", body: me },
       { path: "/api/v1/import-sources", body: [source] },

@@ -35,6 +35,8 @@ class BootstrapRequest(BaseModel):
     admin_email: EmailStr = Field(examples=["max@example.com"])
     admin_password: str = Field(min_length=8, examples=["ein-langes-Passwort"])
     admin_display_name: str = Field(min_length=1, max_length=200, examples=["Max Mustermann"])
+    # Einmal-Code aus dem Server-Protokoll bzw. <Dokumente-Ordner>/.einrichtungscode (core/setup_code.py)
+    setup_code: str = Field(min_length=1, max_length=40)
 
 
 class BootstrapResponse(BaseModel):

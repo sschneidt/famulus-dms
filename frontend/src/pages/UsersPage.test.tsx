@@ -20,7 +20,7 @@ const member = (over: object = {}) => ({
 const self = member({ id: me.id, email: me.email, display_name: me.display_name, role: "admin" });
 
 function render(routes: Parameters<typeof mockFetch>[0]) {
-  tokenStore.set("a", "r");
+  tokenStore.set("a");
   const result = mockFetch([{ path: "/api/v1/auth/me", body: me }, ...routes]);
   renderWithProviders(
     <RequireAuth>

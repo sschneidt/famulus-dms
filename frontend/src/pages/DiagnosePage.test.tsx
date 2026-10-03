@@ -48,7 +48,7 @@ const diagnostics = {
 
 describe("DiagnosePage", () => {
   it("zeigt den Zustand aller Bausteine und startet den Worker erst nach Rückfrage neu", async () => {
-    tokenStore.set("a", "r");
+    tokenStore.set("a");
     const { calls } = mockFetch([
       { path: "/api/v1/auth/me", body: me },
       { path: "/api/v1/system/diagnostics", body: diagnostics },

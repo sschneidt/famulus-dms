@@ -8,6 +8,7 @@ export const me: Me = {
   role: "admin",
   locale: "de",
   household_name: "Familie Muster",
+  two_factor_enabled: false,
 };
 
 export const categories: Category[] = [

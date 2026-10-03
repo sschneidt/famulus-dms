@@ -75,6 +75,9 @@ Ein Haushaltsmitglied. Gehört genau einem Tenant an (kein Cross-Tenant-Zugriff 
 | locale | text | Sprache der Oberfläche |
 | notification_channels | jsonb | z. B. `{"in_app": true, "email": true, "push": false}` |
 | created_at, last_login_at | timestamp | |
+| is_active | bool | deaktiviert statt gelöscht (Migration 0009) |
+| failed_logins, locked_until | int, timestamp | Sperre nach Fehlversuchen (0012, `Sicherheitskonzept.md`) |
+| totp_secret, totp_pending_secret, totp_last_step, recovery_codes | text, text, bigint, jsonb | Zwei-Faktor-Anmeldung; Wiederherstellungscodes nur als Hashes (0012) |
 
 ### 3.3 Category
 Pro Tenant eigenständig, aus dem Basis-Set vorbefüllt, frei erweiterbar.
@@ -239,7 +242,7 @@ Jede vom Chat ausgelöste Änderung erzeugt zusätzlich einen `ClassificationEve
 
 ## 4. Auth-Umsetzung (Ergänzung zu offenem Punkt "Authentifizierung")
 
-Empfehlung passend zur Einfachheits-Anforderung: **JWT** (Access-Token kurzlebig, Refresh-Token langlebig, serverseitig widerrufbar über eine kleine `RefreshToken`-Tabelle: id, user_id, token_hash, expires_at, revoked_at). Kein voller OAuth2-Autorisierungsserver nötig, da es keine Drittanbieter-Clients gibt. Eine spätere Anmeldung über einen externen Identitätsanbieter (z. B. Synology-Konto) wäre eine austauschbare Erweiterung, kein Kernbestandteil des Datenmodells.
+Empfehlung passend zur Einfachheits-Anforderung: **JWT** (Access-Token kurzlebig, Refresh-Token langlebig, serverseitig widerrufbar über eine kleine `RefreshToken`-Tabelle: id, user_id, token_hash, expires_at, revoked_at; seit 0012 zusätzlich session_id (alle Tokens einer Anmeldung = ein Gerät), rotated_at (Diebstahl-Erkennung), last_used_at, session_started_at, user_agent, ip). Kein voller OAuth2-Autorisierungsserver nötig, da es keine Drittanbieter-Clients gibt. Eine spätere Anmeldung über einen externen Identitätsanbieter (z. B. Synology-Konto) wäre eine austauschbare Erweiterung, kein Kernbestandteil des Datenmodells.
 
 ## 5. Bezug zum Anforderungsdokument
 

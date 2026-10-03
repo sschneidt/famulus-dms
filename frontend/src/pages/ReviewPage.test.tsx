@@ -21,7 +21,7 @@ const unanalyzed = (aiAvailable: boolean) => ({
 });
 
 function render(aiAvailable: boolean) {
-  tokenStore.set("a", "r");
+  tokenStore.set("a");
   const result = mockFetch([
     { path: "/api/v1/auth/me", body: me },
     { path: "/api/v1/categories", body: categories },

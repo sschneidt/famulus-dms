@@ -31,12 +31,14 @@ Bewusst **nicht** mehr nötig: die PostgreSQL-Erweiterung `pgvector`. Sie gibt e
    cd C:\HomeDMS
    powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
    ```
-   Optionen: `-DatenOrdner D:\HomeDMS-Daten` (Standard `C:\HomeDMS-Daten`), `-Port 8000`, `-OhneKI`, `-MitSuche`.
-3. Am Ende öffnet sich der Browser; der Einrichtungsassistent legt Haushalt und Admin-Konto an.
+   Optionen: `-DatenOrdner D:\HomeDMS-Daten` (Standard `C:\HomeDMS-Daten`), `-Port 8000`, `-HttpsPort 8443`, `-OhneKI`, `-MitSuche`.
+3. Am Ende öffnet sich der Browser mit `https://localhost:8443`. Der Einrichtungsassistent legt Haushalt und Admin-Konto an; den nötigen **Einrichtungscode** zeigt das Skript am Ende an.
+4. Handy und andere PCs: einmal `http://<PC>:8000/zertifikat` öffnen und dem HomeDMS-Zertifikat vertrauen (Anleitung auf der Seite). Danach `https://<PC>:8443`.
 
 Was das Skript einrichtet:
 - **Autostart:** geplante Aufgabe „HomeDMS“ (Aufgabenplanung). Sie startet beim Hochfahren, auch ohne Anmeldung, als Konto SYSTEM, und startet nach einem Absturz neu.
-- **Firewall:** Port 8000 für das private Netzwerk (Zugriff vom Handy im WLAN).
+- **Firewall:** Ports 8000 (Umleitung + Zertifikat-Hilfe) und 8443 (HomeDMS per HTTPS) für das private Netzwerk.
+- **Verschlüsselung:** eigene Zertifizierungsstelle in `C:\HomeDMS-Daten\tls` (nur Admins + SYSTEM); auf dem Server-PC selbst trägt das Skript sie als vertrauenswürdig ein. Details: `Sicherheitskonzept.md`.
 - **Einstellungen:** `C:\HomeDMS\homedms.env`, nur für Administratoren lesbar.
 - **Daten:** `C:\HomeDMS-Daten\documents` (Ablage), `scan` (Scan-Ordner) und `logs` (Protokolle).
 - **Datenbank-Admin-Passwort:** `C:\HomeDMS-Daten\postgres-admin-passwort.txt`. Das gilt nur, wenn PostgreSQL neu installiert wurde. Bei einem schon vorhandenen PostgreSQL fragt das Skript nach dem Passwort.
@@ -45,7 +47,7 @@ Hinweise:
 - **Ollama:** Unter Windows läuft Ollama im angemeldeten Benutzer (Symbol im Infobereich). Nach einem Neustart rechnet die KI deshalb erst nach der Anmeldung. Bis dahin hochgeladene Dokumente landen unter „Prüfen“ und lassen sich mit „Erneut analysieren“ nachholen.
 - **Scanner:** Der Scan-Ordner `C:\HomeDMS-Daten\scan` lässt sich im Explorer freigeben (Rechtsklick > Eigenschaften > Freigabe). Das Multifunktionsgerät legt dann per „Scan to Folder“ direkt dort ab.
 - **Energiesparen:** Der PC sollte nicht in den Ruhezustand gehen, wenn das Handy jederzeit zugreifen soll.
-- **Handy-App (PWA):** Für „Zum Startbildschirm hinzufügen“ braucht der Browser HTTPS. Im Heimnetz geht die normale Webseite (`http://<PC>:8000`) ohne Einschränkung.
+- **Handy-App (PWA):** Sobald das Handy dem HomeDMS-Zertifikat vertraut, lässt sich HomeDMS über „Zum Startbildschirm hinzufügen“ wie eine App installieren.
 
 ## Linux (Debian 12+, Ubuntu 22.04+)
 
@@ -56,8 +58,9 @@ sudo bash scripts/install-linux.sh  # Optionen: --ohne-ki, --ohne-suche, --ohne-
 ```
 
 Was das Skript einrichtet:
+- **Adresse:** `https://<server>:8443`; neue Geräte vertrauen dem Zertifikat einmal über `http://<server>:8000/zertifikat`. Den Einrichtungscode zeigt das Skript am Ende an.
 - **Dienst:** `homedms` (systemd) läuft als eigener Benutzer `homedms`. Er startet beim Hochfahren und nach einem Absturz neu: `systemctl status homedms`.
-- **Daten:** `/var/lib/homedms/{documents,scan,logs,meilisearch}`. Das Verzeichnis lässt sich mit `HOMEDMS_DATA=/pfad` vor dem Aufruf ändern.
+- **Daten:** `/var/lib/homedms/{documents,scan,logs,meilisearch,tls}`. Das Verzeichnis lässt sich mit `HOMEDMS_DATA=/pfad` vor dem Aufruf ändern.
 - **Ollama:** läuft als eigener Dienst und rechnet sofort nach dem Hochfahren.
 - **Scanner:** den Scan-Ordner per Samba freigeben, z. B. `[scan] path = /var/lib/homedms/scan`. Die Schreibrechte für den Freigabe-Benutzer stellt man mit `chgrp`/`chmod g+w` ein.
 

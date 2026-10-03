@@ -18,9 +18,11 @@ export type Wiedervorlage = Schemas["WiedervorlageResponse"];
 export type Me = Schemas["MeResponse"];
 export type Property = Schemas["PropertyResponse"];
 
-const ACCESS_KEY = "homedms.accessToken";
-const REFRESH_KEY = "homedms.refreshToken";
+const SESSION_KEY = "homedms.session"; // nur "1" = es gibt eine Anmeldung (kein Geheimnis)
+const LEGACY_KEYS = ["homedms.accessToken", "homedms.refreshToken"]; // frueher im Browser-Speicher
 const REFRESH_PATH = "/api/v1/auth/refresh";
+/** Kennzeichnet die Weboberflaeche: das Refresh-Token kommt dann nur als HttpOnly-Cookie. */
+export const SESSION_HEADER = { "X-HomeDMS-Session": "cookie" } as const;
 
 function storage(): Storage | null {
   try {
@@ -30,20 +32,31 @@ function storage(): Storage | null {
   }
 }
 
+// Aeltere Versionen hatten die Tokens im Browser-Speicher - dort sind sie fuer jedes Skript lesbar.
+for (const key of LEGACY_KEYS) storage()?.removeItem(key);
+
+/**
+ * Sicherheit (docs/Sicherheitskonzept.md): Das Access-Token (15 Min.) liegt nur im Arbeitsspeicher
+ * dieser Seite, das Refresh-Token als HttpOnly-Cookie, das kein Skript lesen kann. Nach einem
+ * Neuladen holt sich die Seite per Cookie ein neues Access-Token.
+ */
+let accessToken: string | null = null;
+
 export const tokenStore = {
   get access(): string | null {
-    return storage()?.getItem(ACCESS_KEY) ?? null;
+    return accessToken;
   },
-  get refresh(): string | null {
-    return storage()?.getItem(REFRESH_KEY) ?? null;
+  /** Gibt es (vermutlich) eine Anmeldung, die sich per Cookie erneuern laesst? */
+  get hasSession(): boolean {
+    return storage()?.getItem(SESSION_KEY) === "1";
   },
-  set(access: string, refresh: string) {
-    storage()?.setItem(ACCESS_KEY, access);
-    storage()?.setItem(REFRESH_KEY, refresh);
+  set(access: string) {
+    accessToken = access;
+    storage()?.setItem(SESSION_KEY, "1");
   },
   clear() {
-    storage()?.removeItem(ACCESS_KEY);
-    storage()?.removeItem(REFRESH_KEY);
+    accessToken = null;
+    storage()?.removeItem(SESSION_KEY);
   },
 };
 
@@ -54,22 +67,24 @@ export function onSessionExpired(listener: () => void): () => void {
   return () => sessionExpiredListeners.delete(listener);
 }
 
+const NO_REFRESH = new Set([REFRESH_PATH, "/api/v1/auth/login", "/api/v1/auth/login/2fa", "/api/v1/auth/logout"]);
+
 export function createAuthFetch(baseFetch: typeof fetch = (...args) => fetch(...args)) {
   let refreshing: Promise<boolean> | null = null;
 
+  /** Neues Access-Token per HttpOnly-Cookie holen. Mehrere gleichzeitige Anfragen teilen sich EINE
+   * Erneuerung (das Refresh-Token rotiert - ein zweiter Versuch mit dem alten waere ungueltig). */
   async function refreshTokens(origin: string): Promise<boolean> {
-    const refreshToken = tokenStore.refresh;
-    if (!refreshToken) return false;
     refreshing ??= (async () => {
       try {
         const resp = await baseFetch(new URL(REFRESH_PATH, origin), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken }),
+          headers: SESSION_HEADER,
+          credentials: "same-origin",
         });
         if (!resp.ok) return false;
-        const data = (await resp.json()) as { access_token: string; refresh_token: string };
-        tokenStore.set(data.access_token, data.refresh_token);
+        const data = (await resp.json()) as { access_token: string };
+        tokenStore.set(data.access_token);
         return true;
       } catch {
         return false;
@@ -87,12 +102,16 @@ export function createAuthFetch(baseFetch: typeof fetch = (...args) => fetch(...
     return new Request(request, { headers });
   }
 
-  return async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const authFetch = async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     const original = input instanceof Request && !init ? input : new Request(input, init);
     const retryCopy = original.clone(); // der Body laesst sich nur einmal lesen
-    const response = await baseFetch(withToken(original));
     const url = new URL(original.url);
-    if (response.status !== 401 || url.pathname === REFRESH_PATH || !tokenStore.refresh) {
+    // Nach dem Neuladen: erst per Cookie ein Access-Token holen, statt sicher an 401 zu scheitern
+    if (!tokenStore.access && tokenStore.hasSession && !NO_REFRESH.has(url.pathname)) {
+      await refreshTokens(url.origin);
+    }
+    const response = await baseFetch(withToken(original));
+    if (response.status !== 401 || NO_REFRESH.has(url.pathname) || !tokenStore.hasSession) {
       return response;
     }
     if (await refreshTokens(url.origin)) {
@@ -102,6 +121,9 @@ export function createAuthFetch(baseFetch: typeof fetch = (...args) => fetch(...
     sessionExpiredListeners.forEach((listener) => listener());
     return response;
   };
+  /** Fuer den Start der App: gibt es eine Anmeldung, die sich per Cookie fortsetzen laesst? */
+  authFetch.restore = (origin: string) => refreshTokens(origin);
+  return authFetch;
 }
 
 export const authFetch = createAuthFetch();

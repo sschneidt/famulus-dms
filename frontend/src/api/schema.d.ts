@@ -38,6 +38,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/auth/login/2fa": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Login Two Factor */
+    post: operations["login_two_factor_api_v1_auth_login_2fa_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/auth/refresh": {
     parameters: {
       query?: never;
@@ -103,10 +120,139 @@ export interface paths {
     get?: never;
     /**
      * Change Password
-     * @description Eigenes Passwort aendern. Andere Geraete werden dabei abgemeldet.
+     * @description Eigenes Passwort aendern. Alle ANDEREN Geraete werden abgemeldet, dieses bleibt angemeldet.
      */
     put: operations["change_password_api_v1_auth_password_put"];
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/auth/sessions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Sessions */
+    get: operations["list_sessions_api_v1_auth_sessions_get"];
+    put?: never;
+    post?: never;
+    /**
+     * End Other Sessions
+     * @description Ueberall sonst abmelden.
+     */
+    delete: operations["end_other_sessions_api_v1_auth_sessions_delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/auth/sessions/{session_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** End Session */
+    delete: operations["end_session_api_v1_auth_sessions__session_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/auth/2fa": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Two Factor Status */
+    get: operations["two_factor_status_api_v1_auth_2fa_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/auth/2fa/setup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Two Factor Setup
+     * @description Schritt 1: Geheimnis erzeugen und als QR-Code zeigen - aktiv erst nach /2fa/enable.
+     */
+    post: operations["two_factor_setup_api_v1_auth_2fa_setup_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/auth/2fa/enable": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Two Factor Enable
+     * @description Schritt 2: ersten Code aus der App bestaetigen -> aktiv; Wiederherstellungscodes einmal anzeigen.
+     */
+    post: operations["two_factor_enable_api_v1_auth_2fa_enable_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/auth/2fa/disable": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Two Factor Disable */
+    post: operations["two_factor_disable_api_v1_auth_2fa_disable_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/auth/2fa/recovery-codes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** New Recovery Codes */
+    post: operations["new_recovery_codes_api_v1_auth_2fa_recovery_codes_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -196,7 +342,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Setup Status */
+    /**
+     * Setup Status
+     * @description Oeffentlich (vor der Anmeldung): eingerichtet? und Verbindungsdaten fuer die Zertifikat-Hilfe.
+     */
     get: operations["setup_status_api_v1_setup_status_get"];
     put?: never;
     post?: never;
@@ -217,7 +366,8 @@ export interface paths {
     put?: never;
     /**
      * Bootstrap
-     * @description Nur erlaubt, solange noch kein Tenant existiert (einmaliger Ersteinrichtungs-Schritt).
+     * @description Nur erlaubt, solange noch kein Tenant existiert (einmaliger Ersteinrichtungs-Schritt) - und nur
+     *     mit dem Einrichtungscode, den der Server beim Start ins Protokoll schreibt (core/setup_code.py).
      */
     post: operations["bootstrap_api_v1_setup_bootstrap_post"];
     delete?: never;
@@ -1017,6 +1167,8 @@ export interface components {
        * @example Max Mustermann
        */
       admin_display_name: string;
+      /** Setup Code */
+      setup_code: string;
     };
     /** BootstrapResponse */
     BootstrapResponse: {
@@ -1543,6 +1695,11 @@ export interface components {
        * @default
        */
       household_name: string;
+      /**
+       * Two Factor Enabled
+       * @default false
+       */
+      two_factor_enabled: boolean;
     };
     /**
      * OcrStatus
@@ -1570,6 +1727,11 @@ export interface components {
       current_password: string;
       /** New Password */
       new_password: string;
+    };
+    /** PasswordConfirm */
+    PasswordConfirm: {
+      /** Password */
+      password: string;
     };
     /** PasswordReset */
     PasswordReset: {
@@ -1621,10 +1783,15 @@ export interface components {
       /** Name */
       name: string;
     };
+    /** RecoveryCodes */
+    RecoveryCodes: {
+      /** Recovery Codes */
+      recovery_codes: string[];
+    };
     /** RefreshRequest */
     RefreshRequest: {
       /** Refresh Token */
-      refresh_token: string;
+      refresh_token?: string | null;
     };
     /** RetentionRuleCreate */
     RetentionRuleCreate: {
@@ -1701,17 +1868,89 @@ export interface components {
        */
       hit: boolean;
     };
-    /** TokenResponse */
+    /** SessionInfo */
+    SessionInfo: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Device */
+      device: string;
+      /** Ip */
+      ip?: string | null;
+      /** Started At */
+      started_at?: string | null;
+      /** Last Used At */
+      last_used_at?: string | null;
+      /**
+       * Current
+       * @default false
+       */
+      current: boolean;
+    };
+    /**
+     * TokenResponse
+     * @description Antwort auf Anmeldung/Erneuerung. Die Weboberflaeche bekommt das Refresh-Token nur als
+     *     HttpOnly-Cookie (refresh_token dann leer); andere Clients (z. B. Skripte) im Antworttext.
+     *     Bei Zwei-Faktor-Konten liefert /auth/login zuerst nur two_factor_required + challenge.
+     */
     TokenResponse: {
-      /** Access Token */
+      /**
+       * Access Token
+       * @default
+       */
       access_token: string;
       /** Refresh Token */
-      refresh_token: string;
+      refresh_token?: string | null;
       /**
        * Token Type
        * @default bearer
        */
       token_type: string;
+      /**
+       * Two Factor Required
+       * @default false
+       */
+      two_factor_required: boolean;
+      /** Challenge */
+      challenge?: string | null;
+      /** Notice */
+      notice?: string | null;
+    };
+    /** TwoFactorCode */
+    TwoFactorCode: {
+      /** Code */
+      code: string;
+    };
+    /** TwoFactorLogin */
+    TwoFactorLogin: {
+      /** Challenge */
+      challenge: string;
+      /**
+       * Code
+       * @description Code aus der App oder Wiederherstellungscode
+       */
+      code: string;
+    };
+    /** TwoFactorSetup */
+    TwoFactorSetup: {
+      /** Secret */
+      secret: string;
+      /** Uri */
+      uri: string;
+      /** Qr Svg */
+      qr_svg: string;
+    };
+    /** TwoFactorStatus */
+    TwoFactorStatus: {
+      /** Enabled */
+      enabled: boolean;
+      /**
+       * Recovery Codes Left
+       * @default 0
+       */
+      recovery_codes_left: number;
     };
     /** UnanalyzedItem */
     UnanalyzedItem: {
@@ -1869,6 +2108,11 @@ export interface components {
        * Format: date-time
        */
       created_at: string;
+      /**
+       * Two Factor Enabled
+       * @default false
+       */
+      two_factor_enabled: boolean;
     };
     /** UserUpdate */
     UserUpdate: {
@@ -1878,6 +2122,8 @@ export interface components {
       role?: string | null;
       /** Is Active */
       is_active?: boolean | null;
+      /** Reset Two Factor */
+      reset_two_factor?: boolean | null;
     };
     /** ValidationError */
     ValidationError: {
@@ -2080,7 +2326,7 @@ export interface operations {
       };
     };
   };
-  refresh_api_v1_auth_refresh_post: {
+  login_two_factor_api_v1_auth_login_2fa_post: {
     parameters: {
       query?: never;
       header?: never;
@@ -2089,7 +2335,40 @@ export interface operations {
     };
     requestBody: {
       content: {
-        "application/json": components["schemas"]["RefreshRequest"];
+        "application/json": components["schemas"]["TwoFactorLogin"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TokenResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  refresh_api_v1_auth_refresh_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["RefreshRequest"] | null;
       };
     };
     responses: {
@@ -2120,9 +2399,9 @@ export interface operations {
       path?: never;
       cookie?: never;
     };
-    requestBody: {
+    requestBody?: {
       content: {
-        "application/json": components["schemas"]["RefreshRequest"];
+        "application/json": components["schemas"]["RefreshRequest"] | null;
       };
     };
     responses: {
@@ -2216,6 +2495,223 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_sessions_api_v1_auth_sessions_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SessionInfo"][];
+        };
+      };
+    };
+  };
+  end_other_sessions_api_v1_auth_sessions_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  end_session_api_v1_auth_sessions__session_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        session_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  two_factor_status_api_v1_auth_2fa_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TwoFactorStatus"];
+        };
+      };
+    };
+  };
+  two_factor_setup_api_v1_auth_2fa_setup_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PasswordConfirm"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TwoFactorSetup"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  two_factor_enable_api_v1_auth_2fa_enable_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TwoFactorCode"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RecoveryCodes"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  two_factor_disable_api_v1_auth_2fa_disable_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PasswordConfirm"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  new_recovery_codes_api_v1_auth_2fa_recovery_codes_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PasswordConfirm"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RecoveryCodes"];
+        };
       };
       /** @description Validation Error */
       422: {

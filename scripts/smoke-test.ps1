@@ -31,7 +31,11 @@ param(
     [Alias("Passwort", "Kennwort")]
     [string]$Password,
     [string]$Haushalt = "Mein Haushalt",
-    [string]$BaseUrl = "http://localhost:8000",
+    # Leer = automatisch: https://localhost:8443, wenn HomeDMS HTTPS macht (TLS_MODE=auto), sonst http://localhost:8000
+    [string]$BaseUrl = "",
+    [string]$HttpUrl = "http://localhost:8000",
+    # Einmal-Code fuer die Ersteinrichtung; leer = aus dem Container lesen (docker compose exec)
+    [string]$Einrichtungscode = "",
     [Alias("ResetPassword")]
     [switch]$PasswortZuruecksetzen,
     [switch]$OhneBuild,
@@ -45,7 +49,8 @@ $ProgressPreference = "SilentlyContinue"   # beschleunigt Invoke-WebRequest in P
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $TestDaten = Join-Path $PSScriptRoot "testdaten"
-$Api = "$BaseUrl/api/v1"
+$Api = ""   # wird gesetzt, sobald klar ist, ob HTTPS laeuft (Schritt 2)
+$CaDatei = $null
 $IstWindows = ($PSVersionTable.PSEdition -eq "Desktop") -or $IsWindows
 $CurlExe = if ($IstWindows) { "curl.exe" } else { "curl" }   # "curl" ist in PS 5.1 nur ein Alias
 
@@ -81,6 +86,7 @@ function Invoke-Api([string]$Methode, [string]$Pfad, $Body = $null, [string]$Tok
     $headers = @{}
     if ($Token) { $headers["Authorization"] = "Bearer $Token" }
     $params = @{ Method = $Methode; Uri = "$Api$Pfad"; Headers = $headers; UseBasicParsing = $true; TimeoutSec = 30 }
+    $params += $TlsParams
     if ($null -ne $Body) {
         # Als UTF-8-Bytes senden - PowerShell 5.1 wuerde Umlaute sonst als ISO-8859-1 verschicken
         $params.Body = [System.Text.Encoding]::UTF8.GetBytes(($Body | ConvertTo-Json -Depth 5))
@@ -139,7 +145,7 @@ function Upload-Datei([string]$Datei, [string]$MimeType, [string]$Titel, [string
     $antwortDatei = [System.IO.Path]::GetTempFileName()
     try {
         $code = & $CurlExe -s -o $antwortDatei -w "%{http_code}" -X POST "$Api/documents" `
-            -H "Authorization: Bearer $Token" `
+            -H "Authorization: Bearer $Token" @CurlTls `
             -F "file=@$Datei;type=$MimeType" -F "title=$Titel"
         $text = [System.IO.File]::ReadAllText($antwortDatei, [System.Text.Encoding]::UTF8)
         $json = $null; try { $json = $text | ConvertFrom-Json } catch { }
@@ -147,8 +153,42 @@ function Upload-Datei([string]$Datei, [string]$MimeType, [string]$Titel, [string
     } finally { Remove-Item $antwortDatei -ErrorAction SilentlyContinue }
 }
 
+function Vertraue-HomeDmsZertifikat([string]$Datei) {
+    <# HTTPS mit der eigenen HomeDMS-Zertifizierungsstelle pruefen, ohne sie in Windows zu installieren:
+       Kette gegen GENAU diese CA bauen (Fingerabdruck), sonst ablehnen. PowerShell 7 nutzt einen
+       anderen HTTP-Stack - dort wird fuer localhost auf die Pruefung verzichtet. #>
+    $script:CurlTls = @("--cacert", $Datei, "--ssl-no-revoke")
+    if ($PSVersionTable.PSVersion.Major -ge 6) { $script:TlsParams = @{ SkipCertificateCheck = $true }; return }
+    if (-not ("HomeDmsTrust" -as [type])) {
+        Add-Type -TypeDefinition @"
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+public static class HomeDmsTrust {
+    public static X509Certificate2 Ca;
+    public static bool Check(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors) {
+        if (errors == SslPolicyErrors.None) return true;
+        if (Ca == null || cert == null) return false;
+        var own = new X509Chain();
+        own.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+        own.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
+        own.ChainPolicy.ExtraStore.Add(Ca);
+        if (!own.Build(new X509Certificate2(cert))) return false;
+        var root = own.ChainElements[own.ChainElements.Count - 1].Certificate;
+        return root.Thumbprint == Ca.Thumbprint;
+    }
+}
+"@
+    }
+    [HomeDmsTrust]::Ca = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($Datei)
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [System.Net.Security.RemoteCertificateValidationCallback] [HomeDmsTrust]::Check
+}
+
+$TlsParams = @{}
+$CurlTls = @()
+
 Write-Host ""
-Write-Host "HomeDMS Smoke-Test gegen $BaseUrl" -ForegroundColor Cyan
+Write-Host "HomeDMS Smoke-Test" -ForegroundColor Cyan
 Write-Host ""
 
 if (-not $Email) { $Email = Read-Host "E-Mail-Adresse des Admin-Kontos" }
@@ -190,19 +230,47 @@ $bereit = $false
 $ende = (Get-Date).AddSeconds($TimeoutSekunden)
 while ((Get-Date) -lt $ende) {
     try {
-        $h = Invoke-WebRequest -Uri "$BaseUrl/health" -UseBasicParsing -TimeoutSec 5
+        $h = Invoke-WebRequest -Uri "$HttpUrl/health" -UseBasicParsing -TimeoutSec 5
         if ([int]$h.StatusCode -eq 200) { $bereit = $true; break }
     } catch { }
     Start-Sleep -Seconds 2
 }
-Schreibe-Schritt "API erreichbar" $bereit $(if (-not $bereit) { "$BaseUrl/health antwortet nicht" } else { "" })
+Schreibe-Schritt "API erreichbar" $bereit $(if (-not $bereit) { "$HttpUrl/health antwortet nicht" } else { "" })
 if (-not $bereit) { Beende "Mit 'docker compose ps' und 'docker compose logs app-api' nachsehen. Laeuft evtl. noch ein lokaler uvicorn auf Port 8000?" }
+
+# --- 2b. Verschluesselung: HTTPS mit eigener Zertifizierungsstelle? ----------------------------
+$tlsDetail = ""
+try {
+    $CaDatei = Join-Path ([System.IO.Path]::GetTempPath()) "homedms-ca.crt"
+    Invoke-WebRequest -Uri "$HttpUrl/homedms-ca.crt" -UseBasicParsing -TimeoutSec 5 -OutFile $CaDatei
+    Vertraue-HomeDmsZertifikat $CaDatei
+    if (-not $BaseUrl) { $BaseUrl = "https://localhost:8443" }
+    $tlsDetail = "HTTPS mit eigener Zertifizierungsstelle"
+} catch {
+    $CaDatei = $null
+    if (-not $BaseUrl) { $BaseUrl = $HttpUrl }
+    $tlsDetail = "kein eigenes Zertifikat (TLS_MODE=off/custom) - $BaseUrl"
+}
+$Api = "$BaseUrl/api/v1"
+$tlsOk = $true
+if ($CaDatei) {
+    # HTTP darf nur umleiten - nie die App selbst ausliefern
+    try {
+        $umleitung = Invoke-WebRequest -Uri "$HttpUrl/" -UseBasicParsing -TimeoutSec 5 -MaximumRedirection 0 -ErrorAction SilentlyContinue
+        $code = [int]$umleitung.StatusCode
+    } catch { $code = [int]$_.Exception.Response.StatusCode }
+    $tlsOk = ($code -eq 308)
+    if (-not $tlsOk) { $tlsDetail = "HTTP antwortet mit $code statt Umleitung auf HTTPS" }
+    try { Invoke-WebRequest -Uri "$BaseUrl/health" -UseBasicParsing -TimeoutSec 5 @TlsParams | Out-Null }
+    catch { $tlsOk = $false; $tlsDetail = "HTTPS-Verbindung fehlgeschlagen: $($_.Exception.Message)" }
+}
+Schreibe-Schritt "Verschluesselung" $tlsOk $tlsDetail
 
 # Weboberflaeche: "/" und eine App-Adresse (z. B. nach Neuladen) muessen die App liefern
 $webOk = $false; $webDetail = ""
 try {
-    $start = Invoke-WebRequest -Uri "$BaseUrl/" -UseBasicParsing -TimeoutSec 10
-    $tief = Invoke-WebRequest -Uri "$BaseUrl/termine" -UseBasicParsing -TimeoutSec 10
+    $start = Invoke-WebRequest -Uri "$BaseUrl/" -UseBasicParsing -TimeoutSec 10 @TlsParams
+    $tief = Invoke-WebRequest -Uri "$BaseUrl/termine" -UseBasicParsing -TimeoutSec 10 @TlsParams
     $webOk = ([int]$start.StatusCode -eq 200) -and ($start.Content -match '<div id="root">') -and ($tief.Content -match '<div id="root">')
     if (-not $webOk) { $webDetail = "Antwort enthaelt die App nicht - Image mit --build neu bauen" }
 } catch { $webDetail = "$($_.Exception.Message)" }
@@ -212,9 +280,16 @@ Schreibe-Schritt "Weboberflaeche" $webOk $(if ($webOk) { "$BaseUrl im Browser oe
 $status = Invoke-Api GET "/setup/status"
 if ($status.Status -ne 200) { Schreibe-Schritt "Einrichtungsstatus" $false "HTTP $($status.Status)"; Beende $status.Text }
 if (-not $status.Json.bootstrapped) {
+    if (-not $Einrichtungscode -and -not $OhneDocker) {
+        $prevPref = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+        Push-Location $RepoRoot
+        try { $Einrichtungscode = (& docker compose exec -T app-api cat /data/documents/.einrichtungscode 2>$null | Out-String).Trim() }
+        finally { Pop-Location; $ErrorActionPreference = $prevPref }
+    }
+    if (-not $Einrichtungscode) { $Einrichtungscode = Read-Host "Einrichtungscode (steht im Protokoll: docker compose logs app-api)" }
     $r = Invoke-Api POST "/setup/bootstrap" @{
         household_name = $Haushalt; admin_email = $Email; admin_password = $Password
-        admin_display_name = ($Email -split "@")[0]
+        admin_display_name = ($Email -split "@")[0]; setup_code = $Einrichtungscode
     }
     Schreibe-Schritt "Ersteinrichtung" ($r.Status -eq 201) $(if ($r.Status -eq 201) { "Haushalt '$Haushalt' angelegt" } else { "HTTP $($r.Status): $($r.Text)" })
     if ($r.Status -ne 201) { Beende "" }
@@ -232,6 +307,10 @@ if (-not $status.Json.bootstrapped) {
 
 # --- 4. Anmelden ----------------------------------------------------------------------------
 $login = Invoke-Api POST "/auth/login" @{ email = $Email; password = $Password }
+if ($login.Status -eq 200 -and $login.Json.two_factor_required) {
+    Schreibe-Schritt "Anmeldung" $false "Zwei-Faktor-Anmeldung ist aktiv"
+    Beende "Der Smoke-Test braucht ein Konto ohne Zwei-Faktor-Anmeldung (z. B. ein eigenes Test-Konto unter Benutzer anlegen)."
+}
 Schreibe-Schritt "Anmeldung" ($login.Status -eq 200) $(if ($login.Status -ne 200) { "HTTP $($login.Status)" } else { $Email })
 if ($login.Status -ne 200) {
     $liste = Invoke-Cli @("users")
@@ -395,7 +474,7 @@ if ($neu.Status -ne 201) {
 foreach ($t in $testfaelle) {
     $ziel = [System.IO.Path]::GetTempFileName()
     try {
-        Invoke-WebRequest -Uri "$Api/documents/$($t.Id)/download" -Headers @{ Authorization = "Bearer $token" } `
+        Invoke-WebRequest @TlsParams -Uri "$Api/documents/$($t.Id)/download" -Headers @{ Authorization = "Bearer $token" } `
             -OutFile $ziel -UseBasicParsing -TimeoutSec 30
         if ($t.Mime -like "image/*") {
             # Fotos/Bilder speichert HomeDMS als PDF (aufgerichtet, verkleinert) - Download ist also eine PDF

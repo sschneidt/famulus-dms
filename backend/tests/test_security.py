@@ -19,7 +19,7 @@ def test_password_hash_roundtrip():
 def test_access_token_roundtrip():
     user_id = uuid.uuid4()
     tenant_id = uuid.uuid4()
-    token = security.create_access_token(user_id=user_id, tenant_id=tenant_id, role="admin")
+    token = security.create_access_token(user_id=user_id, tenant_id=tenant_id, role="admin", session_id=uuid.uuid4())
 
     payload = security.decode_token(token)
 
@@ -32,7 +32,7 @@ def test_access_token_roundtrip():
 def test_decode_token_rejects_tampered_token():
     user_id = uuid.uuid4()
     tenant_id = uuid.uuid4()
-    token = security.create_access_token(user_id=user_id, tenant_id=tenant_id, role="member")
+    token = security.create_access_token(user_id=user_id, tenant_id=tenant_id, role="member", session_id=uuid.uuid4())
 
     tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
 

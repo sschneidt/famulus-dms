@@ -119,7 +119,7 @@ id "$SERVICE_USER" >/dev/null 2>&1 || useradd --system --home-dir "$DATA_DIR" --
 if ! runuser -u "$SERVICE_USER" -- test -r "$APP_DIR/backend/homedms/server.py"; then
   die "Benutzer $SERVICE_USER kann $APP_DIR nicht lesen (z. B. weil er in einem Home-Ordner liegt). Ordner nach /opt/homedms verschieben und dort erneut starten."
 fi
-mkdir -p "$DATA_DIR"/{documents,scan,logs,meilisearch}
+mkdir -p "$DATA_DIR"/{documents,scan,logs,meilisearch,tls}
 
 if [ ! -f "$ENV_FILE" ]; then
   step "Einstellungen anlegen ($ENV_FILE)"
@@ -131,6 +131,8 @@ if [ ! -f "$ENV_FILE" ]; then
       -e "s|^SCAN_PATH=.*|SCAN_PATH=$DATA_DIR/scan|" \
       -e "s|^LOG_DIR=.*|LOG_DIR=$DATA_DIR/logs|" \
       -e "s|^MEILISEARCH_DATA=.*|MEILISEARCH_DATA=$DATA_DIR/meilisearch|" \
+      -e "s|^TLS_DIR=.*|TLS_DIR=$DATA_DIR/tls|" \
+      -e "s|^SETUP_CODE=.*|SETUP_CODE=$(secret 12 | sed 's/.\{4\}/&-/g; s/-$//')|" \
       "$APP_DIR/homedms.env.example" > "$ENV_FILE"
 else
   DB_PASSWORD=$(sed -n 's|^DATABASE_URL=postgresql://[^:]*:\([^@]*\)@.*|\1|p' "$ENV_FILE")
@@ -144,6 +146,7 @@ fi
 chmod 640 "$ENV_FILE"
 chown root:"$SERVICE_USER" "$ENV_FILE"
 chown -R "$SERVICE_USER":"$SERVICE_USER" "$DATA_DIR"
+chmod 700 "$DATA_DIR/tls"
 
 step "Datenbank einrichten"
 if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='homedms'" | grep -q 1; then
@@ -186,11 +189,18 @@ systemctl enable homedms >/dev/null
 systemctl restart homedms
 
 PORT=$(sed -n 's/^PORT=//p' "$ENV_FILE"); PORT=${PORT:-8000}
+HTTPS_PORT=$(sed -n 's/^HTTPS_PORT=//p' "$ENV_FILE"); HTTPS_PORT=${HTTPS_PORT:-8443}
 for _ in $(seq 1 60); do curl -fs "http://localhost:$PORT/health" >/dev/null && break; sleep 1; done
 if curl -fs "http://localhost:$PORT/health" >/dev/null; then
   IP=$(hostname -I 2>/dev/null | awk '{print $1}')
-  step "Fertig! HomeDMS laeuft: http://${IP:-localhost}:$PORT"
-  echo "   Beim ersten Aufruf fuehrt ein Assistent durch die Einrichtung (Haushalt + Admin-Konto)."
+  step "Fertig! HomeDMS laeuft: https://${IP:-localhost}:$HTTPS_PORT"
+  echo "   1. Auf jedem Geraet (Handy, PC) einmal http://${IP:-localhost}:$PORT/zertifikat oeffnen und"
+  echo "      der HomeDMS-Zertifizierungsstelle vertrauen (Anleitung auf der Seite)."
+  echo "   2. Dann https://${IP:-localhost}:$HTTPS_PORT - der Assistent legt Haushalt und Admin-Konto an."
+  SETUP_CODE=$(sed -n 's/^SETUP_CODE=//p' "$ENV_FILE")
+  if [ -n "$SETUP_CODE" ] && ! runuser -u postgres -- psql -d homedms -tAc "SELECT 1 FROM tenants LIMIT 1" 2>/dev/null | grep -q 1; then
+    echo "      Einrichtungscode: $SETUP_CODE"
+  fi
   echo "   Dokumente: $DATA_DIR/documents   Scan-Ordner: $DATA_DIR/scan   Protokoll: $DATA_DIR/logs"
   echo "   Dienst: systemctl status homedms   |   Update: Ordner aktualisieren, dieses Skript erneut starten"
 else

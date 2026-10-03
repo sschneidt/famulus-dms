@@ -30,7 +30,7 @@ async def test_diagnose(clean_database, monkeypatch, tmp_path):
         assert r.status_code == 200, r.text
         data = r.json()
         parts = {c["key"]: c for c in data["components"]}
-        assert set(parts) == {"app", "database", "worker", "ai", "search", "ocr", "storage"}
+        assert set(parts) == {"app", "database", "worker", "ai", "search", "ocr", "storage", "tls"}
         assert parts["database"]["status"] == "ok"
         assert parts["ai"]["status"] == "ok" and parts["ai"]["summary"] == "bereit"
         assert parts["ocr"]["status"] == "ok"

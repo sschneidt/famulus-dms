@@ -10,7 +10,9 @@ Was sonst docker-compose erledigt, macht dieser Starter selbst:
 3. Optional Meilisearch mitstarten (MEILISEARCH_BINARY = Pfad zur meilisearch(.exe)).
 4. Den Worker (Texterkennung, KI, Ablage, Scan-Ordner) als zweiten Prozess starten - und neu
    starten, falls er abstuerzt.
-5. Die Weboberflaeche + API auf HOST:PORT bereitstellen (Standard 0.0.0.0:8000).
+5. Die Weboberflaeche + API bereitstellen: HTTPS auf HTTPS_PORT (Standard 8443) mit eigener
+   lokaler Zertifizierungsstelle; PORT (Standard 8000) leitet auf HTTPS um und zeigt unter
+   /zertifikat, wie ein neues Geraet dem Zertifikat vertraut (TLS_MODE, docs/Sicherheitskonzept.md).
 
 Beenden mit Strg+C (bzw. Dienst stoppen) beendet auch Worker und Meilisearch.
 Installation und Dienst-Einrichtung: scripts/install-linux.sh, scripts/install-windows.ps1,
@@ -169,17 +171,10 @@ def main(argv: list[str] | None = None) -> int:
     for child in children:
         child.start()
 
-    import uvicorn
-
     from homedms.runtime import run
 
-    # log_config=None: uvicorn schreibt ueber das hier eingerichtete Protokoll (Konsole/LOG_DIR)
-    server = uvicorn.Server(uvicorn.Config(
-        "homedms.main:app", host=args.host, port=args.port, proxy_headers=True, log_config=None,
-    ))
-    logger.info("HomeDMS laeuft auf http://%s:%s", "localhost" if args.host == "0.0.0.0" else args.host, args.port)
     try:
-        run(server.serve())
+        run(serve(args.host, args.port))
     except KeyboardInterrupt:
         pass
     finally:
@@ -187,6 +182,60 @@ def main(argv: list[str] | None = None) -> int:
             child.stop()
     return 0
 
+
+def build_servers(host: str, http_port: int) -> list:
+    """Webserver je nach TLS_MODE (docs/Sicherheitskonzept.md):
+    - auto:   HTTPS auf HTTPS_PORT mit eigener lokaler Zertifizierungsstelle (core/tls.py) +
+              HTTP auf PORT nur fuer Umleitung und Zertifikat-Hilfe (cert_page.py)
+    - custom: HTTPS mit eigenem Zertifikat (TLS_CERT_FILE/TLS_KEY_FILE) + HTTP-Umleitung
+    - off:    nur HTTP auf PORT - NUR hinter einem Reverse Proxy, der HTTPS macht (z. B. Synology)."""
+    import uvicorn
+
+    from homedms.cert_page import HostTracker, build_redirect_app
+    from homedms.config import get_settings
+    from homedms.core import tls
+    from homedms.main import app
+
+    settings = get_settings()
+    mode = settings.tls_mode.strip().lower()
+    # log_config=None: uvicorn schreibt ueber das hier eingerichtete Protokoll (Konsole/LOG_DIR)
+    common = {"host": host, "proxy_headers": True, "log_config": None}
+    shown = "localhost" if host in ("0.0.0.0", "::") else host
+    if mode == "off":
+        logger.warning("TLS_MODE=off: HomeDMS spricht nur HTTP - nur hinter einem Reverse Proxy mit HTTPS betreiben!")
+        logger.info("HomeDMS laeuft auf http://%s:%s", shown, http_port)
+        return [uvicorn.Server(uvicorn.Config(app, port=http_port, **common))]
+
+    if mode == "custom":
+        if not (settings.tls_cert_file and settings.tls_key_file):
+            raise SystemExit("TLS_MODE=custom braucht TLS_CERT_FILE und TLS_KEY_FILE")
+        files, cert, key = None, settings.tls_cert_file, settings.tls_key_file
+    else:
+        files = tls.ensure_certificates(settings.tls_dir, settings.tls_hostnames)
+        tls.CURRENT = files
+        cert, key = str(files.cert), str(files.key)
+    secured = HostTracker(app, files.names) if files else app
+    servers = [
+        uvicorn.Server(uvicorn.Config(secured, port=settings.https_port, ssl_certfile=cert, ssl_keyfile=key, **common)),
+        uvicorn.Server(uvicorn.Config(build_redirect_app(settings.https_port, files), port=http_port, **common)),
+    ]
+    logger.info("HomeDMS laeuft auf https://%s:%s", shown, settings.https_port)
+    if files:
+        logger.info("Neues Geraet? Zuerst http://%s:%s/zertifikat oeffnen (Fingerabdruck %s...)",
+                    shown, http_port, files.fingerprint[:23])
+    return servers
+
+
+async def serve(host: str, http_port: int) -> None:
+    import asyncio
+
+    servers = build_servers(host, http_port)
+    tasks = [asyncio.create_task(s.serve()) for s in servers]
+    # Endet einer (z. B. Strg+C, Port belegt), werden alle beendet
+    _done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    for s in servers:
+        s.should_exit = True
+    await asyncio.gather(*pending, return_exceptions=True)
 
 if __name__ == "__main__":
     sys.exit(main())

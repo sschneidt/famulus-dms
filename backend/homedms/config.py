@@ -48,6 +48,24 @@ class Settings(BaseSettings):
     # Ordner (z. B. bei reiner Backend-Entwicklung), laeuft nur die API.
     frontend_dist: str = "../frontend/dist"
 
+    # --- Sicherheit (docs/Sicherheitskonzept.md) -------------------------------------------------
+    # Einmal-Code fuer die Ersteinrichtung. Leer = beim Start zufaellig erzeugen, ins Protokoll
+    # schreiben und in <DOCUMENTS_PATH>/.einrichtungscode ablegen (core/setup_code.py).
+    setup_code: str = ""
+    # API-Dokumentation (/docs, /redoc, /openapi.json) - nur zum Entwickeln einschalten
+    api_docs: bool = False
+    # HTTPS: auto = eigene lokale Zertifizierungsstelle (core/tls.py); off = hinter einem Reverse
+    # Proxy, der HTTPS macht (z. B. Synology); custom = eigenes Zertifikat (TLS_CERT_FILE/TLS_KEY_FILE)
+    tls_mode: str = "auto"
+    tls_dir: str = "./data/tls"  # CA + Server-Zertifikat (Schluessel!) - nicht im Dokumente-Ordner
+    tls_hostnames: str = ""  # zusaetzliche Namen/IPs, kommagetrennt, z. B. "nas,nas.local,192.168.1.10"
+    tls_cert_file: str = ""
+    tls_key_file: str = ""
+    https_port: int = 8443  # HTTPS (Weboberflaeche); PORT bleibt fuer HTTP: Umleitung + Zertifikat-Hilfe
+    # Anmeldeschutz: ab so vielen Fehlversuchen in Folge sperren (1 Min., dann jeweils doppelt, max. 60)
+    login_max_failures: int = 5
+    login_max_lock_minutes: int = 60
+
     jwt_secret: str = "dev-only-change-me"
     jwt_access_token_ttl_minutes: int = 15
     jwt_refresh_token_ttl_days: int = 30

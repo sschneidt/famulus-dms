@@ -50,6 +50,7 @@ async def reset_password(email: str, password: str) -> int:
             return 1
         user = users[0]
         user.password_hash = hash_password(password)
+        user.failed_logins, user.locked_until = 0, None  # Sperre nach Fehlversuchen aufheben
         # Bestehende Anmeldungen beenden: wer das alte Passwort kannte, soll nicht angemeldet bleiben.
         await db.execute(
             update(RefreshToken)
@@ -58,6 +59,29 @@ async def reset_password(email: str, password: str) -> int:
         )
         await db.commit()
     print(f"Passwort fuer {email} wurde geaendert. Bestehende Anmeldungen wurden beendet.")
+    return 0
+
+
+async def reset_two_factor(email: str) -> int:
+    """Handy verloren und keine Wiederherstellungscodes mehr (z. B. beim einzigen Admin):
+    Zwei-Faktor-Anmeldung ausschalten und alle Anmeldungen beenden."""
+    async with async_session_factory() as db:
+        users = (await db.execute(select(User).where(func.lower(User.email) == email.lower()))).scalars().all()
+        if len(users) != 1:
+            print(f"Kein eindeutiger Nutzer mit der E-Mail-Adresse {email} gefunden.", file=sys.stderr)
+            return 1
+        user = users[0]
+        user.totp_secret = user.totp_pending_secret = None
+        user.totp_last_step = None
+        user.recovery_codes = None
+        user.failed_logins, user.locked_until = 0, None
+        await db.execute(
+            update(RefreshToken)
+            .where(RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None))
+            .values(revoked_at=datetime.now(timezone.utc))
+        )
+        await db.commit()
+    print(f"Zwei-Faktor-Anmeldung fuer {email} ausgeschaltet - bitte nach der Anmeldung neu einrichten.")
     return 0
 
 
@@ -97,6 +121,8 @@ def main(argv: list[str] | None = None) -> int:
     reset.add_argument("email")
     reset.add_argument("--password", help="Neues Passwort (ohne Angabe wird es sicher abgefragt)")
     sub.add_parser("refile", help="Alle Dateien nach Kategorie/Jahr ablegen und sprechend benennen")
+    two_factor = sub.add_parser("reset-2fa", help="Zwei-Faktor-Anmeldung eines Nutzers ausschalten (Handy verloren)")
+    two_factor.add_argument("email")
     args = parser.parse_args(argv)
 
     async def run() -> int:
@@ -105,6 +131,8 @@ def main(argv: list[str] | None = None) -> int:
                 return await list_users()
             if args.command == "refile":
                 return await refile_all()
+            if args.command == "reset-2fa":
+                return await reset_two_factor(args.email)
             password = args.password if args.password is not None else _ask_password()
             if password is None:
                 return 1

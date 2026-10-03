@@ -14,7 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from homedms.api.deps import get_current_user, require_admin
-from homedms.api.routes.auth import revoke_refresh_tokens
+from homedms.api.routes.auth import clear_two_factor, revoke_refresh_tokens
 from homedms.core.security import hash_password
 from homedms.db import get_db
 from homedms.models.tenant import User, UserRole
@@ -92,6 +92,11 @@ async def update_user(
 
     if payload.role is not None:
         user.role = UserRole(payload.role)
+    if payload.reset_two_factor:
+        if user.id == admin.id:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Die eigene Zwei-Faktor-Anmeldung unter „Konto & Sicherheit“ ändern")
+        clear_two_factor(user)
+        await revoke_refresh_tokens(db, user.id)
     if payload.is_active is not None:
         user.is_active = payload.is_active
         if not payload.is_active:
@@ -108,5 +113,6 @@ async def reset_password(
     """Passwort eines Mitglieds neu setzen (z. B. vergessen). Das Mitglied wird ueberall abgemeldet."""
     user = await _member(db, admin, user_id)
     user.password_hash = hash_password(payload.password)
+    user.failed_logins, user.locked_until = 0, None  # Sperre nach Fehlversuchen aufheben
     await revoke_refresh_tokens(db, user.id)
     await db.commit()

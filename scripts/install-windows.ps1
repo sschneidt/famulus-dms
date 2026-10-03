@@ -29,6 +29,7 @@
 param(
     [string]$DatenOrdner = "$env:SystemDrive\HomeDMS-Daten",
     [int]$Port = 8000,
+    [int]$HttpsPort = 8443,
     [switch]$OhneKI,
     [switch]$MitSuche
 )
@@ -83,7 +84,7 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
 }
 if (-not [Environment]::Is64BitOperatingSystem) { Fail "Nur 64-Bit-Windows wird unterstützt." }
 New-Item -ItemType Directory -Force -Path $Tools, $DatenOrdner | Out-Null
-foreach ($sub in "documents", "scan", "logs", "meilisearch") { New-Item -ItemType Directory -Force -Path (Join-Path $DatenOrdner $sub) | Out-Null }
+foreach ($sub in "documents", "scan", "logs", "meilisearch", "tls") { New-Item -ItemType Directory -Force -Path (Join-Path $DatenOrdner $sub) | Out-Null }
 
 # --- 1. PostgreSQL -----------------------------------------------------------------------------
 Step "PostgreSQL"
@@ -215,6 +216,9 @@ if (-not (Test-Path $EnvFile)) {
         "MEILISEARCH_DATA" = Slash (Join-Path $DatenOrdner "meilisearch")
         "TESSERACT_CMD"    = Slash $tesseract
         "PORT"             = "$Port"
+        "HTTPS_PORT"       = "$HttpsPort"
+        "TLS_DIR"          = Slash (Join-Path $DatenOrdner "tls")
+        "SETUP_CODE"       = ((New-Secret 12) -replace '(.{4})(?!$)', '$1-').ToUpper()
     }
     foreach ($key in $values.Keys) { $text = [regex]::Replace($text, "(?m)^$key=.*$", "$key=$($values[$key])") }
     Write-Utf8 $EnvFile $text
@@ -265,20 +269,30 @@ Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.Co
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 Start-ScheduledTask -TaskName $TaskName
 
-Step "Firewall: Port $Port im Heimnetz freigeben"
+Step "Firewall: Ports $Port und $HttpsPort im Heimnetz freigeben"
 Get-NetFirewallRule -DisplayName "HomeDMS" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
-New-NetFirewallRule -DisplayName "HomeDMS" -Direction Inbound -Protocol TCP -LocalPort $Port -Profile Private, Domain -Action Allow | Out-Null
+New-NetFirewallRule -DisplayName "HomeDMS" -Direction Inbound -Protocol TCP -LocalPort $Port, $HttpsPort -Profile Private, Domain -Action Allow | Out-Null
 
 $ok = $false
 for ($i = 0; $i -lt 90; $i++) {
     try { Invoke-RestMethod -Uri "http://localhost:$Port/health" -TimeoutSec 2 | Out-Null; $ok = $true; break } catch { Start-Sleep -Seconds 1 }
 }
 if (-not $ok) { Fail "HomeDMS antwortet nicht - Protokoll: $(Join-Path $DatenOrdner 'logs\homedms.log')" }
+
+# Diesem PC gleich vertrauen (die anderen Geraete: Seite /zertifikat)
+$caFile = Join-Path $DatenOrdner "tls\ca.crt"
+if (Test-Path $caFile) {
+    Import-Certificate -FilePath $caFile -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
+    Write-Host "   Zertifikat der HomeDMS-Zertifizierungsstelle auf diesem PC als vertrauenswürdig eingetragen."
+}
 $ip = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
     Where-Object { $_.PrefixOrigin -in "Dhcp", "Manual" -and $_.IPAddress -notlike "169.*" } | Select-Object -First 1).IPAddress
-Step "Fertig! HomeDMS läuft: http://localhost:$Port  (im Heimnetz/Handy: http://$($ip):$Port)"
+Step "Fertig! HomeDMS läuft: https://localhost:$HttpsPort  (im Heimnetz: https://$($ip):$HttpsPort)"
+Write-Host "   Handy und andere PCs: einmal http://$($ip):$Port/zertifikat öffnen und dem Zertifikat vertrauen."
+$setupCode = ([regex]::Match((Get-Content $EnvFile -Raw), "(?m)^SETUP_CODE=(\S+)")).Groups[1].Value
 Write-Host "   Beim ersten Aufruf führt ein Assistent durch die Einrichtung (Haushalt + Admin-Konto)."
+if ($setupCode) { Write-Host "   Einrichtungscode: $setupCode" -ForegroundColor Green }
 Write-Host "   Dokumente: $(Join-Path $DatenOrdner 'documents')   Scan-Ordner: $(Join-Path $DatenOrdner 'scan')"
 Write-Host "   Protokoll: $(Join-Path $DatenOrdner 'logs')   Autostart: Aufgabenplanung > '$TaskName'"
 if (-not $OhneKI) { Write-Host "   Hinweis: Ollama läuft unter Windows im angemeldeten Benutzer - nach einem Neustart erst nach der Anmeldung." }
-Start-Process "http://localhost:$Port"
+Start-Process "https://localhost:$HttpsPort"

@@ -39,7 +39,6 @@ import { NavLink as RouterNavLink, Outlet, useLocation } from "react-router";
 import { useNeedsReview, useUnanalyzed, useUnpaid, useWiedervorlagen } from "../api/queries";
 import { useAuth, useUser } from "../auth/AuthContext";
 import { Logo } from "./Logo";
-import { ProfileModal } from "./ProfileModal";
 import { UploadContext, type UploadMode } from "./upload-context";
 import { UploadModal, type PendingFile } from "./UploadModal";
 
@@ -55,7 +54,6 @@ export function AppLayout() {
   const user = useUser();
   const { logout } = useAuth();
   const [navOpen, nav] = useDisclosure(false);
-  const [profileOpen, profile] = useDisclosure(false);
   const isMobile = useMediaQuery("(max-width: 48em)") ?? false;
   const location = useLocation();
   const [upload, setUpload] = useState<{ open: boolean; files?: PendingFile[] }>({ open: false });
@@ -193,8 +191,8 @@ export function AppLayout() {
                       {user.household_name ? ` · ${user.household_name}` : ""}
                     </Text>
                   </Menu.Label>
-                  <Menu.Item leftSection={<IconUserEdit size={16} />} onClick={profile.open}>
-                    Profil &amp; Haushalt
+                  <Menu.Item leftSection={<IconUserEdit size={16} />} component={RouterNavLink} to="/konto">
+                    Konto &amp; Sicherheit
                   </Menu.Item>
                   <Menu.Divider />
                   <Menu.Item leftSection={<IconLogout size={16} />} onClick={() => void logout()}>
@@ -226,8 +224,6 @@ export function AppLayout() {
           <Outlet />
         </AppShell.Main>
       </AppShell>
-
-      <ProfileModal opened={profileOpen} onClose={profile.close} />
 
       {isMobile && !upload.open && location.pathname === "/" && (
         <Affix position={{ bottom: 20, right: 20 }}>

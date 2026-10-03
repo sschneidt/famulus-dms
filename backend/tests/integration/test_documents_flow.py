@@ -7,11 +7,17 @@ import httpx
 import pymupdf
 from sqlalchemy import select, text
 
+from homedms.core import setup_code
 from homedms.core.security import hash_password
 from homedms.db import async_session_factory
 from homedms.jobs import app as jobs_app
 from homedms.main import app
-from homedms.models.document import Category, Document, DocumentAccessOverride, OcrStatus
+from homedms.models.document import (
+    Category,
+    Document,
+    DocumentAccessOverride,
+    OcrStatus,
+)
 from homedms.models.tenant import Tenant, User, UserRole
 
 API = "/api/v1"
@@ -42,10 +48,10 @@ async def test_document_lifecycle(clean_database):
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         # --- Ersteinrichtung -----------------------------------------------------------
-        assert (await client.get(f"{API}/setup/status")).json() == {"bootstrapped": False}
+        assert (await client.get(f"{API}/setup/status")).json()["bootstrapped"] is False
         resp = await client.post(f"{API}/setup/bootstrap", json={
             "household_name": "Familie Test", "admin_email": "admin@example.com",
-            "admin_password": "admin-passwort", "admin_display_name": "Admin",
+            "admin_password": "admin-passwort", "admin_display_name": "Admin", "setup_code": setup_code.get_or_create(),
         })
         assert resp.status_code == 201, resp.text
         tenant_id = uuid.UUID(resp.json()["tenant_id"])
@@ -53,7 +59,7 @@ async def test_document_lifecycle(clean_database):
         # zweiter Bootstrap ist gesperrt
         assert (await client.post(f"{API}/setup/bootstrap", json={
             "household_name": "X", "admin_email": "x@example.com",
-            "admin_password": "xxxxxxxx", "admin_display_name": "X",
+            "admin_password": "xxxxxxxx", "admin_display_name": "X", "setup_code": setup_code.get_or_create(),
         })).status_code == 409
 
         admin = await _login(client, "admin@example.com", "admin-passwort")

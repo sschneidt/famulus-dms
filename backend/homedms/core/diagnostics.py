@@ -13,6 +13,7 @@ laesst sich trotzdem neu starten: Er beendet sich selbst, Docker bzw. der Starte
 startet ihn sofort neu.
 """
 import asyncio
+import os
 import platform
 import shutil
 import tempfile
@@ -318,6 +319,38 @@ async def check_storage() -> Component:
     return Component("storage", "Speicher", "ok", f"{_size(free)} frei", details)
 
 
+async def check_tls() -> Component:
+    from homedms.core import tls
+
+    settings = get_settings()
+    mode = settings.tls_mode.strip().lower()
+    name = "Verschlüsselung (HTTPS)"
+    if mode == "off":
+        return Component("tls", name, "warning", "HomeDMS selbst verschlüsselt nicht", [("Modus", "hinter Reverse Proxy")],
+                         "Nur in Ordnung, wenn ein Reverse Proxy (z. B. Synology) HTTPS macht und Port 8000 nicht "
+                         "direkt aus dem Netz erreichbar ist.")
+    if mode == "custom":
+        return Component("tls", name, "ok", "eigenes Zertifikat", [("Zertifikat", settings.tls_cert_file)])
+    info = tls.certificate_info(settings.tls_dir)
+    if info is None:
+        return Component("tls", name, "error", "kein Zertifikat",
+                         hint="HomeDMS wurde nicht über den Starter (python -m homedms.server) gestartet.")
+    days = (info["expires"] - datetime.now(timezone.utc)).days
+    details = [
+        ("Modus", "eigene Zertifizierungsstelle"),
+        ("Abgedeckt", ", ".join(info["names"])),
+        ("Gültig bis", f"{info['expires']:%d.%m.%Y} (erneuert sich selbst)"),
+        ("Fingerabdruck", info["fingerprint"][:23] + "…"),
+        ("Neues Gerät", f"http://<server>:{os.environ.get('PORT', '8000')}/zertifikat"),
+    ]
+    uncovered = sorted(tls.UNCOVERED)
+    if uncovered:
+        return Component("tls", name, "warning", "Adresse nicht abgedeckt", details,
+                         f"Aufgerufen als {', '.join(uncovered)} - dafür warnt der Browser. In den Einstellungen "
+                         "TLS_HOSTNAMES ergänzen und HomeDMS neu starten.")
+    return Component("tls", name, "ok", f"aktiv, noch {days} Tage gültig", details)
+
+
 async def recent_failures(db: AsyncSession, tenant_id, limit: int = 20) -> list[dict]:
     """Fehlgeschlagene Auftraege der letzten 7 Tage (eigene Dokumente bzw. ohne Dokumentbezug)."""
     rows = (await db.execute(text("""
@@ -361,6 +394,7 @@ async def collect(tenant_id) -> list[Component]:
         _safe(with_db(check_search), "search", "Suche (Meilisearch)"),
         _safe(check_ocr(), "ocr", "Texterkennung (Tesseract)"),
         _safe(check_storage(), "storage", "Speicher"),
+        _safe(check_tls(), "tls", "Verschlüsselung (HTTPS)"),
     ))
 
 

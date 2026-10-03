@@ -2,6 +2,7 @@
 import httpx
 
 from homedms.cli import list_users, reset_password
+from homedms.core import setup_code
 from homedms.main import app
 
 API = "/api/v1"
@@ -11,7 +12,7 @@ async def test_reset_password_allows_new_and_blocks_old_login(clean_database, ca
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
         assert (await client.post(f"{API}/setup/bootstrap", json={
             "household_name": "Familie Test", "admin_email": "admin@example.com",
-            "admin_password": "altes-passwort", "admin_display_name": "Admin",
+            "admin_password": "altes-passwort", "admin_display_name": "Admin", "setup_code": setup_code.get_or_create(),
         })).status_code == 201
         old_login = await client.post(f"{API}/auth/login", json={"email": "admin@example.com", "password": "altes-passwort"})
         old_refresh = old_login.json()["refresh_token"]
