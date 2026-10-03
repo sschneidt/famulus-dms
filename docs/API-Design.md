@@ -22,6 +22,7 @@ REST-API auf Basis von FastAPI, Base-Path `/api/v1`. Alle Endpunkte sind implizi
 | POST | `/auth/refresh` | Neues Access-Token gegen gültiges Refresh-Token | öffentlich (Token-Besitz) |
 | POST | `/auth/logout` | Refresh-Token widerrufen | angemeldet |
 | GET | `/auth/me` | Eigenes Nutzerprofil + Rolle + Tenant-Info (`household_name`) | angemeldet |
+| PUT | `/auth/password` | Eigenes Passwort ändern (`current_password`, `new_password`); alle Anmeldungen werden beendet, die Oberfläche meldet sich gleich neu an – umgesetzt 03.10.2026 | angemeldet |
 | PATCH | `/auth/me` | Eigenen Anzeigenamen ändern (`{"display_name": "..."}`) – umgesetzt 03.10.2026, im Benutzermenü unter „Profil & Haushalt“ | angemeldet |
 | POST | `/setup/bootstrap` | Einmaliger Ersteinrichtungs-Schritt: legt Tenant + ersten Admin-User an (Einrichtungsassistent, Anforderungsdokument 4.7) | öffentlich, nur wenn noch kein Tenant existiert |
 | GET | `/setup/status` | Fortschritt der Ersteinrichtung (u. a. Ollama-Modell-Download-Status) | angemeldet (Admin) |
@@ -32,12 +33,12 @@ REST-API auf Basis von FastAPI, Base-Path `/api/v1`. Alle Endpunkte sind implizi
 |---|---|---|---|
 | GET | `/tenant` | Aktuelle Haushaltseinstellungen (Name, Sprache) | angemeldet |
 | PATCH | `/tenant` | Haushaltseinstellungen ändern – umgesetzt 03.10.2026 für den Namen (`{"name": "..."}`). Der Name ist zugleich der oberste Ablage-Ordner: alle Dokumente des Haushalts werden neu abgelegt (Antwort `documents_refiled`) | Admin |
-| GET | `/users` | Haushaltsmitglieder auflisten | angemeldet |
-| POST | `/users` | Neues Mitglied anlegen/einladen | Admin |
+| GET | `/users` | Haushaltsmitglieder auflisten (umgesetzt 03.10.2026, Seite „Benutzer“) | angemeldet |
+| POST | `/users` | Neues Mitglied anlegen mit Startpasswort (`email`, `display_name`, `password`, `role`). E-Mail ist installationsweit eindeutig (Groß-/Kleinschreibung egal), weil die Anmeldung ohne Angabe des Haushalts läuft | Admin |
 | GET | `/users/{id}` | Nutzerdetails | angemeldet |
-| PATCH | `/users/{id}` | Rolle, Benachrichtigungskanäle etc. ändern | Admin oder eigenes Profil |
-| DELETE | `/users/{id}` | Mitglied entfernen | Admin |
-| PUT | `/users/{id}/password` | Passwort ändern/zurücksetzen | Admin oder eigenes Profil |
+| PATCH | `/users/{id}` | Name, Rolle (`admin`/`member`), `is_active` ändern. Mindestens ein aktiver Admin bleibt; die eigene Rolle/das eigene Konto ändert nur ein anderer Admin. Deaktivieren beendet alle Anmeldungen sofort | Admin |
+| DELETE | `/users/{id}` | **bewusst nicht umgesetzt** – Mitglieder werden deaktiviert statt gelöscht, damit Dokumente, Termine und Verlauf erhalten bleiben | – |
+| PUT | `/users/{id}/password` | Passwort zurücksetzen (`{"password": "..."}`), Mitglied wird überall abgemeldet; eigenes Passwort über `PUT /auth/password` | Admin |
 
 ## 4. Kategorien, Tags & Rechte
 
@@ -105,6 +106,7 @@ REST-API auf Basis von FastAPI, Base-Path `/api/v1`. Alle Endpunkte sind implizi
 | Methode | Pfad | Zweck | Rolle |
 |---|---|---|---|
 | GET | `/import-sources` | Konfigurierte Scan-Ordner/Agenten | Admin |
+| GET | `/import-sources/scan-folder` | Wo der Scan-Ordner auf NAS/PC liegt und welche Einstellung ihn festlegt (`location`, `docker`, `setting`) – nur Anzeige, denn der Ordner wird beim Start eingebunden (Docker: `SCAN_FOLDER_PATH` in der `.env`, ohne Docker: `SCAN_PATH`) | Admin |
 | POST | `/import-sources` | Neue Quelle anlegen (NAS-Ordner oder Client-Agent-Token) | Admin |
 | PATCH | `/import-sources/{id}` | Konfiguration ändern, aktivieren/deaktivieren | Admin |
 | DELETE | `/import-sources/{id}` | Quelle entfernen | Admin |

@@ -3,7 +3,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text, func, true
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -36,6 +36,8 @@ class User(Base, UUIDPKMixin, TimestampMixin):
     # z.B. {"in_app": true, "email": true, "push": false} - siehe Anforderungsdokument 4.5
     notification_channels: Mapped[dict] = mapped_column(JSONB, default=dict)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Deaktiviert statt geloescht: Dokumente/Verlauf bleiben, Anmelden geht nicht mehr (0009)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
 
     tenant: Mapped["Tenant"] = relationship(back_populates="users")
 

@@ -6,18 +6,24 @@ eigenen Unterordner - Ueberschneidungen sind ausgeschlossen, damit nie Dateien e
 bei einem anderen landen.
 """
 import uuid
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from homedms.api.deps import require_admin
+from homedms.config import get_settings
 from homedms.db import get_db
 from homedms.jobs import app as jobs_app
 from homedms.models.ops import ImportSource
 from homedms.models.tenant import User
-from homedms.schemas.import_source import ImportSourceCreate, ImportSourceResponse, ImportSourceUpdate
+from homedms.schemas.import_source import (
+    ImportSourceCreate,
+    ImportSourceResponse,
+    ImportSourceUpdate,
+    ScanFolderInfo,
+)
 from homedms.tasks.scanfolder import request_scan
 
 router = APIRouter(prefix="/import-sources", tags=["import-sources"])
@@ -64,6 +70,17 @@ async def _get(db: AsyncSession, user: User, source_id: uuid.UUID) -> ImportSour
     if source is None or source.tenant_id != user.tenant_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Import-Quelle nicht gefunden")
     return source
+
+
+@router.get("/scan-folder", response_model=ScanFolderInfo)
+async def scan_folder_info(user: User = Depends(require_admin)) -> ScanFolderInfo:
+    """Wo liegt der Scan-Ordner? Festgelegt wird er beim Start (Docker: Ordner-Freigabe in der .env,
+    ohne Docker: Einstellung SCAN_PATH) - eine Webseite kann das nicht umstellen, weil der Container
+    nur die beim Start eingebundenen Ordner sieht."""
+    settings = get_settings()
+    if settings.scan_host_path:
+        return ScanFolderInfo(location=settings.scan_host_path, docker=True, setting="SCAN_FOLDER_PATH")
+    return ScanFolderInfo(location=str(Path(settings.scan_path).resolve()), docker=False, setting="SCAN_PATH")
 
 
 @router.get("", response_model=list[ImportSourceResponse])

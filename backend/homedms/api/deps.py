@@ -34,6 +34,8 @@ async def get_current_user(
     user = await db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Nutzer nicht gefunden")
+    if not user.is_active:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Dieses Konto ist deaktiviert")
     return user
 
 

@@ -93,6 +93,26 @@ export interface paths {
     patch: operations["update_me_api_v1_auth_me_patch"];
     trace?: never;
   };
+  "/api/v1/auth/password": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Change Password
+     * @description Eigenes Passwort aendern. Andere Geraete werden dabei abgemeldet.
+     */
+    put: operations["change_password_api_v1_auth_password_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/tenant": {
     parameters: {
       query?: never;
@@ -109,6 +129,64 @@ export interface paths {
     head?: never;
     /** Rename Household */
     patch: operations["rename_household_api_v1_tenant_patch"];
+    trace?: never;
+  };
+  "/api/v1/users": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * List Users
+     * @description Alle Mitglieder des eigenen Haushalts (z. B. fuer "Termin zuweisen an").
+     */
+    get: operations["list_users_api_v1_users_get"];
+    put?: never;
+    /** Create User */
+    post: operations["create_user_api_v1_users_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/users/{user_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update User */
+    patch: operations["update_user_api_v1_users__user_id__patch"];
+    trace?: never;
+  };
+  "/api/v1/users/{user_id}/password": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Reset Password
+     * @description Passwort eines Mitglieds neu setzen (z. B. vergessen). Das Mitglied wird ueberall abgemeldet.
+     */
+    put: operations["reset_password_api_v1_users__user_id__password_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   "/api/v1/setup/status": {
@@ -684,6 +762,28 @@ export interface paths {
     put?: never;
     /** Merge Property */
     post: operations["merge_property_api_v1_properties__property_id__merge_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/import-sources/scan-folder": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Scan Folder Info
+     * @description Wo liegt der Scan-Ordner? Festgelegt wird er beim Start (Docker: Ordner-Freigabe in der .env,
+     *     ohne Docker: Einstellung SCAN_PATH) - eine Webseite kann das nicht umstellen, weil der Container
+     *     nur die beim Start eingebundenen Ordner sieht.
+     */
+    get: operations["scan_folder_info_api_v1_import_sources_scan_folder_get"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -1298,6 +1398,18 @@ export interface components {
       /** Page Count */
       page_count: number;
     };
+    /** PasswordChange */
+    PasswordChange: {
+      /** Current Password */
+      current_password: string;
+      /** New Password */
+      new_password: string;
+    };
+    /** PasswordReset */
+    PasswordReset: {
+      /** Password */
+      password: string;
+    };
     /** ProfileUpdate */
     ProfileUpdate: {
       /**
@@ -1399,6 +1511,18 @@ export interface components {
       notify_before_days?: number | null;
     };
     /**
+     * ScanFolderInfo
+     * @description Wo der Scan-Ordner liegt und wie man ihn aendert (Anzeige auf der Seite "Scan-Ordner").
+     */
+    ScanFolderInfo: {
+      /** Location */
+      location: string;
+      /** Docker */
+      docker: boolean;
+      /** Setting */
+      setting: string;
+    };
+    /**
      * SearchSegment
      * @description Teil eines Textausschnitts bei der Suche; hit=True wird in der Oberflaeche hervorgehoben.
      */
@@ -1434,6 +1558,65 @@ export interface components {
       total: number;
       /** Total Amount */
       total_amount: number;
+    };
+    /** UserCreate */
+    UserCreate: {
+      /**
+       * Email
+       * Format: email
+       * @example anna@example.com
+       */
+      email: string;
+      /**
+       * Display Name
+       * @example Anna
+       */
+      display_name: string;
+      /**
+       * Password
+       * @description Startpasswort
+       */
+      password: string;
+      /**
+       * Role
+       * @default member
+       */
+      role: string;
+    };
+    /** UserResponse */
+    UserResponse: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /**
+       * Email
+       * Format: email
+       */
+      email: string;
+      /** Display Name */
+      display_name: string;
+      /** Role */
+      role: string;
+      /** Is Active */
+      is_active: boolean;
+      /** Last Login At */
+      last_login_at?: string | null;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /** UserUpdate */
+    UserUpdate: {
+      /** Display Name */
+      display_name?: string | null;
+      /** Role */
+      role?: string | null;
+      /** Is Active */
+      is_active?: boolean | null;
     };
     /** ValidationError */
     ValidationError: {
@@ -1753,6 +1936,37 @@ export interface operations {
       };
     };
   };
+  change_password_api_v1_auth_password_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PasswordChange"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   get_household_api_v1_tenant_get: {
     parameters: {
       query?: never;
@@ -1794,6 +2008,127 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["HouseholdResponse"];
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_users_api_v1_users_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UserResponse"][];
+        };
+      };
+    };
+  };
+  create_user_api_v1_users_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UserResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_user_api_v1_users__user_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UserUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UserResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  reset_password_api_v1_users__user_id__password_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        user_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PasswordReset"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       /** @description Validation Error */
       422: {
@@ -3020,6 +3355,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  scan_folder_info_api_v1_import_sources_scan_folder_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ScanFolderInfo"];
         };
       };
     };

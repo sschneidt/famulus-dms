@@ -24,6 +24,14 @@ class ImportSourceResponse(BaseModel):
     recent: list[ImportLogEntry] = []
 
 
+class ScanFolderInfo(BaseModel):
+    """Wo der Scan-Ordner liegt und wie man ihn aendert (Anzeige auf der Seite "Scan-Ordner")."""
+
+    location: str  # echter Ordner auf NAS/PC, z. B. "/volume1/scan" oder "D:\\Scans"
+    docker: bool  # True: Ordner wird ueber SCAN_FOLDER_PATH in der .env eingebunden
+    setting: str  # Name der Einstellung, die den Ordner festlegt
+
+
 class ImportSourceCreate(BaseModel):
     path: str = Field(default="", max_length=200)
 

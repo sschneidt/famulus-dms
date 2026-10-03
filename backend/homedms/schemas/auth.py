@@ -29,6 +29,14 @@ class MeResponse(BaseModel):
     household_name: str = ""
 
 
+MIN_PASSWORD_LENGTH = 8  # wie bei der Ersteinrichtung (schemas/setup.py)
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=200)
+
+
 class ProfileUpdate(BaseModel):
     display_name: str = Field(min_length=1, max_length=200, examples=["Max Mustermann"])
 

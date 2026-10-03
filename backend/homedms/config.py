@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     documents_path: str = "./data/documents"
     # Ueberwachter Scan-Ordner (Anforderungsdokument 4.1). Im Container fest "/data/scan".
     scan_path: str = "./data/scan"
+    # Nur zur Anzeige: wo der Scan-Ordner auf dem NAS/PC tatsaechlich liegt. Im Docker-Betrieb
+    # setzt docker-compose.yml das aus SCAN_FOLDER_PATH (.env) - der Container selbst sieht nur
+    # /data/scan. Leer = ohne Docker, dann ist scan_path selbst der echte Ordner.
+    scan_host_path: str = ""
     scan_interval_cron: str = "* * * * *"  # jede Minute nachsehen
 
     # Gebaute Weboberflaeche (frontend/dist). Im Docker-Image fest "/app/frontend"; fehlt der

@@ -33,6 +33,10 @@ describe("ScanFolderPage", () => {
     const { calls } = mockFetch([
       { path: "/api/v1/auth/me", body: me },
       { path: "/api/v1/import-sources", body: [source] },
+      {
+        path: "/api/v1/import-sources/scan-folder",
+        body: { location: "/volume1/scan", docker: true, setting: "SCAN_FOLDER_PATH" },
+      },
       { method: "POST", path: "/api/v1/import-sources/s1/scan-now", status: 202, body: { queued: true } },
     ]);
     const user = userEvent.setup();
@@ -46,6 +50,8 @@ describe("ScanFolderPage", () => {
     expect(screen.getByText("importiert")).toBeInTheDocument();
     expect(screen.getByText("Dateityp .docx wird nicht unterstuetzt")).toBeInTheDocument();
     expect(screen.getByText(/1 Datei wartet/)).toBeInTheDocument();
+    expect(await screen.findByTestId("scan-location")).toHaveTextContent("/volume1/scan");
+    expect(screen.getByText("docker compose up -d")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Jetzt prüfen" }));
     await waitFor(() => expect(calls.some((c) => c.path === "/api/v1/import-sources/s1/scan-now")).toBe(true));

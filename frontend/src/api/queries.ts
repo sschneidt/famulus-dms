@@ -18,6 +18,8 @@ export const keys = {
   properties: ["properties"] as const,
   unpaid: ["documents", "unpaid"] as const,
   importSources: ["import-sources"] as const,
+  scanFolderInfo: ["import-sources", "scan-folder"] as const,
+  users: ["users"] as const,
 };
 
 export interface DocumentFilters {
@@ -369,5 +371,44 @@ export function usePatchDocument() {
     mutationFn: ({ id, body }: { id: string; body: Schemas["DocumentUpdateRequest"] }) =>
       call(api.PATCH("/api/v1/documents/{document_id}", { params: { path: { document_id: id } }, body })),
     onSuccess: invalidate,
+  });
+}
+
+export function useScanFolderInfo(enabled: boolean) {
+  return useQuery({
+    queryKey: keys.scanFolderInfo,
+    queryFn: () => call(api.GET("/api/v1/import-sources/scan-folder")),
+    enabled,
+    staleTime: Infinity,
+  });
+}
+
+// --- Benutzer (Haushaltsmitglieder) -------------------------------------------------------------
+
+export function useUsers(enabled = true) {
+  return useQuery({ queryKey: keys.users, queryFn: () => call(api.GET("/api/v1/users")), enabled });
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Schemas["UserCreate"]) => call(api.POST("/api/v1/users", { body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.users }),
+  });
+}
+
+export function useUpdateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: Schemas["UserUpdate"] }) =>
+      call(api.PATCH("/api/v1/users/{user_id}", { params: { path: { user_id: id } }, body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.users }),
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      call(api.PUT("/api/v1/users/{user_id}/password", { params: { path: { user_id: id } }, body: { password } })),
   });
 }

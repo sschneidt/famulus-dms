@@ -22,6 +22,7 @@ HomeDMS reduziert die Anzahl physischer Papierdokumente in Privathaushalten durc
 
 - Mandant (Haushalt) → Nutzer (Haushaltsmitglieder) → Dokumente.
 - Rollenmodell **fein granular**: Sichtbarkeit ist pro Dokument bzw. pro Kategorie konfigurierbar (z. B. Kinder sehen nur eigene Dokumente wie Schule/Gesundheit, Eltern sehen alles). Empfehlung für V1: Basis-Rollen Admin (Haushalt verwalten, Nutzer/Kategorien anlegen) und Mitglied, ergänzt um eine Sichtbarkeits-/ACL-Ebene pro Dokument oder Kategorie.
+- **Benutzerverwaltung (umgesetzt 03.10.2026):** Seite „Benutzer“ (nur Admin): Mitglieder mit Startpasswort anlegen (Vorschlag wird erzeugt, Zugangsdaten zum Weitergeben werden einmal angezeigt), Rolle Admin/Mitglied ändern, Passwort zurücksetzen, deaktivieren/wieder aktivieren. Gelöscht wird nie – Dokumente, Termine und Verlauf bleiben erhalten. Es bleibt immer ein aktiver Admin. Jeder ändert Anzeigenamen und Passwort selbst unter „Profil & Haushalt“; der Admin ändert dort auch den Haushaltsnamen (= oberster Ablage-Ordner, Dateien ziehen mit um). Mitglieder sehen alle Dokumente außer aus geschützten Kategorien; die Oberfläche für geschützte Kategorien (Rechte je Kategorie) folgt bei Bedarf. Mehrere Haushalte auf einer Installation sind im Datenmodell vorgesehen, eine Verwaltung dafür (Betreiber-Rolle) ist bewusst noch nicht gebaut.
 
 ## 4. Funktionale Anforderungen
 

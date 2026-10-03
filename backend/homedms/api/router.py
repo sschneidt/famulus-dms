@@ -15,12 +15,14 @@ from homedms.api.routes import (
     properties,
     retention_rules,
     setup,
+    users,
     wiedervorlagen,
 )
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth.router)
 api_router.include_router(household.router)
+api_router.include_router(users.router)
 api_router.include_router(setup.router)
 api_router.include_router(categories.router)
 api_router.include_router(documents.router)

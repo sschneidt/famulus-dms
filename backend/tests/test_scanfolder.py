@@ -80,3 +80,21 @@ def test_destination_und_titel(tmp_path: Path):
     (tmp_path / "Scan (2).pdf").write_bytes(b"x")
     assert destination(tmp_path, "Scan.pdf") == tmp_path / "Scan (3).pdf"
     assert title_from_filename("Scan_2026-10-02_0815.pdf") == "Scan_2026-10-02_0815"
+
+
+def test_scan_ordner_info_zeigt_echten_ordner(monkeypatch, tmp_path):
+    """Seite "Scan-Ordner": Docker -> Pfad aus der .env; ohne Docker -> SCAN_PATH selbst."""
+    import asyncio
+
+    from homedms.api.routes.import_sources import scan_folder_info
+    from homedms.config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "scan_host_path", "/volume1/scan")
+    info = asyncio.run(scan_folder_info(user=None))
+    assert info.docker and info.location == "/volume1/scan" and info.setting == "SCAN_FOLDER_PATH"
+
+    monkeypatch.setattr(settings, "scan_host_path", "")
+    monkeypatch.setattr(settings, "scan_path", str(tmp_path))
+    info = asyncio.run(scan_folder_info(user=None))
+    assert not info.docker and info.location == str(tmp_path.resolve()) and info.setting == "SCAN_PATH"

@@ -18,7 +18,13 @@ import { useMediaQuery } from "@mantine/hooks";
 import { IconAlertTriangle, IconFolderSearch, IconRefresh } from "@tabler/icons-react";
 import { Link } from "react-router";
 import type { Schemas } from "../api/client";
-import { useCreateImportSource, useImportSources, useScanNow, useUpdateImportSource } from "../api/queries";
+import {
+  useCreateImportSource,
+  useImportSources,
+  useScanFolderInfo,
+  useScanNow,
+  useUpdateImportSource,
+} from "../api/queries";
 import { useUser } from "../auth/AuthContext";
 import { formatDateTime } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
@@ -51,6 +57,7 @@ export function ScanFolderPage() {
           danach nach <Code>_importiert</Code>, Unbrauchbares nach <Code>_fehler</Code>.
         </Text>
       </div>
+      <LocationCard />
       {sources.isPending ? (
         <Center py="xl">
           <Loader />
@@ -82,6 +89,39 @@ export function ScanFolderPage() {
         sources.data.map((s) => <SourceCard key={s.id} source={s} />)
       )}
     </Stack>
+  );
+}
+
+/** Wo der Scan-Ordner liegt - festgelegt beim Start, nicht hier (der Container sieht nur eingebundene Ordner). */
+function LocationCard() {
+  const info = useScanFolderInfo(true);
+  if (!info.data) return null;
+  const { location, docker, setting } = info.data;
+  const relative = location.startsWith(".");
+  return (
+    <Card withBorder padding="md" radius="md">
+      <Stack gap={6}>
+        <Group gap="xs" wrap="wrap">
+          <Text fw={500}>Ordner auf {docker ? "dem NAS/PC" : "diesem Rechner"}:</Text>
+          <Code data-testid="scan-location">{location}</Code>
+        </Group>
+        <Text size="sm" c="dimmed">
+          {docker ? (
+            <>
+              Ändern: in der Datei <Code>.env</Code> neben <Code>docker-compose.yml</Code> die Zeile{" "}
+              <Code>{setting}=…</Code> anpassen (z. B. <Code>{setting}=/volume1/scan</Code>) und danach{" "}
+              <Code>docker compose up -d</Code> ausführen.
+              {relative && " Ein Pfad mit ./ beginnt im HomeDMS-Ordner (dort, wo docker-compose.yml liegt)."}
+            </>
+          ) : (
+            <>
+              Ändern: Einstellung <Code>{setting}</Code> (Umgebungsvariable bzw. <Code>.env</Code>) anpassen und HomeDMS
+              neu starten.
+            </>
+          )}
+        </Text>
+      </Stack>
+    </Card>
   );
 }
 

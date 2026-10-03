@@ -125,6 +125,8 @@ services:
       # Fester Pfad IM Container (siehe volumes unten) - unabhaengig davon, wohin
       # DOCUMENTS_PATH auf dem Host zeigt.
       DOCUMENTS_PATH: /data/documents
+      # Nur zur Anzeige auf der Seite "Scan-Ordner": wo der Ordner auf dem NAS/PC liegt
+      SCAN_HOST_PATH: ${SCAN_FOLDER_PATH:-./data/scan}
       TZ: ${TZ:-Europe/Berlin}
     volumes:
       - ${DOCUMENTS_PATH:-./data/documents}:/data/documents

@@ -12,7 +12,7 @@ import getpass
 import sys
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 
 from homedms.core.security import hash_password
 from homedms.db import async_session_factory, engine
@@ -25,7 +25,7 @@ async def list_users() -> int:
     async with async_session_factory() as db:
         rows = (
             await db.execute(
-                select(Tenant.name, User.email, User.role, User.display_name)
+                select(Tenant.name, User.email, User.role, User.display_name, User.is_active)
                 .join(Tenant, Tenant.id == User.tenant_id)
                 .order_by(Tenant.name, User.email)
             )
@@ -33,14 +33,15 @@ async def list_users() -> int:
     if not rows:
         print("Noch keine Nutzer vorhanden - die Ersteinrichtung (POST /api/v1/setup/bootstrap) fehlt.")
         return 0
-    for tenant_name, email, role, display_name in rows:
-        print(f"{tenant_name:<30} {email:<40} {role.value:<8} {display_name}")
+    for tenant_name, email, role, display_name, is_active in rows:
+        state = "" if is_active else "  (deaktiviert)"
+        print(f"{tenant_name:<30} {email:<40} {role.value:<8} {display_name}{state}")
     return 0
 
 
 async def reset_password(email: str, password: str) -> int:
     async with async_session_factory() as db:
-        users = (await db.execute(select(User).where(User.email == email))).scalars().all()
+        users = (await db.execute(select(User).where(func.lower(User.email) == email.lower()))).scalars().all()
         if not users:
             print(f"Kein Nutzer mit der E-Mail-Adresse {email} gefunden.", file=sys.stderr)
             return 1
