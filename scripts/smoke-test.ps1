@@ -165,23 +165,47 @@ using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 public static class HomeDmsTrust {
     public static X509Certificate2 Ca;
+    public static string LastError = "";
     public static bool Check(object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors errors) {
         if (errors == SslPolicyErrors.None) return true;
-        if (Ca == null || cert == null) return false;
+        if (Ca == null || cert == null) { LastError = "keine CA geladen"; return false; }
+        if ((errors & SslPolicyErrors.RemoteCertificateNameMismatch) != 0) { LastError = "Zertifikat passt nicht zum Hostnamen"; return false; }
         var own = new X509Chain();
         own.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
         own.ChainPolicy.VerificationFlags = X509VerificationFlags.AllowUnknownCertificateAuthority;
         own.ChainPolicy.ExtraStore.Add(Ca);
-        if (!own.Build(new X509Certificate2(cert))) return false;
+        bool ok = own.Build(new X509Certificate2(cert));
         var root = own.ChainElements[own.ChainElements.Count - 1].Certificate;
-        return root.Thumbprint == Ca.Thumbprint;
+        if (root.Thumbprint != Ca.Thumbprint) { LastError = "Zertifikat stammt nicht von der HomeDMS-CA"; return false; }
+        if (!ok) {
+            var s = new System.Text.StringBuilder();
+            foreach (var st in own.ChainStatus) {
+                if (st.Status == X509ChainStatusFlags.UntrustedRoot) continue;
+                s.Append(st.Status.ToString()).Append(" ");
+            }
+            if (s.Length > 0) { LastError = "Kettenpruefung: " + s.ToString().Trim(); return false; }
+        }
+        return true;
+    }
+    // Delegate in C# erzeugen: Windows PowerShell 5.1 kann eine Methode nicht per Cast umwandeln
+    public static RemoteCertificateValidationCallback Callback() {
+        return new RemoteCertificateValidationCallback(Check);
     }
 }
 "@
     }
     [HomeDmsTrust]::Ca = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($Datei)
-    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
-    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [System.Net.Security.RemoteCertificateValidationCallback] [HomeDmsTrust]::Check
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor [System.Net.SecurityProtocolType]::Tls12
+    [System.Net.ServicePointManager]::ServerCertificateValidationCallback = [HomeDmsTrust]::Callback()
+}
+
+function Tls-Fehlertext($Fehler) {
+    # Innerste Ausnahme + ggf. Grund aus der eigenen Zertifikatspruefung
+    $e = $Fehler.Exception
+    while ($e.InnerException) { $e = $e.InnerException }
+    $text = $e.Message
+    if (("HomeDmsTrust" -as [type]) -and [HomeDmsTrust]::LastError) { $text += " [" + [HomeDmsTrust]::LastError + "]" }
+    return $text
 }
 
 $TlsParams = @{}
@@ -240,31 +264,57 @@ if (-not $bereit) { Beende "Mit 'docker compose ps' und 'docker compose logs app
 
 # --- 2b. Verschluesselung: HTTPS mit eigener Zertifizierungsstelle? ----------------------------
 $tlsDetail = ""
+$tlsOk = $true
+$CaDatei = Join-Path ([System.IO.Path]::GetTempPath()) "homedms-ca.crt"
+$caStatus = 0
 try {
-    $CaDatei = Join-Path ([System.IO.Path]::GetTempPath()) "homedms-ca.crt"
     Invoke-WebRequest -Uri "$HttpUrl/homedms-ca.crt" -UseBasicParsing -TimeoutSec 5 -OutFile $CaDatei
-    Vertraue-HomeDmsZertifikat $CaDatei
-    if (-not $BaseUrl) { $BaseUrl = "https://localhost:8443" }
-    $tlsDetail = "HTTPS mit eigener Zertifizierungsstelle"
+    $caStatus = 200
 } catch {
+    if ($_.Exception.Response) { $caStatus = [int]$_.Exception.Response.StatusCode }
+    $caFehler = Tls-Fehlertext $_
+}
+if ($caStatus -eq 200) {
+    try {
+        Vertraue-HomeDmsZertifikat $CaDatei
+        $tlsDetail = "HTTPS mit eigener Zertifizierungsstelle"
+    } catch {
+        $tlsOk = $false
+        $tlsDetail = "CA geladen, aber Zertifikatspruefung nicht einrichtbar: $(Tls-Fehlertext $_)"
+    }
+    if (-not $BaseUrl) { $BaseUrl = "https://localhost:8443" }
+} elseif ($caStatus -eq 404) {
+    # Kein eigenes Zertifikat: TLS_MODE=off (nur HTTP) oder custom (fremdes Zertifikat)
     $CaDatei = $null
     if (-not $BaseUrl) { $BaseUrl = $HttpUrl }
     $tlsDetail = "kein eigenes Zertifikat (TLS_MODE=off/custom) - $BaseUrl"
+} else {
+    $CaDatei = $null
+    $tlsOk = $false
+    if (-not $BaseUrl) { $BaseUrl = "https://localhost:8443" }
+    $tlsDetail = "CA-Zertifikat nicht abrufbar ($HttpUrl/homedms-ca.crt): $caFehler"
 }
 $Api = "$BaseUrl/api/v1"
-$tlsOk = $true
-if ($CaDatei) {
+if ($tlsOk -and $CaDatei) {
     # HTTP darf nur umleiten - nie die App selbst ausliefern
     try {
         $umleitung = Invoke-WebRequest -Uri "$HttpUrl/" -UseBasicParsing -TimeoutSec 5 -MaximumRedirection 0 -ErrorAction SilentlyContinue
         $code = [int]$umleitung.StatusCode
     } catch { $code = [int]$_.Exception.Response.StatusCode }
-    $tlsOk = ($code -eq 308)
-    if (-not $tlsOk) { $tlsDetail = "HTTP antwortet mit $code statt Umleitung auf HTTPS" }
+    if ($code -ne 308) { $tlsOk = $false; $tlsDetail = "HTTP antwortet mit $code statt Umleitung auf HTTPS" }
     try { Invoke-WebRequest -Uri "$BaseUrl/health" -UseBasicParsing -TimeoutSec 5 @TlsParams | Out-Null }
-    catch { $tlsOk = $false; $tlsDetail = "HTTPS-Verbindung fehlgeschlagen: $($_.Exception.Message)" }
+    catch { $tlsOk = $false; $tlsDetail = "HTTPS-Verbindung zu $BaseUrl fehlgeschlagen: $(Tls-Fehlertext $_)" }
+}
+if ($tlsOk -and $BaseUrl -like "http://*") {
+    # Ohne HTTPS darf HTTP nicht umleiten - sonst liefen alle weiteren Schritte ins Leere
+    try {
+        $r = Invoke-WebRequest -Uri "$BaseUrl/api/v1/setup/status" -UseBasicParsing -TimeoutSec 5 -MaximumRedirection 0 -ErrorAction SilentlyContinue
+        $code = [int]$r.StatusCode
+    } catch { $code = [int]$_.Exception.Response.StatusCode }
+    if ($code -eq 308) { $tlsOk = $false; $tlsDetail = "$BaseUrl leitet auf HTTPS um - Aufruf mit -BaseUrl https://localhost:8443 wiederholen" }
 }
 Schreibe-Schritt "Verschluesselung" $tlsOk $tlsDetail
+if (-not $tlsOk) { Beende "Ohne funktionierende HTTPS-Verbindung sind die weiteren Pruefungen sinnlos. Die Meldung oben nennt den Grund." }
 
 # Weboberflaeche: "/" und eine App-Adresse (z. B. nach Neuladen) muessen die App liefern
 $webOk = $false; $webDetail = ""
