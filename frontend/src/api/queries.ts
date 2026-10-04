@@ -22,6 +22,9 @@ export const keys = {
   scanFolderInfo: ["import-sources", "scan-folder"] as const,
   users: ["users"] as const,
   diagnostics: ["system", "diagnostics"] as const,
+  notifications: ["notifications"] as const,
+  notificationSettings: ["notifications", "settings"] as const,
+  mailSettings: ["tenant", "mail"] as const,
 };
 
 export interface DocumentFilters {
@@ -451,6 +454,109 @@ export function useSystemAction() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.diagnostics });
       setTimeout(() => void qc.invalidateQueries({ queryKey: keys.diagnostics }), 5000);
+    },
+  });
+}
+
+// --- Benachrichtigungen ---------------------------------------------------------------------------
+
+export function useNotifications() {
+  return useQuery({
+    queryKey: keys.notifications,
+    queryFn: () => call(api.GET("/api/v1/notifications")),
+    refetchInterval: 60_000,
+  });
+}
+
+export function useMarkNotificationRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      call(api.POST("/api/v1/notifications/{notification_id}/read", { params: { path: { notification_id: id } } })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.notifications, exact: true }),
+  });
+}
+
+export function useMarkAllNotificationsRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => call(api.POST("/api/v1/notifications/read-all")),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.notifications, exact: true }),
+  });
+}
+
+export function useNotificationSettings() {
+  return useQuery({
+    queryKey: keys.notificationSettings,
+    queryFn: () => call(api.GET("/api/v1/notifications/settings")),
+  });
+}
+
+export function useUpdateNotificationSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Schemas["NotificationSettingsUpdate"]) =>
+      call(api.PATCH("/api/v1/notifications/settings", { body })),
+    onSuccess: (data) => qc.setQueryData(keys.notificationSettings, data),
+  });
+}
+
+export function useSubscribePush() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Schemas["PushSubscriptionCreate"]) =>
+      call(api.POST("/api/v1/notifications/push-subscriptions", { body })),
+    onSuccess: (data) => qc.setQueryData(keys.notificationSettings, data),
+  });
+}
+
+export function useRemovePushDevice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      call(
+        api.DELETE("/api/v1/notifications/push-subscriptions/{subscription_id}", {
+          params: { path: { subscription_id: id } },
+        }),
+      ),
+    onSuccess: (data) => qc.setQueryData(keys.notificationSettings, data),
+  });
+}
+
+export function useTestNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (channel: "email" | "push") => call(api.POST("/api/v1/notifications/test", { body: { channel } })),
+    // Fehler/Erfolg steht danach auch bei Geraeten bzw. im E-Mail-Versand
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: keys.notificationSettings });
+      void qc.invalidateQueries({ queryKey: keys.mailSettings });
+    },
+  });
+}
+
+export function useMailSettings(enabled: boolean) {
+  return useQuery({ queryKey: keys.mailSettings, queryFn: () => call(api.GET("/api/v1/tenant/mail")), enabled });
+}
+
+export function useSaveMailSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Schemas["MailSettingsUpdate"]) => call(api.PUT("/api/v1/tenant/mail", { body })),
+    onSuccess: (data) => {
+      qc.setQueryData(keys.mailSettings, data);
+      void qc.invalidateQueries({ queryKey: keys.notificationSettings });
+    },
+  });
+}
+
+export function useDeleteMailSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => call(api.DELETE("/api/v1/tenant/mail")),
+    onSuccess: (data) => {
+      qc.setQueryData(keys.mailSettings, data);
+      void qc.invalidateQueries({ queryKey: keys.notificationSettings });
     },
   });
 }

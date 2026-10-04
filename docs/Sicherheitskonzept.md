@@ -99,6 +99,12 @@ HomeDMS speichert Dokumente unverschlüsselt im Dateisystem. Das ist nötig, dam
 
 `homedms.env` bzw. `.env` enthalten Geheimnisse (Datenbank-Passwort, JWT-Schlüssel): Sie sind nur für Admins lesbar und nie im Git-Repository. TOTP-Geheimnisse liegen in der Datenbank. Wer die Datenbank liest, hat ohnehin Zugriff auf alles, deshalb sind sie dort nicht gesondert verschlüsselt.
 
+## 7a. Erinnerungen per E-Mail und Push
+
+- **E-Mail:** Auf Wunsch des Nutzers stehen Details in der Mail (Bezeichnung des Termins, Dokumenttitel, Datum). Diese Angaben liegen damit beim Mail-Anbieter im Klartext. Dokumente selbst werden nie verschickt, nur Links in die App (Anmeldung nötig). Das SMTP-Passwort ist in der Datenbank verschlüsselt (Fernet, Schlüssel per HKDF aus `JWT_SECRET`), wird von der API nie zurückgegeben, und die Verbindung zum Mailserver ist per STARTTLS bzw. SSL verschlüsselt und zertifikatsgeprüft. „Ohne Verschlüsselung“ ist nur für einen Mailserver im Heimnetz gedacht.
+- **Push:** Jede Nachricht ist Ende-zu-Ende für das jeweilige Gerät verschlüsselt (RFC 8291) und mit dem eigenen VAPID-Schlüssel signiert (RFC 8292). Google, Apple oder Mozilla sehen nur verschlüsselte Daten und die Geräteadresse. Der Server schickt nur an bekannte Push-Dienste (Google, Apple, Mozilla, Microsoft), damit über ein gefälschtes Abo keine beliebigen Adressen im Heimnetz angesprochen werden können. Push braucht ausgehenden Internetzugang des Servers – eingehend bleibt alles zu.
+- **Wer bekommt was:** nur Termine und Dokumente, die die Person ohnehin sehen darf.
+
 ## 8. Zugriff von unterwegs
 
 Empfohlen: **VPN**, also Synology VPN Server, WireGuard (z. B. in der FRITZ!Box) oder Tailscale. HomeDMS bleibt von außen unsichtbar; über das VPN gilt das Heimnetz-Zertifikat. Tailscale-Adressen (100.64/10, `*.ts.net`) sind in der Namensbeschränkung enthalten.

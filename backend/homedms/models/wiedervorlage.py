@@ -2,7 +2,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, Enum as SAEnum, ForeignKey, Numeric, String, Text, DateTime
+from sqlalchemy import Boolean, Date, Enum as SAEnum, ForeignKey, Numeric, SmallInteger, String, Text, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 
 from homedms.models.base import Base, TimestampMixin, UUIDPKMixin
@@ -36,6 +36,9 @@ class Wiedervorlage(Base, UUIDPKMixin, TimestampMixin):
     assigned_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     reminder_lead_days: Mapped[int] = mapped_column(default=30)
+    # Erinnerungen (0013, core/reminders.py): zuletzt verschickte Stufe und wann
+    reminder_stage: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+    reminded_on: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), nullable=True)

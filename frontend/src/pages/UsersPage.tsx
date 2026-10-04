@@ -42,6 +42,7 @@ import { formatDateTime } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
 import { certificatePageUrl, useSetupStatus } from "../lib/connection";
 import { generatePassword } from "../lib/password";
+import { MailSettingsCard } from "../components/MailSettingsCard";
 
 type Member = Schemas["UserResponse"];
 
@@ -91,6 +92,8 @@ export function UsersPage() {
           )}
         </Stack>
       )}
+
+      <MailSettingsCard />
 
       <CreateUserModal opened={creating} onClose={() => setCreating(false)} />
       <ResetPasswordModal member={resetFor} onClose={() => setResetFor(null)} />

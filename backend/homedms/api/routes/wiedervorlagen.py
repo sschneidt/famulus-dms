@@ -2,7 +2,7 @@
 
 Uebersicht, Wiedervorlagen eines Dokuments, manuell anlegen, aendern (auch KI-Vorschlaege vor dem
 Bestaetigen), bestaetigen/verwerfen, erledigen (bei Wiederholung mit automatischem Folgetermin),
-loeschen. Erinnerungen per Benachrichtigung folgen mit Abschnitt 9 (Benachrichtigungen).
+loeschen. Erinnerungen verschickt die taegliche Zusammenfassung (core/notifications.py).
 
 Rechte richten sich nach dem zugehoerigen Dokument (homedms/core/visibility.py): sehen, wer das
 Dokument sehen darf; bestaetigen/verwerfen, wer es bearbeiten darf.
@@ -194,6 +194,9 @@ async def update_wiedervorlage(
     if recurrence != "custom_months":
         updates["recurrence_interval_months"] = None
 
+    # Neuer Termin oder anderer Vorlauf: Erinnerungen beginnen von vorn (core/reminders.py)
+    if any(f in updates and updates[f] != getattr(wv, f) for f in ("due_date", "reminder_lead_days")):
+        wv.reminder_stage, wv.reminded_on = 0, None
     for field, value in updates.items():
         setattr(wv, field, value)
     await db.commit()

@@ -24,3 +24,4 @@ from homedms.tasks import extraction as _extraction  # noqa: E402,F401  (extract
 from homedms.tasks import filing as _filing  # noqa: E402,F401  (file_document)
 from homedms.tasks import scanfolder as _scanfolder  # noqa: E402,F401  (scan_folders, jede Minute)
 from homedms.tasks import system as _system  # noqa: E402,F401  (restart_worker, pull_model - Seite Diagnose)
+from homedms.tasks import notifications as _notifications  # noqa: E402,F401  (send_reminders, alle 15 Min.)

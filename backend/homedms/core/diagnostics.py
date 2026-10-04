@@ -19,11 +19,11 @@ import shutil
 import tempfile
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import httpx
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from homedms.config import get_settings
@@ -40,6 +40,7 @@ TASK_LABELS = {
     "pull_model": "KI-Modell laden",
     "restart_worker": "Worker-Neustart",
     "ping": "Test",
+    "send_reminders": "Erinnerungen",
 }
 
 
@@ -351,6 +352,46 @@ async def check_tls() -> Component:
     return Component("tls", name, "ok", f"aktiv, noch {days} Tage gültig", details)
 
 
+async def check_notifications(db: AsyncSession, tenant_id) -> Component:
+    """E-Mail-Versand und Push: eingerichtet? Letzter Versand geklappt?"""
+    from homedms.core import mailer
+    from homedms.models.ops import Notification, PushSubscription
+    from homedms.models.tenant import Tenant, User
+
+    name = "Erinnerungen (E-Mail/Push)"
+    tenant = await db.get(Tenant, tenant_id)
+    mail = tenant.mail_settings or {}
+    devices = await db.scalar(
+        select(func.count()).select_from(PushSubscription).join(User, User.id == PushSubscription.user_id)
+        .where(User.tenant_id == tenant_id))
+    week = datetime.now(timezone.utc) - timedelta(days=7)
+    failed = (await db.execute(
+        select(Notification.channel, func.count()).where(
+            Notification.tenant_id == tenant_id, Notification.status == "failed", Notification.type == "digest",
+            Notification.created_at > week).group_by(Notification.channel))).all()
+    pending = await db.scalar(select(func.count()).where(
+        Notification.tenant_id == tenant_id, Notification.status == "pending"))
+    details = [
+        ("E-Mail", f"über {mail.get('host')} als {mail.get('sender')}" if mailer.is_configured(mail) else "nicht eingerichtet"),
+        ("Push-Geräte", str(devices or 0)),
+        ("Zeitzone", get_settings().tz),
+    ]
+    if pending:
+        details.append(("Warten auf Versand", str(pending)))
+    for channel, count in failed:
+        details.append((f"Fehlgeschlagen ({'E-Mail' if channel == 'email' else 'Push'}, 7 Tage)", str(count)))
+    if mail.get("last_error"):
+        return Component("notifications", name, "error", "E-Mail-Versand gestört", details,
+                         f"{mail['last_error']} - unter „Benutzer“ > „E-Mail-Versand“ prüfen.")
+    if failed:
+        return Component("notifications", name, "warning", "Versand zuletzt fehlgeschlagen", details,
+                         "Push braucht Internetzugang des Servers; Details stehen bei den Geräten unter „Konto & Sicherheit“.")
+    if not mailer.is_configured(mail) and not devices:
+        return Component("notifications", name, "disabled", "nur in der App (Glocke)", details,
+                         "E-Mail unter „Benutzer“ > „E-Mail-Versand“ einrichten, Push unter „Konto & Sicherheit“ einschalten.")
+    return Component("notifications", name, "ok", "eingerichtet", details)
+
+
 async def recent_failures(db: AsyncSession, tenant_id, limit: int = 20) -> list[dict]:
     """Fehlgeschlagene Auftraege der letzten 7 Tage (eigene Dokumente bzw. ohne Dokumentbezug)."""
     rows = (await db.execute(text("""
@@ -395,6 +436,7 @@ async def collect(tenant_id) -> list[Component]:
         _safe(check_ocr(), "ocr", "Texterkennung (Tesseract)"),
         _safe(check_storage(), "storage", "Speicher"),
         _safe(check_tls(), "tls", "Verschlüsselung (HTTPS)"),
+        _safe(with_db(check_notifications, tenant_id), "notifications", "Erinnerungen (E-Mail/Push)"),
     ))
 
 

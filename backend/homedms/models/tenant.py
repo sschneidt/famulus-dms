@@ -1,9 +1,9 @@
 """Tenant (Haushalt), User, RefreshToken. Siehe docs/Datenmodell.md 3.1, 3.2 und Abschnitt 4 (Auth)."""
 import enum
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func, true
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Enum, ForeignKey, Integer, SmallInteger, String, Text, func, true
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,6 +20,9 @@ class Tenant(Base, UUIDPKMixin, TimestampMixin):
 
     name: Mapped[str] = mapped_column(String(200))
     default_language: Mapped[str] = mapped_column(String(10), default="de")
+    # E-Mail-Versand (0013, core/mailer.py): host, port, security, username, password (verschluesselt),
+    # sender, app_url (fuer Links in der E-Mail). None = kein E-Mail-Versand eingerichtet.
+    mail_settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     users: Mapped[list["User"]] = relationship(back_populates="tenant")
 
@@ -35,6 +38,10 @@ class User(Base, UUIDPKMixin, TimestampMixin):
     locale: Mapped[str] = mapped_column(String(10), default="de")
     # z.B. {"in_app": true, "email": true, "push": false} - siehe Anforderungsdokument 4.5
     notification_channels: Mapped[dict] = mapped_column(JSONB, default=dict)
+    # Taegliche Zusammenfassung (0013): ab dieser Stunde (Ortszeit, TZ) einmal pro Tag
+    digest_hour: Mapped[int] = mapped_column(SmallInteger, default=7, server_default="7")
+    last_digest_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    last_digest_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # Deaktiviert statt geloescht: Dokumente/Verlauf bleiben, Anmelden geht nicht mehr (0009)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())

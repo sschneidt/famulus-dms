@@ -37,9 +37,10 @@ import { useAuth, useUser } from "../auth/AuthContext";
 import { certificatePageUrl, useSetupStatus } from "../lib/connection";
 import { formatDateTime } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
+import { NotificationSettingsSection } from "../components/NotificationSettingsSection";
 
 /**
- * Konto & Sicherheit: Name (und Haushaltsname fuer Admins), Passwort, Zwei-Faktor-Anmeldung,
+ * Konto & Sicherheit: Name (und Haushaltsname fuer Admins), Passwort, Benachrichtigungen, Zwei-Faktor-Anmeldung,
  * angemeldete Geraete und wie ein neues Geraet der Verschluesselung vertraut.
  */
 export function AccountPage() {
@@ -54,6 +55,9 @@ export function AccountPage() {
           <PasswordForm />
         </Section>
       </SimpleGrid>
+      <Section title="Benachrichtigungen">
+        <NotificationSettingsSection />
+      </Section>
       <Section title="Zwei-Faktor-Anmeldung">
         <TwoFactorSection />
       </Section>

@@ -39,6 +39,7 @@ import { NavLink as RouterNavLink, Outlet, useLocation } from "react-router";
 import { useNeedsReview, useUnanalyzed, useUnpaid, useWiedervorlagen } from "../api/queries";
 import { useAuth, useUser } from "../auth/AuthContext";
 import { Logo } from "./Logo";
+import { NotificationBell } from "./NotificationBell";
 import { UploadContext, type UploadMode } from "./upload-context";
 import { UploadModal, type PendingFile } from "./UploadModal";
 
@@ -171,6 +172,7 @@ export function AppLayout() {
                   Hochladen
                 </Button>
               )}
+              <NotificationBell />
               <ColorSchemeToggle />
               <Menu position="bottom-end" withinPortal>
                 <Menu.Target>

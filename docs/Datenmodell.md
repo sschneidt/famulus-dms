@@ -59,6 +59,7 @@ Ein Mandant. Wird über den Einrichtungsassistenten angelegt (Anforderungsdokume
 | id | UUID, PK | |
 | name | text | Haushaltsname, z. B. "Familie Müller" |
 | default_language | enum(de, en, …) | Standardsprache für OCR/UI, erweiterbar |
+| mail_settings | jsonb, nullable | E-Mail-Versand des Haushalts (0013): host, port, security (starttls/ssl/none), username, password (verschlüsselt, Schlüssel aus `JWT_SECRET` abgeleitet), sender, app_url (für Links), last_ok_at, last_error |
 | created_at | timestamp | |
 
 ### 3.2 User
@@ -73,7 +74,9 @@ Ein Haushaltsmitglied. Gehört genau einem Tenant an (kein Cross-Tenant-Zugriff 
 | display_name | text | |
 | role | enum(admin, member) | Admin verwaltet Haushalt, Nutzer, Kategorien; Member unterliegt Rechte-Modell (3.6) |
 | locale | text | Sprache der Oberfläche |
-| notification_channels | jsonb | z. B. `{"in_app": true, "email": true, "push": false}` |
+| notification_channels | jsonb | z. B. `{"in_app": true, "email": true, "push": false}` – In-App immer an |
+| digest_hour | smallint, default 7 | Uhrzeit der täglichen Zusammenfassung (Ortszeit `TZ`), 0013 |
+| last_digest_on, last_digest_at | date, timestamp | zuletzt erstellte Zusammenfassung – höchstens eine pro Tag; „neu seit“ zählt ab `last_digest_at` |
 | created_at, last_login_at | timestamp | |
 | is_active | bool | deaktiviert statt gelöscht (Migration 0009) |
 | failed_logins, locked_until | int, timestamp | Sperre nach Fehlversuchen (0012, `Sicherheitskonzept.md`) |
@@ -194,6 +197,7 @@ Damit muss ein Admin nur für die wenigen sensiblen Kategorien (z. B. Gesundheit
 | assigned_user_id | UUID, FK → User, nullable | zuständige Person; Default = `Document.owner_user_id` |
 | created_by_user_id | UUID, FK → User, nullable | null = System/KI |
 | reminder_lead_days | int, default 30 | Vorlauf für die Benachrichtigung vor `due_date` |
+| reminder_stage, reminded_on | smallint, date | zuletzt gemeldete Erinnerungsstufe (1 Vorlauf, 2 eine Woche, 3 morgen, 4 heute, 5 überfällig – dann wöchentlich) und wann; ein neuer Termin oder Vorlauf setzt sie zurück (0013) |
 | completed_at | timestamp, nullable | |
 | completed_by_user_id | UUID, FK, nullable | |
 | created_at, updated_at | timestamp | |
@@ -228,9 +232,14 @@ Wird eine wiederkehrende Wiedervorlage als `erledigt` markiert, erzeugt das Back
 
 ### 3.10 Benachrichtigungen
 
-**Notification**: id, tenant_id, user_id, type (enum: new_document, wiedervorlage_due, wiedervorlage_vorschlag, needs_review, …), channel (enum: in_app, email, push), payload (jsonb, u. a. Referenz auf `wiedervorlage_id`), status (enum: unread, read, sent, failed), created_at.
+**Notification**: id, tenant_id, user_id, type (enum: new_document, wiedervorlage_due, wiedervorlage_vorschlag, needs_review, digest, test), channel (enum: in_app, email, push), payload (jsonb, u. a. Referenz auf `wiedervorlage_id`), status (enum: unread, read, sent, failed, pending), created_at; seit 0013 zusätzlich sent_at, attempts, error.
 
-**PushSubscription**: id, user_id (FK), endpoint, keys (jsonb, Web-Push-Schlüssel), created_at.
+- `in_app`-Zeilen sind das Benachrichtigungscenter (Glocke): je fälligem Termin eine Zeile, dazu je eine Sammelzeile für neue Fristvorschläge, Dokumente zum Prüfen und neue Scan-Ordner-Dokumente. Gelesene werden nach 60 Tagen gelöscht.
+- `email`/`push`-Zeilen (type `digest`) sind die zu verschickende Zusammenfassung: `pending`, bis sie raus ist; bei Fehlern bis zu 6 Versuche im 15-Minuten-Takt, danach `failed`.
+
+**PushSubscription**: id, user_id (FK), endpoint (eindeutig), keys (jsonb, Web-Push-Schlüssel p256dh/auth), created_at; seit 0013 user_agent (Gerätename), last_success_at, last_error. Meldet der Push-Dienst 404/410, wird das Abo gelöscht.
+
+**AppSetting** (0013): key (PK), value (jsonb), updated_at – serverweite Werte, die mit der Datenbank gesichert werden. Derzeit `vapid`: der Schlüssel, mit dem HomeDMS Push-Nachrichten signiert. Ginge er verloren, müsste jedes Gerät Push neu einschalten.
 
 ### 3.11 KI-Chat-Assistent
 

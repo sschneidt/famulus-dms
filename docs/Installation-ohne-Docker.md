@@ -96,6 +96,10 @@ Zu sichern sind drei Dinge:
 
 Unter Windows eignen sich der Dateiversionsverlauf oder eine Aufgabe mit `pg_dump`, unter Linux z. B. `restic`/`borg` plus `pg_dump` per Cron.
 
+## Erinnerungen (E-Mail/Push)
+
+Die Uhrzeit der täglichen Zusammenfassung richtet sich nach `TZ` in `homedms.env` (Standard `Europe/Berlin`). Für Push braucht der Server ausgehenden Internetzugang (zu den Push-Diensten von Google, Apple, Mozilla bzw. Microsoft), für E-Mail Zugang zum Mailserver (Port 587 oder 465).
+
 ## Stand und Grenzen (03.10.2026)
 
 - **Linux:** Getestet ist der Starter selbst mit frischer Datenbank ohne pgvector: Upload, Texterkennung, Ablage, Suche, Worker-Neustart, Meilisearch als Hilfsprozess und Beenden. Das Installationsskript ist nur statisch geprüft (`bash -n`, shellcheck).

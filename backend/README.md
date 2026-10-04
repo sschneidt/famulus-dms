@@ -231,6 +231,11 @@ ergänzen). `0003` stellt alle Zeitstempel auf "mit Zeitzone" um.
   (PostgreSQL-basierte Job-Queue, kein Redis nötig - siehe
   `docs/Docker-Compose-Entwurf.md` Abschnitt 2) und einem Platzhalter-Task (`ping`), der
   die Verkabelung (DB-Verbindung, Worker-Start) end-to-end beweist.
+- **Erinnerungen / Benachrichtigungen (04.10.2026):** tägliche Zusammenfassung je Person
+  (`core/notifications.py`, Stufenregeln in `core/reminders.py`, Task `send_reminders` alle
+  15 Minuten) in der Glocke, per E-Mail (`core/mailer.py`, SMTP des Haushalts) und per Web-Push
+  (`core/webpush.py`, RFC 8291/8292 ohne Zusatzbibliothek); Endpunkte unter `/notifications`
+  und `/tenant/mail`.
 - **Tests:** siehe oben.
 
 ## Was noch fehlt (nächste Schritte)
@@ -242,12 +247,9 @@ Die übrigen Endpunkte aus `docs/API-Design.md` folgen schrittweise, u. a.:
 - **KI (Rest):** KI-Einstellungen per API (`/ai-config`), Kalibrierung der Schwellenwerte an
   echten Dokumenten, erneute Verarbeitung auf Knopfdruck (z. B. nach einem KI-Ausfall), Ablage
   der Dateien nach Kategorie.
-- **Erinnerungen:** fällige Wiedervorlagen (`reminder_lead_days` vorher) über Benachrichtigungen
-  melden (In-App, E-Mail, Web-Push) - siehe Benachrichtigungen.
 - **Massen-Umkategorisierung** (`POST /documents/bulk-reclassify`) und Zugriffs-Ausnahmen verwalten
   (`GET/PUT /documents/{id}/access`) - Modelle (`DocumentAccessOverride`) existieren bereits, nur
   die Endpunkte dafür fehlen noch.
-- **Benachrichtigungen** (In-App, E-Mail, Web-Push) inkl. `PushSubscription`-Verwaltung.
 - **KI-Chat-Assistent** (`ChatSession`/`ChatMessage`, Bibliotheks-weite Fragen +
   Massen-Umkategorisierung).
 - **KI-Konfiguration** (`/ai-config/*`, inkl. Modell-Download-Status für den

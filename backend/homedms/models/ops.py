@@ -1,8 +1,8 @@
-"""ImportSource, Notification, PushSubscription - Datenmodell 3.9 / 3.10."""
+"""ImportSource, Notification, PushSubscription, AppSetting - Datenmodell 3.9 / 3.10."""
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, Enum as SAEnum, ForeignKey, String, DateTime, func
+from sqlalchemy import Boolean, Enum as SAEnum, ForeignKey, SmallInteger, String, Text, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,16 +28,20 @@ class Notification(Base, UUIDPKMixin):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     type: Mapped[str] = mapped_column(
         SAEnum(
-            "new_document", "wiedervorlage_due", "wiedervorlage_vorschlag", "needs_review",
+            "new_document", "wiedervorlage_due", "wiedervorlage_vorschlag", "needs_review", "digest", "test",
             name="notification_type",
         )
     )
     channel: Mapped[str] = mapped_column(SAEnum("in_app", "email", "push", name="notification_channel"))
     payload: Mapped[dict] = mapped_column(JSONB, default=dict)
     status: Mapped[str] = mapped_column(
-        SAEnum("unread", "read", "sent", "failed", name="notification_status"), default="unread"
+        SAEnum("unread", "read", "sent", "failed", "pending", name="notification_status"), default="unread"
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # E-Mail/Push (0013): "pending" bis verschickt; bei Fehlern mehrere Versuche (core/notifications.py)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    attempts: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class PushSubscription(Base, UUIDPKMixin):
@@ -47,3 +51,17 @@ class PushSubscription(Base, UUIDPKMixin):
     endpoint: Mapped[str] = mapped_column(String(1000))
     keys: Mapped[dict] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    user_agent: Mapped[str | None] = mapped_column(String(300), nullable=True)  # Geraetename (0013)
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class AppSetting(Base):
+    """Serverweite Werte, die mit der Datenbank gesichert werden sollen (z. B. Web-Push-Schluessel:
+    geht er verloren, muesste jedes Geraet Push neu einschalten)."""
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    value: Mapped[dict] = mapped_column(JSONB)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

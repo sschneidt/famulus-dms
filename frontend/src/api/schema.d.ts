@@ -1070,6 +1070,151 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/notifications": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Notifications */
+    get: operations["list_notifications_api_v1_notifications_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/notifications/{notification_id}/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mark Read */
+    post: operations["mark_read_api_v1_notifications__notification_id__read_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/notifications/read-all": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Mark All Read */
+    post: operations["mark_all_read_api_v1_notifications_read_all_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/notifications/settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Notification Settings */
+    get: operations["get_notification_settings_api_v1_notifications_settings_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Update Notification Settings */
+    patch: operations["update_notification_settings_api_v1_notifications_settings_patch"];
+    trace?: never;
+  };
+  "/api/v1/notifications/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Send Test
+     * @description Testnachricht sofort verschicken - zeigt den echten Fehler, falls es nicht klappt.
+     */
+    post: operations["send_test_api_v1_notifications_test_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/notifications/push-subscriptions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Subscribe Push
+     * @description Dieses Geraet fuer Push anmelden (und Push fuer die Person einschalten).
+     */
+    post: operations["subscribe_push_api_v1_notifications_push_subscriptions_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/notifications/push-subscriptions/{subscription_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Unsubscribe Push */
+    delete: operations["unsubscribe_push_api_v1_notifications_push_subscriptions__subscription_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/tenant/mail": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Mail Settings */
+    get: operations["get_mail_settings_api_v1_tenant_mail_get"];
+    /** Save Mail Settings */
+    put: operations["save_mail_settings_api_v1_tenant_mail_put"];
+    post?: never;
+    /** Delete Mail Settings */
+    delete: operations["delete_mail_settings_api_v1_tenant_mail_delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1667,6 +1812,80 @@ export interface components {
       /** Password */
       password: string;
     };
+    /** MailSettings */
+    MailSettings: {
+      /** Configured */
+      configured: boolean;
+      /**
+       * Host
+       * @default
+       */
+      host: string;
+      /**
+       * Port
+       * @default 587
+       */
+      port: number;
+      /**
+       * Security
+       * @default starttls
+       * @enum {string}
+       */
+      security: "starttls" | "ssl" | "none";
+      /**
+       * Username
+       * @default
+       */
+      username: string;
+      /**
+       * Password Set
+       * @default false
+       */
+      password_set: boolean;
+      /**
+       * Sender
+       * @default
+       */
+      sender: string;
+      /**
+       * App Url
+       * @default
+       */
+      app_url: string;
+      /** Last Ok At */
+      last_ok_at?: string | null;
+      /** Last Error */
+      last_error?: string | null;
+    };
+    /** MailSettingsUpdate */
+    MailSettingsUpdate: {
+      /** Host */
+      host: string;
+      /** Port */
+      port: number;
+      /**
+       * Security
+       * @enum {string}
+       */
+      security: "starttls" | "ssl" | "none";
+      /**
+       * Username
+       * @default
+       */
+      username: string;
+      /** Password */
+      password?: string | null;
+      /**
+       * Sender
+       * Format: email
+       */
+      sender: string;
+      /**
+       * App Url
+       * @default
+       */
+      app_url: string;
+    };
     /** MeResponse */
     MeResponse: {
       /**
@@ -1700,6 +1919,64 @@ export interface components {
        * @default false
        */
       two_factor_enabled: boolean;
+    };
+    /** NotificationItem */
+    NotificationItem: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Type */
+      type: string;
+      /** Title */
+      title: string;
+      /** Body */
+      body: string;
+      /** Url */
+      url: string;
+      /** Read */
+      read: boolean;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+    };
+    /** NotificationList */
+    NotificationList: {
+      /** Items */
+      items: components["schemas"]["NotificationItem"][];
+      /** Unread */
+      unread: number;
+    };
+    /** NotificationSettings */
+    NotificationSettings: {
+      /** Email */
+      email: boolean;
+      /** Push */
+      push: boolean;
+      /** Digest Hour */
+      digest_hour: number;
+      /** Email Address */
+      email_address: string;
+      /** Email Available */
+      email_available: boolean;
+      /** Push Public Key */
+      push_public_key: string;
+      /** Push Devices */
+      push_devices: components["schemas"]["PushDevice"][];
+      /** Timezone */
+      timezone: string;
+    };
+    /** NotificationSettingsUpdate */
+    NotificationSettingsUpdate: {
+      /** Email */
+      email?: boolean | null;
+      /** Push */
+      push?: boolean | null;
+      /** Digest Hour */
+      digest_hour?: number | null;
     };
     /**
      * OcrStatus
@@ -1782,6 +2059,40 @@ export interface components {
     PropertyUpdate: {
       /** Name */
       name: string;
+    };
+    /** PushDevice */
+    PushDevice: {
+      /**
+       * Id
+       * Format: uuid
+       */
+      id: string;
+      /** Name */
+      name: string;
+      /** Endpoint */
+      endpoint: string;
+      /**
+       * Created At
+       * Format: date-time
+       */
+      created_at: string;
+      /** Last Success At */
+      last_success_at?: string | null;
+      /** Last Error */
+      last_error?: string | null;
+    };
+    /** PushKeys */
+    PushKeys: {
+      /** P256Dh */
+      p256dh: string;
+      /** Auth */
+      auth: string;
+    };
+    /** PushSubscriptionCreate */
+    PushSubscriptionCreate: {
+      /** Endpoint */
+      endpoint: string;
+      keys: components["schemas"]["PushKeys"];
     };
     /** RecoveryCodes */
     RecoveryCodes: {
@@ -1888,6 +2199,21 @@ export interface components {
        * @default false
        */
       current: boolean;
+    };
+    /** TestRequest */
+    TestRequest: {
+      /**
+       * Channel
+       * @enum {string}
+       */
+      channel: "email" | "push";
+    };
+    /** TestResult */
+    TestResult: {
+      /** Ok */
+      ok: boolean;
+      /** Message */
+      message: string;
     };
     /**
      * TokenResponse
@@ -4344,6 +4670,307 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_notifications_api_v1_notifications_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationList"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  mark_read_api_v1_notifications__notification_id__read_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        notification_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  mark_all_read_api_v1_notifications_read_all_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  get_notification_settings_api_v1_notifications_settings_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationSettings"];
+        };
+      };
+    };
+  };
+  update_notification_settings_api_v1_notifications_settings_patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NotificationSettingsUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationSettings"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  send_test_api_v1_notifications_test_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TestRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TestResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  subscribe_push_api_v1_notifications_push_subscriptions_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PushSubscriptionCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationSettings"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  unsubscribe_push_api_v1_notifications_push_subscriptions__subscription_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subscription_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationSettings"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  get_mail_settings_api_v1_tenant_mail_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MailSettings"];
+        };
+      };
+    };
+  };
+  save_mail_settings_api_v1_tenant_mail_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MailSettingsUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MailSettings"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_mail_settings_api_v1_tenant_mail_delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MailSettings"];
         };
       };
     };

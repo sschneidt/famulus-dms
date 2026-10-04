@@ -26,6 +26,7 @@ dependencies = [
     "cryptography>=43",
     "pyotp>=2.9",
     "segno>=1.6",
+    "tzdata>=2024.1",  # Zeitzonen fuer die Erinnerungs-Uhrzeit (Windows hat keine eingebaute Datenbank)
 ]
 
 [project.optional-dependencies]

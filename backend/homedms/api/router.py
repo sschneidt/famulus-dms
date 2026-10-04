@@ -11,6 +11,7 @@ from homedms.api.routes import (
     documents,
     household,
     import_sources,
+    notifications,
     pages,
     properties,
     retention_rules,
@@ -34,3 +35,5 @@ api_router.include_router(retention_rules.router)
 api_router.include_router(properties.router)
 api_router.include_router(import_sources.router)
 api_router.include_router(system.router)
+api_router.include_router(notifications.router)
+api_router.include_router(notifications.mail_router)

@@ -13,7 +13,7 @@ from homedms.models.document import (
 )
 from homedms.models.classification import AIModelConfig, CategoryExemplar, ClassificationEvent
 from homedms.models.wiedervorlage import RetentionRule, Wiedervorlage
-from homedms.models.ops import ImportSource, Notification, PushSubscription
+from homedms.models.ops import AppSetting, ImportSource, Notification, PushSubscription
 from homedms.models.chat import ChatMessage, ChatSession
 
 __all__ = [
@@ -36,6 +36,7 @@ __all__ = [
     "RetentionRule",
     "ImportSource",
     "Notification",
+    "AppSetting",
     "PushSubscription",
     "ChatSession",
     "ChatMessage",

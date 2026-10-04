@@ -124,10 +124,17 @@ HTTP-Seite (Port 8000, nicht unter `/api`): `/zertifikat` (Anleitung + QR-Code),
 
 | Methode | Pfad | Zweck | Rolle |
 |---|---|---|---|
-| GET | `/notifications` | Eigene Benachrichtigungen (Filter: `status`) | angemeldet |
+| GET | `/notifications` | Benachrichtigungscenter (Glocke): neueste zuerst, mit `unread`; Titel/Text/Link fertig formuliert | angemeldet |
 | POST | `/notifications/{id}/read` | Als gelesen markieren | angemeldet (eigene) |
-| POST | `/push-subscriptions` | Web-Push-Endpoint registrieren | angemeldet |
-| DELETE | `/push-subscriptions/{id}` | Push-Abo entfernen | angemeldet (eigene) |
+| POST | `/notifications/read-all` | Alle als gelesen markieren | angemeldet |
+| GET | `/notifications/settings` | Eigene Einstellungen: `email`, `push`, `digest_hour`, ob E-Mail-Versand eingerichtet ist, VAPID-Schlüssel, Geräte mit Push | angemeldet |
+| PATCH | `/notifications/settings` | `email`, `push`, `digest_hour` (0–23) ändern | angemeldet |
+| POST | `/notifications/test` | Testnachricht sofort schicken (`channel`: email/push); Antwort `{ok, message}` mit dem echten Fehler | angemeldet |
+| POST | `/notifications/push-subscriptions` | Dieses Gerät für Push anmelden (`endpoint`, `keys`); nur bekannte Push-Dienste (Google, Apple, Mozilla, Microsoft) | angemeldet |
+| DELETE | `/notifications/push-subscriptions/{id}` | Push auf einem Gerät beenden | angemeldet (eigene) |
+| GET / PUT / DELETE | `/tenant/mail` | E-Mail-Versand des Haushalts (SMTP); das Passwort wird nie zurückgegeben, `password: null` behält es | Admin |
+
+Umsetzung 04.10.2026: Die Erinnerungen entstehen als tägliche Zusammenfassung im Hintergrund (Task `send_reminders`, alle 15 Minuten, `core/notifications.py`), nicht über einzelne API-Aufrufe.
 
 ## 10. KI-Konfiguration
 

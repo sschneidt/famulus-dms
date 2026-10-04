@@ -33,6 +33,8 @@ export default defineConfig({
         // (sie sollen immer aktuell sein und nicht unbemerkt auf dem Geraet liegen bleiben).
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api\//, /^\/docs/, /^\/redoc/, /^\/openapi\.json/, /^\/health/],
+        // Push-Benachrichtigungen anzeigen und beim Antippen die App oeffnen (public/push-sw.js)
+        importScripts: ["push-sw.js"],
       },
     }),
   ],
