@@ -17,6 +17,7 @@ import numpy as np
 from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from homedms.i18n import N_
 from homedms.ai.classifier import (
     CategoryScore,
     accept_llm,
@@ -136,7 +137,7 @@ async def classify_document(document_id: str) -> None:
 
         text = (document.ocr_text or "").strip()
         if not text:
-            needs_review("embedding", "Kein erkannter Text - bitte Kategorie manuell zuordnen.")
+            needs_review("embedding", N_("Kein erkannter Text - bitte Kategorie manuell zuordnen."))
             await db.commit()
             return
 

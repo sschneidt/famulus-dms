@@ -2,10 +2,12 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach } from "vitest";
 import { tokenStore } from "../api/client";
+import { setLanguage } from "../i18n"; // Tests laufen auf Deutsch
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   tokenStore.clear();
+  await setLanguage("de", false); // ein Test hat evtl. umgeschaltet
   window.localStorage.clear();
 });
 

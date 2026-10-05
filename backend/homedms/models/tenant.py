@@ -23,6 +23,8 @@ class Tenant(Base, UUIDPKMixin, TimestampMixin):
     # E-Mail-Versand (0013, core/mailer.py): host, port, security, username, password (verschluesselt),
     # sender, app_url (fuer Links in der E-Mail). None = kein E-Mail-Versand eingerichtet.
     mail_settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Sprachen der Texterkennung (0014, core/ocr_languages.py), z. B. ["deu", "eng"]; None = Standard
+    ocr_languages: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
     users: Mapped[list["User"]] = relationship(back_populates="tenant")
 

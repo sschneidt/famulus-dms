@@ -13,11 +13,12 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from homedms.i18n import _, _n
 from homedms.api.deps import get_current_user, require_admin
 from homedms.api.routes.auth import device_name
 from homedms.config import get_settings
 from homedms.core import mailer, notifications, webpush
-from homedms.core.reminders import ReminderItem, when
+from homedms.core.reminders import ReminderItem, note_label, when
 from homedms.db import get_db
 from homedms.models.ops import Notification, PushSubscription
 from homedms.models.tenant import Tenant, User
@@ -52,19 +53,22 @@ def render(note: Notification) -> NotificationItem:
         due = date.fromisoformat(p["due_date"])
         item = ReminderItem(p.get("wiedervorlage_id", ""), p.get("document_id", ""), p.get("document_title", ""),
                             p.get("note", ""), due, (due - today()).days, p.get("stage", 0))
-        title, url = item.note or "Termin", f"/dokumente/{item.document_id}"
-        body = f"{item.document_title or 'Dokument'}: {when(item)}"
+        title, url = note_label(item.note), f"/dokumente/{item.document_id}"
+        body = f"{item.document_title or _('Dokument')}: {when(item)}"
     elif note.type == "wiedervorlage_vorschlag":
         n = p.get("count", 0)
-        title = "Neue Fristvorschläge" if n != 1 else "Neuer Fristvorschlag"
-        body, url = f"Die KI hat {n} Frist{'' if n == 1 else 'en'} erkannt – bitte bestätigen.", "/termine"
+        title = _n("Neuer Fristvorschlag", "Neue Fristvorschläge", n)
+        body, url = _n("Die KI hat {count} Frist erkannt – bitte bestätigen.",
+                       "Die KI hat {count} Fristen erkannt – bitte bestätigen.", n), "/termine"
     elif note.type == "needs_review":
         n = p.get("count", 0)
-        title, url = "Kategorie prüfen", "/pruefen"
-        body = f"{n} neue{'s' if n == 1 else ''} Dokument{' wartet' if n == 1 else 'e warten'} auf eine Einordnung."
+        title, url = _("Kategorie prüfen"), "/pruefen"
+        body = _n("{count} neues Dokument wartet auf eine Einordnung.", "{count} neue Dokumente warten auf eine Einordnung.", n)
     elif note.type == "new_document":
         n = p.get("count", 0)
-        title, body, url = "Neue Dokumente", f"{n} Dokument{' ist' if n == 1 else 'e sind'} über den Scan-Ordner eingegangen.", "/"
+        title, url = _("Neue Dokumente"), "/"
+        body = _n("{count} Dokument ist über den Scan-Ordner eingegangen.",
+                  "{count} Dokumente sind über den Scan-Ordner eingegangen.", n)
     else:
         title, body, url = p.get("title", "HomeDMS"), p.get("body", ""), p.get("url", "/")
     return NotificationItem(id=note.id, type=note.type, title=title, body=body, url=url,
@@ -89,7 +93,7 @@ async def list_notifications(
 async def mark_read(notification_id: uuid.UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> None:
     note = await db.get(Notification, notification_id)
     if note is None or note.user_id != user.id or note.channel != "in_app":
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Benachrichtigung nicht gefunden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Benachrichtigung nicht gefunden"))
     note.status = "read"
     await db.commit()
 
@@ -149,15 +153,15 @@ async def send_test(payload: TestRequest, user: User = Depends(get_current_user)
     try:
         if payload.channel == "email":
             await notifications.send_email(
-                db, user, "HomeDMS: Testnachricht",
-                "Hallo,\n\ndiese Testnachricht zeigt: Der E-Mail-Versand von HomeDMS funktioniert.\n"
-                "Erinnerungen kommen ab jetzt einmal täglich, wenn etwas ansteht.\n", None)
-            message = f"Test-E-Mail an {user.email} verschickt."
+                db, user, _("HomeDMS: Testnachricht"),
+                _("Hallo,") + "\n\n" + _("diese Testnachricht zeigt: Der E-Mail-Versand von HomeDMS funktioniert.") + "\n"
+                + _("Erinnerungen kommen ab jetzt einmal täglich, wenn etwas ansteht.") + "\n", None)
+            message = _("Test-E-Mail an {email} verschickt.", email=user.email)
         else:
             count = await notifications.send_push(db, user, {
-                "title": "HomeDMS: Testnachricht", "body": "Push funktioniert auf diesem Gerät.", "url": "/konto",
+                "title": _("HomeDMS: Testnachricht"), "body": _("Push funktioniert auf diesem Gerät."), "url": "/konto",
                 "tag": "homedms-test"})
-            message = f"Testnachricht an {count} Gerät{'e' if count != 1 else ''} geschickt."
+            message = _n("Testnachricht an {count} Gerät geschickt.", "Testnachricht an {count} Geräte geschickt.", count)
     except (mailer.MailError, webpush.PushError) as exc:
         note.status, note.error = "failed", str(exc)
         db.add(note)
@@ -175,7 +179,7 @@ def _check_endpoint(endpoint: str) -> None:
     parts = urlsplit(endpoint)
     host = (parts.hostname or "").lower()
     if parts.scheme != "https" or not any(host.endswith(s) or host == s[1:] for s in PUSH_HOST_SUFFIXES):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Unbekannter Push-Dienst")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Unbekannter Push-Dienst"))
 
 
 @router.post("/push-subscriptions", response_model=NotificationSettings, status_code=status.HTTP_201_CREATED)
@@ -188,7 +192,7 @@ async def subscribe_push(
     try:
         webpush.encrypt(b"x", payload.keys.p256dh, payload.keys.auth)  # Schluessel brauchbar?
     except ValueError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Ungültige Push-Schlüssel") from exc
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Ungültige Push-Schlüssel")) from exc
     sub = await db.scalar(select(PushSubscription).where(PushSubscription.endpoint == payload.endpoint))
     if sub is not None and sub.user_id != user.id:
         await db.delete(sub)  # Geraet wechselt die Person (Abmelden/Anmelden im selben Browser)
@@ -197,7 +201,7 @@ async def subscribe_push(
     if sub is None:
         count = await db.scalar(select(func.count()).select_from(PushSubscription).where(PushSubscription.user_id == user.id))
         if count >= MAX_DEVICES:
-            raise HTTPException(status.HTTP_409_CONFLICT, f"Höchstens {MAX_DEVICES} Geräte - bitte zuerst eines entfernen")
+            raise HTTPException(status.HTTP_409_CONFLICT, _("Höchstens {count} Geräte - bitte zuerst eines entfernen", count=MAX_DEVICES))
         sub = PushSubscription(user_id=user.id, endpoint=payload.endpoint)
         db.add(sub)
     sub.keys = payload.keys.model_dump()
@@ -214,7 +218,7 @@ async def unsubscribe_push(
 ) -> NotificationSettings:
     sub = await db.get(PushSubscription, subscription_id)
     if sub is None or sub.user_id != user.id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Gerät nicht gefunden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Gerät nicht gefunden"))
     await db.delete(sub)
     await db.flush()
     left = await db.scalar(select(func.count()).select_from(PushSubscription).where(PushSubscription.user_id == user.id))
@@ -248,7 +252,7 @@ async def save_mail_settings(
 ) -> MailSettings:
     app_url = payload.app_url.strip().rstrip("/")
     if app_url and urlsplit(app_url).scheme not in ("http", "https"):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Adresse der App muss mit https:// beginnen")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Adresse der App muss mit https:// beginnen"))
     tenant = await db.get(Tenant, user.tenant_id)
     old = tenant.mail_settings or {}
     if payload.password is None:

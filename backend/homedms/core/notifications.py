@@ -25,6 +25,7 @@ from homedms.config import get_settings
 from homedms.core import mailer, webpush
 from homedms.core.reminders import Digest, ReminderItem, should_remind, stage_for
 from homedms.core.visibility import visible_documents_expr
+from homedms.i18n import _, use_language
 from homedms.models.document import ClassificationStatus, Document, DocumentSource
 from homedms.models.ops import Notification, PushSubscription
 from homedms.models.tenant import Tenant, User, UserRole
@@ -139,6 +140,19 @@ async def create_digest(db: AsyncSession, user: User, tenant: Tenant, now: datet
     local = local_now(now)
     since = user.last_digest_at or (now - timedelta(days=1))
     digest, marks = await collect(db, user, local.date(), since)
+    with use_language(user.locale):  # E-Mail und Push in der Sprache der Person
+        await _queue(db, user, tenant, digest)
+    for wv, stage in marks:
+        wv.reminder_stage = stage
+        wv.reminded_on = local.date()
+    user.last_digest_on = local.date()
+    user.last_digest_at = now
+    await db.commit()
+    return digest
+
+
+async def _queue(db: AsyncSession, user: User, tenant: Tenant, digest: Digest) -> None:
+    """App-Eintraege anlegen und E-Mail/Push zum Versand vormerken (Texte fertig in der Sprache der Person)."""
     if not digest.is_empty:
         db.add_all(_in_app(user, digest))
         wanted = channels(user)
@@ -148,19 +162,11 @@ async def create_digest(db: AsyncSession, user: User, tenant: Tenant, now: datet
             db.add(Notification(tenant_id=user.tenant_id, user_id=user.id, type="digest", channel="email",
                                 status="pending", payload={"subject": digest.subject(),
                                                            "text": digest.text(app_url), "html": digest.html(app_url)}))
-        if wanted["push"]:
-            has_device = await db.scalar(select(func.count()).select_from(PushSubscription)
-                                         .where(PushSubscription.user_id == user.id))
-            if has_device:
-                db.add(Notification(tenant_id=user.tenant_id, user_id=user.id, type="digest", channel="push",
-                                    status="pending", payload={"message": digest.push()}))
-    for wv, stage in marks:
-        wv.reminder_stage = stage
-        wv.reminded_on = local.date()
-    user.last_digest_on = local.date()
-    user.last_digest_at = now
-    await db.commit()
-    return digest
+        has_device = wanted["push"] and await db.scalar(
+            select(func.count()).select_from(PushSubscription).where(PushSubscription.user_id == user.id))
+        if has_device:
+            db.add(Notification(tenant_id=user.tenant_id, user_id=user.id, type="digest", channel="push",
+                                status="pending", payload={"message": digest.push()}))
 
 
 async def run_digests(db: AsyncSession, now: datetime | None = None) -> int:
@@ -206,7 +212,7 @@ async def send_push(db: AsyncSession, user: User, message: dict) -> int:
     kein Geraet erreicht wurde, aber es welche gibt."""
     subs = (await db.execute(select(PushSubscription).where(PushSubscription.user_id == user.id))).scalars().all()
     if not subs:
-        raise webpush.PushError("Auf keinem Gerät ist Push eingeschaltet")
+        raise webpush.PushError(_("Auf keinem Gerät ist Push eingeschaltet"))
     vapid = await webpush.get_vapid(db)
     ok, errors = 0, []
     for sub in subs:
@@ -223,12 +229,17 @@ async def send_push(db: AsyncSession, user: User, message: dict) -> int:
         sub.last_error = None
         ok += 1
     if not ok:
-        raise webpush.PushError(errors[0] if errors else "Push wurde auf allen Geräten abbestellt")
+        raise webpush.PushError(errors[0] if errors else _("Push wurde auf allen Geräten abbestellt"))
     return ok
 
 
 async def deliver(db: AsyncSession, note: Notification) -> None:
     user = await db.get(User, note.user_id)
+    with use_language(user.locale):  # Fehlermeldungen in der Sprache der Person
+        await _deliver(db, user, note)
+
+
+async def _deliver(db: AsyncSession, user: User, note: Notification) -> None:
     note.attempts = (note.attempts or 0) + 1
     try:
         if note.channel == "email":

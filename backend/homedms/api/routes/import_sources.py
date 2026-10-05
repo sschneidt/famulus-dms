@@ -25,6 +25,7 @@ from homedms.schemas.import_source import (
     ScanFolderInfo,
 )
 from homedms.tasks.scanfolder import request_scan
+from homedms.i18n import _, translate_stored
 
 router = APIRouter(prefix="/import-sources", tags=["import-sources"])
 
@@ -33,7 +34,7 @@ def normalize_path(raw: str) -> str:
     """Unterordner relativ zum Scan-Ordner: "Familie/Scans" - kein "..", kein absoluter Pfad."""
     parts = [p for p in PurePosixPath(raw.replace("\\", "/").strip()).parts if p not in ("", ".", "/")]
     if any(p == ".." or p.startswith("_") or p.startswith("@") or p.startswith("#") for p in parts):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Ungueltiger Ordnername")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Ungueltiger Ordnername"))
     return "/".join(parts)
 
 
@@ -51,7 +52,7 @@ async def _check_overlap(db: AsyncSession, path: str, exclude: uuid.UUID | None 
         if other.id != exclude and overlaps(path, (other.config or {}).get("path", "")):
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
-                "Dieser Ordner ueberschneidet sich mit einem bereits eingerichteten Scan-Ordner",
+                _("Dieser Ordner ueberschneidet sich mit einem bereits eingerichteten Scan-Ordner"),
             )
 
 
@@ -60,15 +61,22 @@ def _response(source: ImportSource) -> ImportSourceResponse:
     state = config.get("status") or {}
     return ImportSourceResponse(
         id=source.id, type=source.type, path=config.get("path", ""), is_active=source.is_active,
-        last_scanned_at=source.last_scanned_at, waiting=state.get("waiting", 0), error=state.get("error"),
-        recent=source.recent or [],
+        last_scanned_at=source.last_scanned_at, waiting=state.get("waiting", 0), error=translate_stored(state.get("error")),
+        recent=[_entry(e) for e in source.recent or []],
     )
+
+
+def _entry(entry: dict) -> dict:
+    """Protokolleintrag in der Sprache der Person (gespeichert ist Vorlage + Werte, aeltere nur Text)."""
+    key, params = entry.get("key"), entry.get("params") or {}
+    message = _(key, **params) if key else translate_stored(entry.get("message") or "")
+    return {**entry, "message": message}
 
 
 async def _get(db: AsyncSession, user: User, source_id: uuid.UUID) -> ImportSource:
     source = await db.get(ImportSource, source_id)
     if source is None or source.tenant_id != user.tenant_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Import-Quelle nicht gefunden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Import-Quelle nicht gefunden"))
     return source
 
 

@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, authFetch, call, onSessionExpired, SESSION_HEADER, tokenStore, type Me } from "../api/client";
+import { currentLanguage, isLanguage, setLanguage, takePendingChoice } from "../i18n";
 
 type AuthState =
   { status: "loading"; user: null } | { status: "anonymous"; user: null } | { status: "authenticated"; user: Me };
@@ -33,7 +34,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const user = await call(api.GET("/api/v1/auth/me"));
+      let user = await call(api.GET("/api/v1/auth/me"));
+      // Sprache: auf der Anmeldeseite gewaehlt -> ins Konto uebernehmen, sonst gilt die des Kontos
+      const chosen = takePendingChoice();
+      if (chosen && chosen !== user.locale) {
+        user = await call(api.PATCH("/api/v1/auth/me", { body: { locale: chosen } })).catch(() => user);
+      } else if (isLanguage(user.locale) && user.locale !== currentLanguage()) {
+        await setLanguage(user.locale);
+      }
       setState({ status: "authenticated", user });
     } catch {
       tokenStore.clear();

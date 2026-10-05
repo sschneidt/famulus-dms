@@ -35,6 +35,7 @@ import {
   IconUserPlus,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Schemas } from "../api/client";
 import { useCreateUser, useResetPassword, useUpdateUser, useUsers } from "../api/queries";
 import { useUser } from "../auth/AuthContext";
@@ -52,25 +53,27 @@ type Member = Schemas["UserResponse"];
  */
 export function UsersPage() {
   const me = useUser();
+  const { t } = useTranslation();
   const isAdmin = me.role === "admin";
   const users = useUsers(isAdmin);
   const [creating, setCreating] = useState(false);
   const [resetFor, setResetFor] = useState<Member | null>(null);
 
-  if (!isAdmin) return <Alert color="yellow">Benutzer können nur Administratoren verwalten.</Alert>;
+  if (!isAdmin) return <Alert color="yellow">{t("Benutzer können nur Administratoren verwalten.")}</Alert>;
 
   return (
     <Stack>
       <Group justify="space-between" align="flex-start" wrap="wrap">
         <div>
-          <Title order={2}>Benutzer</Title>
+          <Title order={2}>{t("Benutzer")}</Title>
           <Text c="dimmed" size="sm" maw={680}>
-            Wer HomeDMS nutzen darf. Mitglieder sehen und bearbeiten alle Dokumente des Haushalts (außer aus geschützten
-            Kategorien) und ihre eigenen. Admins verwalten zusätzlich Benutzer, Aufbewahrung und den Scan-Ordner.
+            {t(
+              "Wer HomeDMS nutzen darf. Mitglieder sehen und bearbeiten alle Dokumente des Haushalts (außer aus geschützten Kategorien) und ihre eigenen. Admins verwalten zusätzlich Benutzer, Aufbewahrung und den Scan-Ordner.",
+            )}
           </Text>
         </div>
         <Button leftSection={<IconUserPlus size={16} />} onClick={() => setCreating(true)}>
-          Mitglied hinzufügen
+          {t("Mitglied hinzufügen")}
         </Button>
       </Group>
 
@@ -87,7 +90,7 @@ export function UsersPage() {
           ))}
           {users.data.length === 1 && (
             <Text size="sm" c="dimmed">
-              Noch niemand außer dir – lege für jedes Familienmitglied ein eigenes Konto an.
+              {t("Noch niemand außer dir – lege für jedes Familienmitglied ein eigenes Konto an.")}
             </Text>
           )}
         </Stack>
@@ -102,27 +105,30 @@ export function UsersPage() {
 }
 
 function MemberCard({ member, isMe, onResetPassword }: { member: Member; isMe: boolean; onResetPassword(): void }) {
+  const { t } = useTranslation();
   const update = useUpdateUser();
   const isAdmin = member.role === "admin";
 
   const change = (body: Schemas["UserUpdate"], success: string) =>
     update.mutate(
       { id: member.id, body },
-      { onSuccess: () => notifySuccess(success), onError: (e) => notifyError(e, "Ändern nicht möglich") },
+      { onSuccess: () => notifySuccess(success), onError: (e) => notifyError(e, t("Ändern nicht möglich")) },
     );
 
   const confirmDeactivate = () =>
     modals.openConfirmModal({
-      title: `${member.display_name} deaktivieren?`,
+      title: t("{{name}} deaktivieren?", { name: member.display_name }),
       children: (
         <Text size="sm">
-          {member.display_name} kann sich danach nicht mehr anmelden und wird auf allen Geräten abgemeldet. Dokumente
-          und Termine bleiben erhalten; das Konto lässt sich jederzeit wieder aktivieren.
+          {t(
+            "{{name}} kann sich danach nicht mehr anmelden und wird auf allen Geräten abgemeldet. Dokumente und Termine bleiben erhalten; das Konto lässt sich jederzeit wieder aktivieren.",
+            { name: member.display_name },
+          )}
         </Text>
       ),
-      labels: { confirm: "Deaktivieren", cancel: "Abbrechen" },
+      labels: { confirm: t("Deaktivieren"), cancel: t("Abbrechen") },
       confirmProps: { color: "red" },
-      onConfirm: () => change({ is_active: false }, `${member.display_name} deaktiviert`),
+      onConfirm: () => change({ is_active: false }, t("{{name}} deaktiviert", { name: member.display_name })),
     });
 
   return (
@@ -136,14 +142,14 @@ function MemberCard({ member, isMe, onResetPassword }: { member: Member; isMe: b
             <Group gap={6} wrap="wrap">
               <Text fw={500} truncate>
                 {member.display_name}
-                {isMe && " (du)"}
+                {isMe && ` ${t("(du)")}`}
               </Text>
               <Badge size="xs" variant="light" color={isAdmin ? "blue" : "gray"}>
-                {isAdmin ? "Admin" : "Mitglied"}
+                {isAdmin ? t("Admin") : t("Mitglied")}
               </Badge>
               {!member.is_active && (
                 <Badge size="xs" color="red" variant="light">
-                  deaktiviert
+                  {t("deaktiviert")}
                 </Badge>
               )}
               {member.two_factor_enabled ? (
@@ -152,9 +158,9 @@ function MemberCard({ member, isMe, onResetPassword }: { member: Member; isMe: b
                 </Badge>
               ) : (
                 isAdmin && (
-                  <Tooltip label="Admin ohne Zwei-Faktor-Anmeldung – unter „Konto & Sicherheit“ einschalten">
+                  <Tooltip label={t("Admin ohne Zwei-Faktor-Anmeldung – unter „Konto & Sicherheit“ einschalten")}>
                     <Badge size="xs" color="orange" variant="light">
-                      ohne 2FA
+                      {t("ohne 2FA")}
                     </Badge>
                   </Tooltip>
                 )
@@ -165,13 +171,13 @@ function MemberCard({ member, isMe, onResetPassword }: { member: Member; isMe: b
             </Text>
             <Text size="xs" c="dimmed">
               {member.last_login_at
-                ? `Zuletzt angemeldet ${formatDateTime(member.last_login_at)}`
-                : "Noch nie angemeldet"}
+                ? t("Zuletzt angemeldet {{date}}", { date: formatDateTime(member.last_login_at) })
+                : t("Noch nie angemeldet")}
             </Text>
           </div>
         </Group>
         {isMe ? (
-          <Tooltip label="Eigenes Profil und Passwort: Benutzermenü oben rechts">
+          <Tooltip label={t("Eigenes Profil und Passwort: Benutzermenü oben rechts")}>
             <IconUser size={18} color="var(--mantine-color-dimmed)" />
           </Tooltip>
         ) : (
@@ -180,7 +186,7 @@ function MemberCard({ member, isMe, onResetPassword }: { member: Member; isMe: b
               <ActionIcon
                 variant="subtle"
                 color="gray"
-                aria-label={`Aktionen für ${member.display_name}`}
+                aria-label={t("Aktionen für {{name}}", { name: member.display_name })}
                 loading={update.isPending}
               >
                 <IconDots size={18} />
@@ -195,49 +201,53 @@ function MemberCard({ member, isMe, onResetPassword }: { member: Member; isMe: b
                       change(
                         { role: isAdmin ? "member" : "admin" },
                         isAdmin
-                          ? `${member.display_name} ist jetzt Mitglied`
-                          : `${member.display_name} ist jetzt Admin`,
+                          ? t("{{name}} ist jetzt Mitglied", { name: member.display_name })
+                          : t("{{name}} ist jetzt Admin", { name: member.display_name }),
                       )
                     }
                   >
-                    {isAdmin ? "Zum Mitglied machen" : "Zum Admin machen"}
+                    {isAdmin ? t("Zum Mitglied machen") : t("Zum Admin machen")}
                   </Menu.Item>
                   <Menu.Item leftSection={<IconKey size={16} />} onClick={onResetPassword}>
-                    Passwort zurücksetzen …
+                    {t("Passwort zurücksetzen …")}
                   </Menu.Item>
                   {member.two_factor_enabled && (
                     <Menu.Item
                       leftSection={<IconShieldOff size={16} />}
                       onClick={() =>
                         modals.openConfirmModal({
-                          title: `Zwei-Faktor von ${member.display_name} zurücksetzen?`,
+                          title: t("Zwei-Faktor von {{name}} zurücksetzen?", { name: member.display_name }),
                           children: (
                             <Text size="sm">
-                              Für den Fall, dass das Handy verloren ist: {member.display_name} meldet sich danach nur
-                              mit dem Passwort an und sollte die Zwei-Faktor-Anmeldung neu einrichten.
+                              {t(
+                                "Für den Fall, dass das Handy verloren ist: {{name}} meldet sich danach nur mit dem Passwort an und sollte die Zwei-Faktor-Anmeldung neu einrichten.",
+                                { name: member.display_name },
+                              )}
                             </Text>
                           ),
-                          labels: { confirm: "Zurücksetzen", cancel: "Abbrechen" },
+                          labels: { confirm: t("Zurücksetzen"), cancel: t("Abbrechen") },
                           confirmProps: { color: "red" },
-                          onConfirm: () => change({ reset_two_factor: true }, "Zwei-Faktor zurückgesetzt"),
+                          onConfirm: () => change({ reset_two_factor: true }, t("Zwei-Faktor zurückgesetzt")),
                         })
                       }
                     >
-                      Zwei-Faktor zurücksetzen …
+                      {t("Zwei-Faktor zurücksetzen …")}
                     </Menu.Item>
                   )}
                   <Menu.Divider />
                   <Menu.Item color="red" leftSection={<IconUserOff size={16} />} onClick={confirmDeactivate}>
-                    Deaktivieren …
+                    {t("Deaktivieren …")}
                   </Menu.Item>
                 </>
               )}
               {!member.is_active && (
                 <Menu.Item
                   leftSection={<IconRefresh size={16} />}
-                  onClick={() => change({ is_active: true }, `${member.display_name} ist wieder aktiv`)}
+                  onClick={() =>
+                    change({ is_active: true }, t("{{name}} ist wieder aktiv", { name: member.display_name }))
+                  }
                 >
-                  Wieder aktivieren
+                  {t("Wieder aktivieren")}
                 </Menu.Item>
               )}
             </Menu.Dropdown>
@@ -249,14 +259,16 @@ function MemberCard({ member, isMe, onResetPassword }: { member: Member; isMe: b
 }
 
 function CreateUserModal({ opened, onClose }: { opened: boolean; onClose(): void }) {
+  const { t } = useTranslation();
   return (
-    <Modal opened={opened} onClose={onClose} title="Mitglied hinzufügen">
+    <Modal opened={opened} onClose={onClose} title={t("Mitglied hinzufügen")}>
       {opened && <CreateUserForm onClose={onClose} />}
     </Modal>
   );
 }
 
 function CreateUserForm({ onClose }: { onClose(): void }) {
+  const { t } = useTranslation();
   const create = useCreateUser();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -274,48 +286,48 @@ function CreateUserForm({ onClose }: { onClose(): void }) {
         e.preventDefault();
         create.mutate(
           { display_name: name.trim(), email: email.trim(), password, role },
-          { onSuccess: setCreated, onError: (err) => notifyError(err, "Anlegen nicht möglich") },
+          { onSuccess: setCreated, onError: (err) => notifyError(err, t("Anlegen nicht möglich")) },
         );
       }}
     >
       <Stack>
         <TextInput
-          label="Name"
-          placeholder="z. B. Anna"
+          label={t("Name")}
+          placeholder={t("z. B. Anna")}
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
           data-autofocus
           required
         />
         <TextInput
-          label="E-Mail"
-          description="Damit meldet sich das Mitglied an"
+          label={t("E-Mail")}
+          description={t("Damit meldet sich das Mitglied an")}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.currentTarget.value)}
           required
         />
-        <PasswordField value={password} onChange={setPassword} label="Startpasswort" />
+        <PasswordField value={password} onChange={setPassword} label={t("Startpasswort")} />
         <div>
           <Text size="sm" fw={500} mb={4}>
-            Rolle
+            {t("Rolle")}
           </Text>
           <SegmentedControl
             fullWidth
             value={role}
             onChange={(v) => setRole(v as "member" | "admin")}
             data={[
-              { value: "member", label: "Mitglied" },
-              { value: "admin", label: "Admin" },
+              { value: "member", label: t("Mitglied") },
+              { value: "admin", label: t("Admin") },
             ]}
           />
         </div>
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
-            Abbrechen
+            {t("Abbrechen")}
           </Button>
           <Button type="submit" loading={create.isPending} disabled={!valid}>
-            Anlegen
+            {t("Anlegen")}
           </Button>
         </Group>
       </Stack>
@@ -324,14 +336,20 @@ function CreateUserForm({ onClose }: { onClose(): void }) {
 }
 
 function ResetPasswordModal({ member, onClose }: { member: Member | null; onClose(): void }) {
+  const { t } = useTranslation();
   return (
-    <Modal opened={member !== null} onClose={onClose} title={member ? `Neues Passwort für ${member.display_name}` : ""}>
+    <Modal
+      opened={member !== null}
+      onClose={onClose}
+      title={member ? t("Neues Passwort für {{name}}", { name: member.display_name }) : ""}
+    >
       {member && <ResetPasswordForm member={member} onClose={onClose} />}
     </Modal>
   );
 }
 
 function ResetPasswordForm({ member, onClose }: { member: Member; onClose(): void }) {
+  const { t } = useTranslation();
   const reset = useResetPassword();
   const [password, setPassword] = useState(generatePassword);
   const [done, setDone] = useState(false);
@@ -343,21 +361,23 @@ function ResetPasswordForm({ member, onClose }: { member: Member; onClose(): voi
         e.preventDefault();
         reset.mutate(
           { id: member.id, password },
-          { onSuccess: () => setDone(true), onError: (err) => notifyError(err, "Zurücksetzen nicht möglich") },
+          { onSuccess: () => setDone(true), onError: (err) => notifyError(err, t("Zurücksetzen nicht möglich")) },
         );
       }}
     >
       <Stack>
         <Text size="sm" c="dimmed">
-          {member.display_name} wird auf allen Geräten abgemeldet und meldet sich danach mit dem neuen Passwort an.
+          {t("{{name}} wird auf allen Geräten abgemeldet und meldet sich danach mit dem neuen Passwort an.", {
+            name: member.display_name,
+          })}
         </Text>
-        <PasswordField value={password} onChange={setPassword} label="Neues Passwort" />
+        <PasswordField value={password} onChange={setPassword} label={t("Neues Passwort")} />
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
-            Abbrechen
+            {t("Abbrechen")}
           </Button>
           <Button type="submit" loading={reset.isPending} disabled={password.length < 8}>
-            Passwort setzen
+            {t("Passwort setzen")}
           </Button>
         </Group>
       </Stack>
@@ -366,24 +386,25 @@ function ResetPasswordForm({ member, onClose }: { member: Member; onClose(): voi
 }
 
 function PasswordField({ value, onChange, label }: { value: string; onChange(v: string): void; label: string }) {
+  const { t } = useTranslation();
   return (
     <Group align="flex-end" gap="xs" wrap="nowrap">
       <PasswordInput
         label={label}
-        description="Mindestens 8 Zeichen – das Mitglied kann es später selbst ändern"
+        description={t("Mindestens 8 Zeichen – das Mitglied kann es später selbst ändern")}
         defaultVisible
         value={value}
         onChange={(e) => onChange(e.currentTarget.value)}
-        error={value.length > 0 && value.length < 8 ? "Mindestens 8 Zeichen" : undefined}
+        error={value.length > 0 && value.length < 8 ? t("Mindestens 8 Zeichen") : undefined}
         style={{ flex: 1 }}
         required
       />
-      <Tooltip label="Neues Passwort vorschlagen">
+      <Tooltip label={t("Neues Passwort vorschlagen")}>
         <ActionIcon
           variant="light"
           size="lg"
           onClick={() => onChange(generatePassword())}
-          aria-label="Passwort vorschlagen"
+          aria-label={t("Passwort vorschlagen")}
         >
           <IconRefresh size={18} />
         </ActionIcon>
@@ -404,33 +425,34 @@ function Credentials({
   password: string;
   onClose(): void;
 }) {
+  const { t } = useTranslation();
   const certificatePage = certificatePageUrl(useSetupStatus().data);
   const text = [
     `HomeDMS – ${window.location.origin}`,
-    `E-Mail: ${email}`,
-    `Passwort: ${password}`,
-    certificatePage ? `Neues Gerät zuerst einrichten: ${certificatePage}` : null,
+    `${t("E-Mail:")} ${email}`,
+    `${t("Passwort:")} ${password}`,
+    certificatePage ? `${t("Neues Gerät zuerst einrichten:")} ${certificatePage}` : null,
   ]
     .filter(Boolean)
     .join("\n");
   return (
     <Stack>
       <Alert color="teal" icon={<IconCheck />}>
-        Fertig. Gib {name} diese Zugangsdaten – das Passwort wird nur jetzt angezeigt.
+        {t("Fertig. Gib {{name}} diese Zugangsdaten – das Passwort wird nur jetzt angezeigt.", { name })}
       </Alert>
       <Stack gap={4}>
         <Text size="sm">
-          Adresse: <Code>{window.location.origin}</Code>
+          {t("Adresse:")} <Code>{window.location.origin}</Code>
         </Text>
         <Text size="sm">
-          E-Mail: <Code>{email}</Code>
+          {t("E-Mail:")} <Code>{email}</Code>
         </Text>
         <Text size="sm">
-          Passwort: <Code data-testid="credential-password">{password}</Code>
+          {t("Passwort:")} <Code data-testid="credential-password">{password}</Code>
         </Text>
         {certificatePage && (
           <Text size="sm">
-            Neues Gerät zuerst einrichten: <Code>{certificatePage}</Code>
+            {t("Neues Gerät zuerst einrichten:")} <Code>{certificatePage}</Code>
           </Text>
         )}
       </Stack>
@@ -442,11 +464,11 @@ function Credentials({
               leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}
               onClick={copy}
             >
-              {copied ? "Kopiert" : "Zugangsdaten kopieren"}
+              {copied ? t("Kopiert") : t("Zugangsdaten kopieren")}
             </Button>
           )}
         </CopyButton>
-        <Button onClick={onClose}>Schließen</Button>
+        <Button onClick={onClose}>{t("Schließen")}</Button>
       </Group>
     </Stack>
   );

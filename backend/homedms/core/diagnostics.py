@@ -26,21 +26,24 @@ import httpx
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from homedms import i18n
 from homedms.config import get_settings
+from homedms.i18n import N_, _, _n
 
 STARTED_AT = time.time()
 HEARTBEAT_OK_SECONDS = 60
 TASK_LABELS = {
-    "ocr_document": "Texterkennung",
-    "classify_document": "Einordnung",
-    "extract_metadata": "Betreff/Fristen",
-    "file_document": "Ablage",
-    "scan_folders": "Scan-Ordner",
-    "learn_exemplar": "Lernen",
-    "pull_model": "KI-Modell laden",
-    "restart_worker": "Worker-Neustart",
-    "ping": "Test",
-    "send_reminders": "Erinnerungen",
+    "ocr_document": N_("Texterkennung"),
+    "classify_document": N_("Einordnung"),
+    "extract_metadata": N_("Betreff/Fristen"),
+    "file_document": N_("Ablage"),
+    "scan_folders": N_("Scan-Ordner"),
+    "learn_exemplar": N_("Lernen"),
+    "pull_model": N_("KI-Modell laden"),
+    "restart_worker": N_("Worker-Neustart"),
+    "ping": N_("Test"),
+    "send_reminders": N_("Erinnerungen"),
+    "install_ocr_language": N_("Sprachpaket laden"),
 }
 
 
@@ -65,20 +68,26 @@ class Component:
 def _size(n: float) -> str:
     for unit in ("B", "KB", "MB", "GB", "TB"):
         if n < 1024 or unit == "TB":
-            return f"{n:.0f} {unit}" if unit in ("B", "KB") else f"{n:.1f} {unit}".replace(".", ",")
+            return f"{n:.0f} {unit}" if unit in ("B", "KB") else _("{value} {unit}", value=_decimal(n), unit=unit)
         n /= 1024
     return str(n)
+
+
+def _decimal(value: float) -> str:
+    """Eine Nachkommastelle mit dem Dezimalzeichen der Sprache."""
+    text = f"{value:.1f}"
+    return text if i18n.current() == "en" else text.replace(".", ",")
 
 
 def _duration(seconds: float) -> str:
     seconds = int(seconds)
     if seconds < 90:
-        return f"{seconds} s"
+        return _("{count} s", count=seconds)
     if seconds < 5400:
-        return f"{seconds // 60} Min."
+        return _("{count} Min.", count=seconds // 60)
     if seconds < 172800:
-        return f"{seconds // 3600} Std."
-    return f"{seconds // 86400} Tage"
+        return _("{count} Std.", count=seconds // 3600)
+    return _n("{count} Tag", "{count} Tage", seconds // 86400)
 
 
 def running_in_docker() -> bool:
@@ -95,12 +104,12 @@ async def check_app() -> Component:
         app_version = version("homedms")
     except PackageNotFoundError:
         app_version = "0.1.0"
-    mode = "Docker" if running_in_docker() else f"ohne Docker ({platform.system()})"
-    return Component("app", "HomeDMS", "ok", f"läuft seit {_duration(time.time() - STARTED_AT)}", [
-        ("Version", app_version),
-        ("Betrieb", mode),
+    mode = "Docker" if running_in_docker() else _("ohne Docker ({system})", system=platform.system())
+    return Component("app", "HomeDMS", "ok", _("läuft seit {duration}", duration=_duration(time.time() - STARTED_AT)), [
+        (_("Version"), app_version),
+        (_("Betrieb"), mode),
         ("Python", platform.python_version()),
-        ("Rechner", platform.node() or "-"),
+        (_("Rechner"), platform.node() or "-"),
     ])
 
 
@@ -115,19 +124,20 @@ async def check_database(db: AsyncSession) -> Component:
         revision = await db.scalar(text("SELECT version_num FROM alembic_version"))
         documents = await db.scalar(text("SELECT count(*) FROM documents WHERE deleted_at IS NULL"))
     except Exception as exc:  # noqa: BLE001
-        return Component("database", "Datenbank", "error", "nicht erreichbar", hint=str(exc)[:300])
+        return Component("database", _("Datenbank"), "error", _("nicht erreichbar"), hint=str(exc)[:300])
     latency = (time.perf_counter() - started) * 1000
     ini = Path(__file__).resolve().parents[2] / "alembic.ini"
     head = ScriptDirectory.from_config(Config(str(ini))).get_current_head() if ini.exists() else revision
-    component = Component("database", "Datenbank", "ok", f"PostgreSQL {server.split(' ')[0]}", [
-        ("Antwortzeit", f"{latency:.0f} ms"),
-        ("Größe", _size(size or 0)),
-        ("Dokumente (alle Haushalte)", str(documents)),
-        ("Schema-Stand", revision or "-"),
+    component = Component("database", _("Datenbank"), "ok", f"PostgreSQL {server.split(' ')[0]}", [
+        (_("Antwortzeit"), f"{latency:.0f} ms"),
+        (_("Größe"), _size(size or 0)),
+        (_("Dokumente (alle Haushalte)"), str(documents)),
+        (_("Schema-Stand"), revision or "-"),
     ])
     if head and revision != head:
         component.status = "warning"
-        component.hint = f"Schema-Stand {revision}, erwartet {head} - HomeDMS neu starten, dann wird migriert."
+        component.hint = _("Schema-Stand {revision}, erwartet {head} - HomeDMS neu starten, dann wird migriert.",
+                           revision=revision, head=head)
     return component
 
 
@@ -158,39 +168,44 @@ async def check_worker(db: AsyncSession) -> Component:
     waiting = sum(c.get("todo", 0) for c in counts.values())
     active, last_heartbeat = workers
     details = [
-        ("Arbeitsstränge aktiv", f"{active} von 2"),
-        ("Dateien (Texterkennung, Ablage)", _queue_text(counts.get("default", {}))),
-        ("KI (Einordnung, Fristen)", _queue_text(counts.get("ai", {}))),
-        ("Fehlgeschlagen (24 Std.)", str(failed)),
+        (_("Arbeitsstränge aktiv"), _("{active} von {total}", active=active, total=2)),
+        (_("Dateien (Texterkennung, Ablage)"), _queue_text(counts.get("default", {}))),
+        (_("KI (Einordnung, Fristen)"), _queue_text(counts.get("ai", {}))),
+        (_("Fehlgeschlagen (24 Std.)"), str(failed)),
     ]
     if oldest:
-        details.append(("Ältester wartender Auftrag", f"seit {_duration((datetime.now(timezone.utc) - oldest).total_seconds())}"))
-    actions = [Action("restart-worker", "Worker neu starten",
-                      "Laufende Aufträge werden abgebrochen; was dabei offen bleibt, holt „Prüfen > Nicht analysiert“ nach.")]
+        details.append((_("Ältester wartender Auftrag"),
+                        _("seit {duration}", duration=_duration((datetime.now(timezone.utc) - oldest).total_seconds()))))
+    actions = [Action("restart-worker", _("Worker neu starten"),
+                      _("Laufende Aufträge werden abgebrochen; was dabei offen bleibt, holt „Prüfen > Nicht analysiert“ nach."))]
     if stalled:
-        actions.insert(0, Action("retry-stalled", f"Hängende Aufträge neu starten ({stalled})"))
+        actions.insert(0, Action("retry-stalled", _("Hängende Aufträge neu starten ({count})", count=stalled)))
+    name = _("Worker (Hintergrundverarbeitung)")
     if not active:
-        hint = ("Docker: Container „app-worker“ prüfen (docker compose ps / logs app-worker)."
-                if running_in_docker() else "Der Starter startet den Worker selbst neu - Protokoll worker.log prüfen.")
+        hint = (_("Docker: Container „app-worker“ prüfen (docker compose ps / logs app-worker).")
+                if running_in_docker() else _("Der Starter startet den Worker selbst neu - Protokoll worker.log prüfen."))
         if last_heartbeat:
-            hint = f"Letztes Lebenszeichen vor {_duration((datetime.now(timezone.utc) - last_heartbeat).total_seconds())}. " + hint
+            since = _duration((datetime.now(timezone.utc) - last_heartbeat).total_seconds())
+            hint = _("Letztes Lebenszeichen vor {duration}.", duration=since) + " " + hint
         # Neustart per Auftrag geht nur, wenn der Worker laeuft
-        return Component("worker", "Worker (Hintergrundverarbeitung)", "error", "läuft nicht", details, hint,
+        return Component("worker", name, "error", _("läuft nicht"), details, hint,
                          [a for a in actions if a.id == "retry-stalled"])
-    status, summary = "ok", (f"{waiting} Aufträge warten" if waiting else "bereit")
+    status, summary = "ok", (_n("{count} Auftrag wartet", "{count} Aufträge warten", waiting) if waiting else _("bereit"))
     hint = None
     if stalled:
-        status, hint = "warning", f"{stalled} Auftrag/Aufträge hängen (Worker zwischendurch abgebrochen)."
+        status, hint = "warning", _n("{count} Auftrag hängt (Worker zwischendurch abgebrochen).",
+                                     "{count} Aufträge hängen (Worker zwischendurch abgebrochen).", stalled)
     elif failed:
-        status, hint = "warning", "Fehlgeschlagene Aufträge: Details unten; betroffene Dokumente unter „Prüfen > Nicht analysiert“."
-    return Component("worker", "Worker (Hintergrundverarbeitung)", status, summary, details, hint, actions)
+        status, hint = "warning", _("Fehlgeschlagene Aufträge: Details unten; betroffene Dokumente unter „Prüfen > Nicht analysiert“.")
+    return Component("worker", name, status, summary, details, hint, actions)
 
 
 def _queue_text(c: dict[str, int]) -> str:
     doing, todo = c.get("doing", 0), c.get("todo", 0)
     if not doing and not todo:
-        return "leer"
-    return ", ".join(p for p in (f"{doing} läuft" if doing else "", f"{todo} wartet" if todo else "") if p)
+        return _("leer")
+    return ", ".join(p for p in (_("{count} läuft", count=doing) if doing else "",
+                                 _("{count} wartet", count=todo) if todo else "") if p)
 
 
 def _model_present(wanted: str, installed: set[str]) -> bool:
@@ -210,27 +225,29 @@ async def check_ai(db: AsyncSession, tenant_id) -> Component:
             tags = (await http.get("/api/tags")).json().get("models", [])
             loaded = (await http.get("/api/ps")).json().get("models", [])
     except (httpx.HTTPError, ValueError) as exc:
-        hint = ("Docker: Container „ollama“ prüfen." if running_in_docker()
-                else "Ollama starten (Windows: läuft im angemeldeten Benutzer, Symbol im Infobereich).")
-        return Component("ai", "KI (Ollama)", "error", "nicht erreichbar", [("Adresse", client.base_url)],
-                         f"{hint} Dokumente ohne Analyse lassen sich danach unter „Prüfen > Nicht analysiert“ nachholen. ({str(exc)[:120]})")
+        hint = (_("Docker: Container „ollama“ prüfen.") if running_in_docker()
+                else _("Ollama starten (Windows: läuft im angemeldeten Benutzer, Symbol im Infobereich)."))
+        later = _("Dokumente ohne Analyse lassen sich danach unter „Prüfen > Nicht analysiert“ nachholen.")
+        return Component("ai", _("KI (Ollama)"), "error", _("nicht erreichbar"), [(_("Adresse"), client.base_url)],
+                         f"{hint} {later} ({str(exc)[:120]})")
     installed = {m.get("name", "") for m in tags}
     missing = [m for m in (client.chat_model, client.embedding_model) if not _model_present(m, installed)]
     details = [
-        ("Version", version),
-        ("Sprachmodell", client.chat_model + ("" if _model_present(client.chat_model, installed) else " – fehlt")),
-        ("Embedding-Modell", client.embedding_model + ("" if _model_present(client.embedding_model, installed) else " – fehlt")),
-        ("Im Arbeitsspeicher", ", ".join(m.get("name", "?") for m in loaded) or "nichts geladen"),
+        (_("Version"), version),
+        (_("Sprachmodell"), client.chat_model + ("" if _model_present(client.chat_model, installed) else " – " + _("fehlt"))),
+        (_("Embedding-Modell"),
+         client.embedding_model + ("" if _model_present(client.embedding_model, installed) else " – " + _("fehlt"))),
+        (_("Im Arbeitsspeicher"), ", ".join(m.get("name", "?") for m in loaded) or _("nichts geladen")),
     ]
     actions = []
     if missing:
-        actions.append(Action("pull-models", "Fehlende Modelle herunterladen", "Der Download (einige GB) läuft im Hintergrund."))
+        actions.append(Action("pull-models", _("Fehlende Modelle herunterladen"), _("Der Download (einige GB) läuft im Hintergrund.")))
     if loaded:
-        actions.append(Action("unload-models", "Arbeitsspeicher freigeben"))
+        actions.append(Action("unload-models", _("Arbeitsspeicher freigeben")))
     if missing:
-        return Component("ai", "KI (Ollama)", "warning", f"Modell fehlt: {', '.join(missing)}", details,
-                         "Ohne die Modelle bleiben Einordnung und Fristenerkennung aus.", actions)
-    return Component("ai", "KI (Ollama)", "ok", "bereit" if not loaded else "bereit, Modell geladen", details, None, actions)
+        return Component("ai", _("KI (Ollama)"), "warning", _("Modell fehlt: {models}", models=", ".join(missing)), details,
+                         _("Ohne die Modelle bleiben Einordnung und Fristenerkennung aus."), actions)
+    return Component("ai", _("KI (Ollama)"), "ok", _("bereit") if not loaded else _("bereit, Modell geladen"), details, None, actions)
 
 
 async def check_search(db: AsyncSession) -> Component:
@@ -238,8 +255,8 @@ async def check_search(db: AsyncSession) -> Component:
 
     settings = get_settings()
     if not settings.meilisearch_url:
-        return Component("search", "Suche (Meilisearch)", "disabled", "nicht eingerichtet",
-                         hint="Die Suche läuft über die Datenbank (Teilwörter, ohne Tippfehler-Toleranz).")
+        return Component("search", _("Suche (Meilisearch)"), "disabled", _("nicht eingerichtet"),
+                         hint=_("Die Suche läuft über die Datenbank (Teilwörter, ohne Tippfehler-Toleranz)."))
     client = meili.client()
     try:
         health = await client._request("GET", "/health", timeout=4)  # noqa: SLF001
@@ -250,42 +267,61 @@ async def check_search(db: AsyncSession) -> Component:
         except meili.SearchUnavailable:
             indexed = 0
     except meili.SearchUnavailable as exc:
-        return Component("search", "Suche (Meilisearch)", "error", "nicht erreichbar", [("Adresse", settings.meilisearch_url)],
-                         f"Die Suche nutzt solange die Datenbank. ({str(exc)[:150]})",
-                         [Action("reindex-search", "Suchindex neu aufbauen")])
+        return Component("search", _("Suche (Meilisearch)"), "error", _("nicht erreichbar"),
+                         [(_("Adresse"), settings.meilisearch_url)],
+                         _("Die Suche nutzt solange die Datenbank.") + f" ({str(exc)[:150]})",
+                         [Action("reindex-search", _("Suchindex neu aufbauen"))])
     documents = await db.scalar(text("SELECT count(*) FROM documents WHERE deleted_at IS NULL")) or 0
-    details = [("Version", version), ("Im Index", f"{indexed} von {documents} Dokumenten")]
-    actions = [Action("reindex-search", "Suchindex neu aufbauen")]
+    details = [(_("Version"), version), (_("Im Index"), _("{indexed} von {total} Dokumenten", indexed=indexed, total=documents))]
+    actions = [Action("reindex-search", _("Suchindex neu aufbauen"))]
+    name = _("Suche (Meilisearch)")
     if health.get("status") != "available":
-        return Component("search", "Suche (Meilisearch)", "warning", str(health.get("status")), details, None, actions)
+        return Component("search", name, "warning", str(health.get("status")), details, None, actions)
     if indexed != documents:
-        return Component("search", "Suche (Meilisearch)", "warning", "Index unvollständig", details,
-                         "Nicht alle Dokumente sind im Suchindex - „Suchindex neu aufbauen“ behebt das.", actions)
-    return Component("search", "Suche (Meilisearch)", "ok", "bereit", details, None, actions)
+        return Component("search", name, "warning", _("Index unvollständig"), details,
+                         _("Nicht alle Dokumente sind im Suchindex - „Suchindex neu aufbauen“ behebt das."), actions)
+    return Component("search", name, "ok", _("bereit"), details, None, actions)
 
 
 def _tesseract_info() -> tuple[str, list[str]]:
     import pytesseract
 
+    from homedms.core import ocr_languages
     from homedms.runtime import configure_tesseract
 
     configure_tesseract()
-    return str(pytesseract.get_tesseract_version()), sorted(pytesseract.get_languages(config=""))
+    config = ocr_languages.tesseract_config()
+    return str(pytesseract.get_tesseract_version()), sorted(pytesseract.get_languages(config=config))
 
 
-async def check_ocr() -> Component:
-    wanted = [lang for lang in get_settings().ocr_languages.split("+") if lang]
+async def check_ocr(db: AsyncSession, tenant_id) -> Component:
+    from homedms.core import ocr_languages
+
+    name = _("Texterkennung (Tesseract)")
+    wanted = await ocr_languages.wanted(db, tenant_id)
     try:
         version, languages = await asyncio.wait_for(asyncio.to_thread(_tesseract_info), timeout=10)
     except Exception as exc:  # noqa: BLE001
-        return Component("ocr", "Texterkennung (Tesseract)", "error", "nicht gefunden", [("Sprachen", "+".join(wanted))],
-                         f"Tesseract installieren bzw. TESSERACT_CMD setzen. ({str(exc)[:150]})")
-    missing = [lang for lang in wanted + ["osd"] if lang not in languages]
-    details = [("Version", version.split()[0]), ("Sprachen", ", ".join(lang for lang in languages if lang != "osd"))]
+        return Component("ocr", name, "error", _("nicht gefunden"), [(_("Sprachen"), "+".join(wanted))],
+                         _("Tesseract installieren bzw. TESSERACT_CMD setzen.") + f" ({str(exc)[:150]})")
+    missing = [lang for lang in wanted if lang not in languages]
+    states = await ocr_languages.install_states(db)
+    details = [
+        (_("Version"), version.split()[0]),
+        (_("Verwendet"), await ocr_languages.lang_for(db, tenant_id)),
+        (_("Installiert"), ", ".join(lang for lang in languages if lang != "osd")),
+    ]
     if missing:
-        return Component("ocr", "Texterkennung (Tesseract)", "warning", f"Sprachpaket fehlt: {', '.join(missing)}", details,
-                         "Ohne „osd“ werden quer fotografierte Seiten schlechter erkannt.")
-    return Component("ocr", "Texterkennung (Tesseract)", "ok", "bereit", details)
+        failed = [states[c]["error"] for c in missing if (states.get(c) or {}).get("status") == "failed"]
+        installing = [c for c in missing if (states.get(c) or {}).get("status") == "installing"]
+        hint = (failed[0] if failed else _("Wird gerade heruntergeladen.") if installing
+                else _("Fehlende Pakete lassen sich unter „Sprachen“ oder hier nachladen."))
+        return Component("ocr", name, "warning", _("Sprachpaket fehlt: {codes}", codes=", ".join(missing)), details,
+                         hint, [Action("install-ocr-languages", _("Sprachpakete herunterladen"))])
+    if "osd" not in languages:
+        return Component("ocr", name, "warning", _("Sprachpaket fehlt: {codes}", codes="osd"), details,
+                         _("Ohne „osd“ werden quer fotografierte Seiten schlechter erkannt."))
+    return Component("ocr", name, "ok", _("bereit"), details)
 
 
 def _storage_info(path: Path) -> tuple[int, int, bool]:
@@ -305,19 +341,21 @@ async def check_storage() -> Component:
         free, total, writable = await asyncio.to_thread(_storage_info, Path(settings.documents_path))
         scan_ok = await asyncio.to_thread(lambda: Path(settings.scan_path).is_dir())
     except OSError as exc:
-        return Component("storage", "Speicher", "error", "Ablage-Ordner nicht erreichbar", hint=str(exc)[:200])
+        return Component("storage", _("Speicher"), "error", _("Ablage-Ordner nicht erreichbar"), hint=str(exc)[:200])
     location = settings.scan_host_path or str(Path(settings.scan_path).resolve())
     details = [
-        ("Frei", f"{_size(free)} von {_size(total)} ({free / total:.0%})".replace(".", ",") if total else "-"),
-        ("Ablage", str(Path(settings.documents_path).resolve()) if not running_in_docker() else "Ordner DOCUMENTS_PATH"),
-        ("Scan-Ordner", location + ("" if scan_ok else " – fehlt")),
+        (_("Frei"), _("{free} von {total} ({percent} %)", free=_size(free), total=_size(total),
+                      percent=round(free / total * 100)) if total else "-"),
+        (_("Ablage"), str(Path(settings.documents_path).resolve()) if not running_in_docker() else _("Ordner DOCUMENTS_PATH")),
+        (_("Scan-Ordner"), location + ("" if scan_ok else " – " + _("fehlt"))),
     ]
+    name = _("Speicher")
     if not writable:
-        return Component("storage", "Speicher", "error", "Ablage schreibgeschützt", details,
-                         "HomeDMS kann keine Dateien speichern - Berechtigungen des Ordners prüfen.")
+        return Component("storage", name, "error", _("Ablage schreibgeschützt"), details,
+                         _("HomeDMS kann keine Dateien speichern - Berechtigungen des Ordners prüfen."))
     if total and (free < 2 * 1024**3 or free / total < 0.05):
-        return Component("storage", "Speicher", "warning", "wenig Platz", details, "Weniger als 2 GB bzw. 5 % frei.")
-    return Component("storage", "Speicher", "ok", f"{_size(free)} frei", details)
+        return Component("storage", name, "warning", _("wenig Platz"), details, _("Weniger als 2 GB bzw. 5 % frei."))
+    return Component("storage", name, "ok", _("{size} frei", size=_size(free)), details)
 
 
 async def check_tls() -> Component:
@@ -325,31 +363,32 @@ async def check_tls() -> Component:
 
     settings = get_settings()
     mode = settings.tls_mode.strip().lower()
-    name = "Verschlüsselung (HTTPS)"
+    name = _("Verschlüsselung (HTTPS)")
     if mode == "off":
-        return Component("tls", name, "warning", "HomeDMS selbst verschlüsselt nicht", [("Modus", "hinter Reverse Proxy")],
-                         "Nur in Ordnung, wenn ein Reverse Proxy (z. B. Synology) HTTPS macht und Port 8000 nicht "
-                         "direkt aus dem Netz erreichbar ist.")
+        return Component("tls", name, "warning", _("HomeDMS selbst verschlüsselt nicht"),
+                         [(_("Modus"), _("hinter Reverse Proxy"))],
+                         _("Nur in Ordnung, wenn ein Reverse Proxy (z. B. Synology) HTTPS macht und Port 8000 nicht "
+                           "direkt aus dem Netz erreichbar ist."))
     if mode == "custom":
-        return Component("tls", name, "ok", "eigenes Zertifikat", [("Zertifikat", settings.tls_cert_file)])
+        return Component("tls", name, "ok", _("eigenes Zertifikat"), [(_("Zertifikat"), settings.tls_cert_file)])
     info = tls.certificate_info(settings.tls_dir)
     if info is None:
-        return Component("tls", name, "error", "kein Zertifikat",
-                         hint="HomeDMS wurde nicht über den Starter (python -m homedms.server) gestartet.")
+        return Component("tls", name, "error", _("kein Zertifikat"),
+                         hint=_("HomeDMS wurde nicht über den Starter (python -m homedms.server) gestartet."))
     days = (info["expires"] - datetime.now(timezone.utc)).days
     details = [
-        ("Modus", "eigene Zertifizierungsstelle"),
-        ("Abgedeckt", ", ".join(info["names"])),
-        ("Gültig bis", f"{info['expires']:%d.%m.%Y} (erneuert sich selbst)"),
-        ("Fingerabdruck", info["fingerprint"][:23] + "…"),
-        ("Neues Gerät", f"http://<server>:{os.environ.get('PORT', '8000')}/zertifikat"),
+        (_("Modus"), _("eigene Zertifizierungsstelle")),
+        (_("Abgedeckt"), ", ".join(info["names"])),
+        (_("Gültig bis"), _("{date} (erneuert sich selbst)", date=i18n.format_date(info["expires"]))),
+        (_("Fingerabdruck"), info["fingerprint"][:23] + "…"),
+        (_("Neues Gerät"), f"http://<server>:{os.environ.get('PORT', '8000')}/zertifikat"),
     ]
     uncovered = sorted(tls.UNCOVERED)
     if uncovered:
-        return Component("tls", name, "warning", "Adresse nicht abgedeckt", details,
-                         f"Aufgerufen als {', '.join(uncovered)} - dafür warnt der Browser. In den Einstellungen "
-                         "TLS_HOSTNAMES ergänzen und HomeDMS neu starten.")
-    return Component("tls", name, "ok", f"aktiv, noch {days} Tage gültig", details)
+        return Component("tls", name, "warning", _("Adresse nicht abgedeckt"), details,
+                         _("Aufgerufen als {hosts} - dafür warnt der Browser. In den Einstellungen "
+                           "TLS_HOSTNAMES ergänzen und HomeDMS neu starten.", hosts=", ".join(uncovered)))
+    return Component("tls", name, "ok", _n("aktiv, noch {count} Tag gültig", "aktiv, noch {count} Tage gültig", days), details)
 
 
 async def check_notifications(db: AsyncSession, tenant_id) -> Component:
@@ -358,7 +397,7 @@ async def check_notifications(db: AsyncSession, tenant_id) -> Component:
     from homedms.models.ops import Notification, PushSubscription
     from homedms.models.tenant import Tenant, User
 
-    name = "Erinnerungen (E-Mail/Push)"
+    name = _("Erinnerungen (E-Mail/Push)")
     tenant = await db.get(Tenant, tenant_id)
     mail = tenant.mail_settings or {}
     devices = await db.scalar(
@@ -372,24 +411,26 @@ async def check_notifications(db: AsyncSession, tenant_id) -> Component:
     pending = await db.scalar(select(func.count()).where(
         Notification.tenant_id == tenant_id, Notification.status == "pending"))
     details = [
-        ("E-Mail", f"über {mail.get('host')} als {mail.get('sender')}" if mailer.is_configured(mail) else "nicht eingerichtet"),
-        ("Push-Geräte", str(devices or 0)),
-        ("Zeitzone", get_settings().tz),
+        (_("E-Mail"), _("über {host} als {sender}", host=mail.get("host"), sender=mail.get("sender"))
+         if mailer.is_configured(mail) else _("nicht eingerichtet")),
+        (_("Push-Geräte"), str(devices or 0)),
+        (_("Zeitzone"), get_settings().tz),
     ]
     if pending:
-        details.append(("Warten auf Versand", str(pending)))
+        details.append((_("Warten auf Versand"), str(pending)))
     for channel, count in failed:
-        details.append((f"Fehlgeschlagen ({'E-Mail' if channel == 'email' else 'Push'}, 7 Tage)", str(count)))
+        details.append((_("Fehlgeschlagen ({channel}, 7 Tage)", channel=_("E-Mail") if channel == "email" else "Push"),
+                        str(count)))
     if mail.get("last_error"):
-        return Component("notifications", name, "error", "E-Mail-Versand gestört", details,
-                         f"{mail['last_error']} - unter „Benutzer“ > „E-Mail-Versand“ prüfen.")
+        return Component("notifications", name, "error", _("E-Mail-Versand gestört"), details,
+                         _("{error} - unter „Benutzer“ > „E-Mail-Versand“ prüfen.", error=mail["last_error"]))
     if failed:
-        return Component("notifications", name, "warning", "Versand zuletzt fehlgeschlagen", details,
-                         "Push braucht Internetzugang des Servers; Details stehen bei den Geräten unter „Konto & Sicherheit“.")
+        return Component("notifications", name, "warning", _("Versand zuletzt fehlgeschlagen"), details,
+                         _("Push braucht Internetzugang des Servers; Details stehen bei den Geräten unter „Konto & Sicherheit“."))
     if not mailer.is_configured(mail) and not devices:
-        return Component("notifications", name, "disabled", "nur in der App (Glocke)", details,
-                         "E-Mail unter „Benutzer“ > „E-Mail-Versand“ einrichten, Push unter „Konto & Sicherheit“ einschalten.")
-    return Component("notifications", name, "ok", "eingerichtet", details)
+        return Component("notifications", name, "disabled", _("nur in der App (Glocke)"), details,
+                         _("E-Mail unter „Benutzer“ > „E-Mail-Versand“ einrichten, Push unter „Konto & Sicherheit“ einschalten."))
+    return Component("notifications", name, "ok", _("eingerichtet"), details)
 
 
 async def recent_failures(db: AsyncSession, tenant_id, limit: int = 20) -> list[dict]:
@@ -406,7 +447,7 @@ async def recent_failures(db: AsyncSession, tenant_id, limit: int = 20) -> list[
         LIMIT :limit
     """), {"tenant": tenant_id, "limit": limit})).all()
     return [
-        {"job_id": r.id, "task": TASK_LABELS.get(r.task_name, r.task_name), "at": r.at,
+        {"job_id": r.id, "task": _(TASK_LABELS[r.task_name]) if r.task_name in TASK_LABELS else r.task_name, "at": r.at,
          "document_id": r.document_id if r.title is not None else None, "document_title": r.title}
         for r in rows
     ]
@@ -416,7 +457,7 @@ async def _safe(coro, key: str, name: str) -> Component:
     try:
         return await asyncio.wait_for(coro, timeout=15)
     except Exception as exc:  # noqa: BLE001 - eine kaputte Pruefung darf die Seite nicht verhindern
-        return Component(key, name, "error", "Prüfung fehlgeschlagen", hint=str(exc)[:200] or type(exc).__name__)
+        return Component(key, name, "error", _("Prüfung fehlgeschlagen"), hint=str(exc)[:200] or type(exc).__name__)
 
 
 async def collect(tenant_id) -> list[Component]:
@@ -429,14 +470,14 @@ async def collect(tenant_id) -> list[Component]:
 
     return list(await asyncio.gather(
         _safe(check_app(), "app", "HomeDMS"),
-        _safe(with_db(check_database), "database", "Datenbank"),
-        _safe(with_db(check_worker), "worker", "Worker (Hintergrundverarbeitung)"),
-        _safe(with_db(check_ai, tenant_id), "ai", "KI (Ollama)"),
-        _safe(with_db(check_search), "search", "Suche (Meilisearch)"),
-        _safe(check_ocr(), "ocr", "Texterkennung (Tesseract)"),
-        _safe(check_storage(), "storage", "Speicher"),
-        _safe(check_tls(), "tls", "Verschlüsselung (HTTPS)"),
-        _safe(with_db(check_notifications, tenant_id), "notifications", "Erinnerungen (E-Mail/Push)"),
+        _safe(with_db(check_database), "database", _("Datenbank")),
+        _safe(with_db(check_worker), "worker", _("Worker (Hintergrundverarbeitung)")),
+        _safe(with_db(check_ai, tenant_id), "ai", _("KI (Ollama)")),
+        _safe(with_db(check_search), "search", _("Suche (Meilisearch)")),
+        _safe(with_db(check_ocr, tenant_id), "ocr", _("Texterkennung (Tesseract)")),
+        _safe(check_storage(), "storage", _("Speicher")),
+        _safe(check_tls(), "tls", _("Verschlüsselung (HTTPS)")),
+        _safe(with_db(check_notifications, tenant_id), "notifications", _("Erinnerungen (E-Mail/Push)")),
     ))
 
 

@@ -1,23 +1,25 @@
 import { Loader, Paper, Stack, Text, Timeline, Title } from "@mantine/core";
 import { IconRobot, IconUser } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { useClassificationHistory } from "../../api/queries";
 import { useCategoryNames } from "../../lib/categories";
-import { formatDateTime, formatPercent, stageLabels } from "../../lib/format";
+import { formatDateTime, formatPercent, stageLabel } from "../../lib/format";
 
 /** Wer hat wann welche Kategorie vergeben (KI oder Mensch) - Nachvollziehbarkeit. */
 export function HistoryPanel({ documentId }: { documentId: string }) {
+  const { t } = useTranslation();
   const history = useClassificationHistory(documentId);
   const categoryName = useCategoryNames();
 
   return (
     <Paper withBorder p="md" radius="md">
       <Stack gap="sm">
-        <Title order={4}>Verlauf</Title>
+        <Title order={4}>{t("Verlauf")}</Title>
         {history.isPending ? (
           <Loader size="sm" />
         ) : !history.data?.length ? (
           <Text size="sm" c="dimmed">
-            Noch keine Einordnung.
+            {t("Noch keine Einordnung.")}
           </Text>
         ) : (
           <Timeline bulletSize={22} lineWidth={2}>
@@ -34,11 +36,7 @@ export function HistoryPanel({ documentId }: { documentId: string }) {
                   }
                 >
                   <Text size="xs" c="dimmed">
-                    {[
-                      stageLabels[event.stage] ?? event.stage,
-                      formatPercent(event.confidence),
-                      formatDateTime(event.created_at),
-                    ]
+                    {[stageLabel(event.stage), formatPercent(event.confidence), formatDateTime(event.created_at)]
                       .filter(Boolean)
                       .join(" · ")}
                   </Text>

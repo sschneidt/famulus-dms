@@ -25,9 +25,11 @@
     "@tabler/icons-react": "^3.48.0",
     "@tanstack/react-query": "^5.104.0",
     "dayjs": "^1.11.23",
+    "i18next": "^26.4.2",
     "openapi-fetch": "^0.17.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-i18next": "^17.0.15",
     "react-router": "^8.4.0"
   },
   "devDependencies": {

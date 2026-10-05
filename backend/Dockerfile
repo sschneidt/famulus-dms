@@ -17,14 +17,15 @@ RUN npm run build
 # --- Stufe 2: Backend -----------------------------------------------------------------------
 FROM python:3.12-slim-bookworm
 
-# Tesseract + Sprachpakete (Anforderungsdokument 4.2: Primaersprachen Deutsch + Englisch,
-# weitere Sprachen als Module nachruestbar - einfach hier ergaenzen). PyMuPDF, Pillow und
+# Tesseract + Sprachpakete fuer die drei Oberflaechensprachen (Deutsch, Englisch, Russisch).
+# Weitere Sprachen laedt HomeDMS bei Bedarf selbst nach (Seite "Sprachen", Volume tessdata). PyMuPDF, Pillow und
 # psycopg[binary] brauchen dagegen KEINE weiteren System-Pakete (reine/vorkompilierte Wheels) -
 # genau deshalb wurden sie so gewaehlt (Anforderungsdokument 4.7: "einfach installierbar").
 RUN apt-get update && apt-get install -y --no-install-recommends \
       tesseract-ocr \
       tesseract-ocr-deu \
       tesseract-ocr-eng \
+      tesseract-ocr-rus \
       tesseract-ocr-osd \
     && rm -rf /var/lib/apt/lists/*
 

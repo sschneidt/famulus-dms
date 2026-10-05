@@ -8,6 +8,8 @@ export interface SetupStatus {
   tls?: boolean;
   http_port?: number;
   https_port?: number;
+  /** nur vor der Ersteinrichtung: angebotene Sprachpakete der Texterkennung */
+  ocr_languages?: { code: string; name: string; installed: boolean }[];
 }
 
 export function useSetupStatus() {

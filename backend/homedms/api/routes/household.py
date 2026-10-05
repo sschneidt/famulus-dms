@@ -15,6 +15,7 @@ from homedms.models.document import Document
 from homedms.models.tenant import Tenant, User
 from homedms.schemas.auth import HouseholdResponse, HouseholdUpdate
 from homedms.tasks.filing import defer_filing
+from homedms.i18n import _
 
 router = APIRouter(prefix="/tenant", tags=["auth"])
 
@@ -31,7 +32,7 @@ async def rename_household(
 ) -> HouseholdResponse:
     name = payload.name.strip()
     if not name:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Bitte einen Namen angeben")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Bitte einen Namen angeben"))
     tenant = await db.get(Tenant, user.tenant_id)
     if tenant.name == name:
         return HouseholdResponse(name=name)

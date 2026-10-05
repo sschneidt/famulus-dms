@@ -17,6 +17,7 @@ from homedms.models.document import Category
 from homedms.models.tenant import User
 from homedms.models.wiedervorlage import RetentionRule
 from homedms.schemas.retention import RetentionRuleCreate, RetentionRuleResponse, RetentionRuleUpdate
+from homedms.i18n import _
 
 router = APIRouter(prefix="/retention-rules", tags=["retention-rules"])
 
@@ -24,7 +25,7 @@ router = APIRouter(prefix="/retention-rules", tags=["retention-rules"])
 async def _check_category(db: AsyncSession, user: User, category_id: uuid.UUID, exclude_rule: uuid.UUID | None = None) -> None:
     category = await db.get(Category, category_id)
     if category is None or category.tenant_id != user.tenant_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kategorie nicht gefunden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Kategorie nicht gefunden"))
     clash = await db.scalar(
         select(RetentionRule.id).where(
             RetentionRule.tenant_id == user.tenant_id,
@@ -33,13 +34,13 @@ async def _check_category(db: AsyncSession, user: User, category_id: uuid.UUID, 
         )
     )
     if clash:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Fuer diese Kategorie gibt es schon eine Aufbewahrungsregel")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Fuer diese Kategorie gibt es schon eine Aufbewahrungsregel"))
 
 
 async def _get(db: AsyncSession, user: User, rule_id: uuid.UUID) -> RetentionRule:
     rule = await db.get(RetentionRule, rule_id)
     if rule is None or rule.tenant_id != user.tenant_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Aufbewahrungsregel nicht gefunden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Aufbewahrungsregel nicht gefunden"))
     return rule
 
 
@@ -71,7 +72,7 @@ async def update_rule(
     updates = payload.model_dump(exclude_unset=True)
     for field in ("retention_period_months", "requires_original", "notify_before_days", "category_id"):
         if field in updates and updates[field] is None:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"{field} darf nicht leer sein")
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("{field} darf nicht leer sein", field=field))
     old_category = rule.category_id
     if "category_id" in updates and updates["category_id"] != old_category:
         await _check_category(db, user, updates["category_id"], exclude_rule=rule.id)

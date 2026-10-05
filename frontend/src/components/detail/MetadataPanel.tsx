@@ -20,8 +20,10 @@ import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { IconCheck, IconCopy, IconFolder, IconWand } from "@tabler/icons-react";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import type { DocumentDetail, Schemas } from "../../api/client";
 import { usePatchDocument, useProperties, useUpdateDocument } from "../../api/queries";
+import { dateInputFormat, numberSeparators } from "../../i18n";
 import { notifyError, notifySuccess } from "../../lib/notify";
 import { ExtractionHint } from "../StatusBadge";
 
@@ -54,14 +56,15 @@ function valuesOf(doc: DocumentDetail): Values {
  * Der Titel entsteht automatisch aus "Betreff – Absender", bis man ihn selbst aendert.
  */
 export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; readOnly?: boolean }) {
+  const { t } = useTranslation();
   const update = useUpdateDocument(doc.id);
   const setInvoice = usePatchDocument();
   const properties = useProperties();
   const form = useForm<Values>({
     initialValues: valuesOf(doc),
     validate: {
-      title: (v) => (v.trim() ? null : "Titel darf nicht leer sein"),
-      amount: (v) => (v === "" || Number(v) >= 0 ? null : "Betrag darf nicht negativ sein"),
+      title: (v) => (v.trim() ? null : t("Titel darf nicht leer sein")),
+      amount: (v) => (v === "" || Number(v) >= 0 ? null : t("Betrag darf nicht negativ sein")),
     },
   });
 
@@ -91,9 +94,9 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
       const saved = await update.mutateAsync(body);
       form.setValues(valuesOf(saved as DocumentDetail));
       form.resetDirty(valuesOf(saved as DocumentDetail));
-      notifySuccess("Gespeichert");
+      notifySuccess(t("Gespeichert"));
     } catch (e) {
-      notifyError(e, "Speichern fehlgeschlagen");
+      notifyError(e, t("Speichern fehlgeschlagen"));
     }
   });
 
@@ -101,7 +104,7 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
     try {
       await update.mutateAsync({ title_locked: false });
       form.resetDirty();
-      notifySuccess("Titel wird wieder automatisch gebildet");
+      notifySuccess(t("Titel wird wieder automatisch gebildet"));
     } catch (e) {
       notifyError(e);
     }
@@ -115,21 +118,21 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
       <form onSubmit={submit}>
         <Stack gap="sm">
           <Group justify="space-between">
-            <Title order={4}>Angaben</Title>
+            <Title order={4}>{t("Angaben")}</Title>
             <ExtractionHint doc={doc} />
           </Group>
           <TextInput
             label={
               <Group gap={6} component="span">
-                Titel
+                {t("Titel")}
                 {doc.title_locked ? (
                   <Badge size="xs" variant="light" color="gray">
-                    eigener Titel
+                    {t("eigener Titel")}
                   </Badge>
                 ) : (
-                  <Tooltip label="Wird aus Betreff und Absender gebildet">
+                  <Tooltip label={t("Wird aus Betreff und Absender gebildet")}>
                     <Badge size="xs" variant="light" leftSection={<IconWand size={10} />}>
-                      automatisch
+                      {t("automatisch")}
                     </Badge>
                   </Tooltip>
                 )}
@@ -139,8 +142,8 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
             rightSectionWidth={doc.title_locked && !readOnly ? 36 : undefined}
             rightSection={
               doc.title_locked && !readOnly ? (
-                <Tooltip label="Titel wieder automatisch bilden">
-                  <ActionIcon variant="subtle" onClick={() => void autoTitle()} aria-label="Automatisch benennen">
+                <Tooltip label={t("Titel wieder automatisch bilden")}>
+                  <ActionIcon variant="subtle" onClick={() => void autoTitle()} aria-label={t("Automatisch benennen")}>
                     <IconWand size={16} />
                   </ActionIcon>
                 </Tooltip>
@@ -149,25 +152,24 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
             {...form.getInputProps("title")}
           />
           <TextInput
-            label="Betreff"
-            placeholder="z. B. Rechnung Heizungswartung"
-            description="Grundlage für Titel und Dateinamen"
+            label={t("Betreff")}
+            placeholder={t("z. B. Rechnung Heizungswartung")}
+            description={t("Grundlage für Titel und Dateinamen")}
             disabled={readOnly}
             {...form.getInputProps("subject")}
           />
           <Group grow align="flex-start">
             <DateInput
-              label="Dokumentdatum"
-              valueFormat="DD.MM.YYYY"
+              label={t("Dokumentdatum")}
+              valueFormat={dateInputFormat()}
               clearable
               disabled={readOnly}
               {...form.getInputProps("document_date")}
             />
             {doc.is_invoice !== false && (
               <NumberInput
-                label="Betrag"
-                decimalSeparator=","
-                thousandSeparator="."
+                label={t("Betrag")}
+                {...numberSeparators()}
                 decimalScale={2}
                 fixedDecimalScale
                 min={0}
@@ -179,15 +181,15 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
             )}
           </Group>
           <Switch
-            label="Ist eine Rechnung"
+            label={t("Ist eine Rechnung")}
             description={
               doc.is_invoice === false
-                ? "Kein Betrag, keine Zahlung – Zahlungsfristen sind normale Termine"
+                ? t("Kein Betrag, keine Zahlung – Zahlungsfristen sind normale Termine")
                 : doc.is_invoice_locked
-                  ? "von Ihnen festgelegt"
+                  ? t("von Ihnen festgelegt")
                   : doc.is_invoice
-                    ? "von der KI erkannt"
-                    : "noch nicht bestimmt"
+                    ? t("von der KI erkannt")
+                    : t("noch nicht bestimmt")
             }
             checked={
               doc.is_invoice !== false && (doc.is_invoice === true || doc.amount !== null || !!doc.payment_status)
@@ -198,48 +200,48 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
                 { id: doc.id, body: { is_invoice: e.currentTarget.checked } },
                 {
                   onSuccess: (_, v) =>
-                    notifySuccess(v.body.is_invoice ? "Als Rechnung markiert" : "Als „Keine Rechnung“ markiert"),
+                    notifySuccess(v.body.is_invoice ? t("Als Rechnung markiert") : t("Als „Keine Rechnung“ markiert")),
                   onError: (err) => notifyError(err),
                 },
               )
             }
           />
           <TextInput
-            label="Aussteller"
-            placeholder="z. B. Stadtwerke"
+            label={t("Aussteller")}
+            placeholder={t("z. B. Stadtwerke")}
             disabled={readOnly}
             {...form.getInputProps("issuer")}
           />
           <Select
-            label="Objekt"
-            description="Haus oder Wohnung, zu der das Dokument gehört"
-            placeholder="keinem Objekt zugeordnet"
+            label={t("Objekt")}
+            description={t("Haus oder Wohnung, zu der das Dokument gehört")}
+            placeholder={t("keinem Objekt zugeordnet")}
             data={propertyOptions}
             clearable
             searchable
             disabled={readOnly}
-            nothingFoundMessage="Objekte entstehen automatisch aus erkannten Adressen"
+            nothingFoundMessage={t("Objekte entstehen automatisch aus erkannten Adressen")}
             {...form.getInputProps("property_id")}
           />
           <div>
             <Text size="sm" fw={500} mb={4}>
-              Papier-Original
+              {t("Papier-Original")}
             </Text>
             <SegmentedControl
               fullWidth
               disabled={readOnly}
               data={[
-                { value: "ja", label: "vorhanden" },
-                { value: "nein", label: "entsorgt" },
-                { value: "unbekannt", label: "unbekannt" },
+                { value: "ja", label: t("vorhanden") },
+                { value: "nein", label: t("entsorgt") },
+                { value: "unbekannt", label: t("unbekannt") },
               ]}
               {...form.getInputProps("original_present")}
             />
           </div>
           {form.values.original_present === "ja" && (
             <TextInput
-              label="Aufbewahrungsort"
-              placeholder="z. B. Ordner Versicherungen"
+              label={t("Aufbewahrungsort")}
+              placeholder={t("z. B. Ordner Versicherungen")}
               disabled={readOnly}
               {...form.getInputProps("original_location")}
             />
@@ -247,10 +249,10 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
           {!readOnly && form.isDirty() && (
             <Group justify="flex-end">
               <Button variant="default" onClick={() => form.reset()}>
-                Verwerfen
+                {t("Verwerfen")}
               </Button>
               <Button type="submit" loading={update.isPending}>
-                Speichern
+                {t("Speichern")}
               </Button>
             </Group>
           )}
@@ -262,8 +264,8 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
               </Code>
               <CopyButton value={path}>
                 {({ copied, copy }) => (
-                  <Tooltip label={copied ? "Kopiert" : "Ablageort kopieren"}>
-                    <ActionIcon variant="subtle" size="sm" onClick={copy} aria-label="Ablageort kopieren">
+                  <Tooltip label={copied ? t("Kopiert") : t("Ablageort kopieren")}>
+                    <ActionIcon variant="subtle" size="sm" onClick={copy} aria-label={t("Ablageort kopieren")}>
                       {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
                     </ActionIcon>
                   </Tooltip>

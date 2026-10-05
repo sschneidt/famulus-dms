@@ -1,12 +1,21 @@
 import { ActionIcon, Anchor, Badge, Blockquote, Button, Group, Menu, Paper, Stack, Text, Tooltip } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { IconCheck, IconDots, IconEdit, IconFileText, IconRepeat, IconTrash, IconX } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import type { Wiedervorlage } from "../api/client";
 import { useDeleteWiedervorlage, useSetPayment, useWiedervorlageAction } from "../api/queries";
 import { isPaymentNote } from "../lib/payments";
 import { PaidButton } from "./PaidButton";
-import { formatDate, formatDateTime, formatPercent, recurrenceText, relativeDue, sourceLabels } from "../lib/format";
+import {
+  formatDate,
+  formatDateTime,
+  formatPercent,
+  noteLabel,
+  recurrenceText,
+  relativeDue,
+  sourceLabel,
+} from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
 
 interface Props {
@@ -18,6 +27,7 @@ interface Props {
 
 /** Ein Termin/eine Wiedervorlage mit den passenden Aktionen je nach Status. */
 export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
+  const { t } = useTranslation();
   const action = useWiedervorlageAction();
   const remove = useDeleteWiedervorlage();
   const due = relativeDue(wv.due_date);
@@ -33,10 +43,12 @@ export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
       const result = await action.mutateAsync({ id: wv.id, action: kind, paidOn });
       if (kind === "complete") {
         const next = (result as { next?: Wiedervorlage | null }).next;
-        const done = paidOn ? `Bezahlt am ${formatDate(paidOn)}` : "Erledigt";
-        notifySuccess(next ? `${done} – nächster Termin am ${formatDate(next.due_date)}` : done);
+        const done = paidOn ? t("Bezahlt am {{date}}", { date: formatDate(paidOn) }) : t("Erledigt");
+        notifySuccess(
+          next ? t("{{done}} – nächster Termin am {{date}}", { done, date: formatDate(next.due_date) }) : done,
+        );
       } else {
-        notifySuccess(kind === "confirm" ? "Termin übernommen" : "Vorschlag verworfen");
+        notifySuccess(kind === "confirm" ? t("Termin übernommen") : t("Vorschlag verworfen"));
       }
     } catch (e) {
       notifyError(e);
@@ -45,13 +57,13 @@ export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
 
   function confirmDelete() {
     modals.openConfirmModal({
-      title: "Termin löschen?",
-      children: <Text size="sm">„{wv.note}" wird endgültig gelöscht.</Text>,
-      labels: { confirm: "Löschen", cancel: "Abbrechen" },
+      title: t("Termin löschen?"),
+      children: <Text size="sm">{t("„{{note}}“ wird endgültig gelöscht.", { note: noteLabel(wv.note) })}</Text>,
+      labels: { confirm: t("Löschen"), cancel: t("Abbrechen") },
       confirmProps: { color: "red" },
       onConfirm: () =>
         remove.mutate(wv.id, {
-          onSuccess: () => notifySuccess("Termin gelöscht"),
+          onSuccess: () => notifySuccess(t("Termin gelöscht")),
           onError: (e) => notifyError(e),
         }),
     });
@@ -78,24 +90,24 @@ export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
               )}
             </Group>
             <Text size="sm" style={{ overflowWrap: "anywhere" }}>
-              {wv.note}
+              {noteLabel(wv.note)}
             </Text>
           </Stack>
           {active && (
             <Menu position="bottom-end" withinPortal>
               <Menu.Target>
-                <ActionIcon variant="subtle" color="gray" aria-label="Weitere Aktionen" disabled={busy}>
+                <ActionIcon variant="subtle" color="gray" aria-label={t("Weitere Aktionen")} disabled={busy}>
                   <IconDots size={16} />
                 </ActionIcon>
               </Menu.Target>
               <Menu.Dropdown>
                 {onEdit && (
                   <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => onEdit(wv)}>
-                    Bearbeiten
+                    {t("Bearbeiten")}
                   </Menu.Item>
                 )}
                 <Menu.Item leftSection={<IconTrash size={14} />} color="red" onClick={confirmDelete}>
-                  Löschen
+                  {t("Löschen")}
                 </Menu.Item>
               </Menu.Dropdown>
             </Menu>
@@ -108,7 +120,7 @@ export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
             variant="light"
             color={wv.source === "ai_suggested" ? "violet" : wv.source === "retention_rule" ? "teal" : "gray"}
           >
-            {sourceLabels[wv.source] ?? wv.source}
+            {sourceLabel(wv.source)}
             {wv.source === "ai_suggested" && wv.confidence !== null ? ` ${formatPercent(wv.confidence)}` : ""}
           </Badge>
           {wv.recurrence !== "none" && (
@@ -118,26 +130,26 @@ export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
           )}
           {wv.status === "erledigt" && (
             <Badge size="sm" color="green" variant="light">
-              erledigt {formatDateTime(wv.completed_at)}
+              {t("erledigt {{date}}", { date: formatDateTime(wv.completed_at) })}
             </Badge>
           )}
           {wv.status === "verworfen" && (
             <Badge size="sm" color="gray" variant="light">
-              verworfen
+              {t("verworfen")}
             </Badge>
           )}
           {showDocument && (
             <Anchor component={Link} to={`/dokumente/${wv.document_id}`} size="sm">
               <Group gap={4} wrap="nowrap">
                 <IconFileText size={14} />
-                {wv.document_title ?? "Dokument"}
+                {wv.document_title ?? t("Dokument")}
               </Group>
             </Anchor>
           )}
         </Group>
 
         {wv.status === "vorgeschlagen" && wv.source_snippet && (
-          <Tooltip label="Fundstelle im Dokumenttext" position="top-start">
+          <Tooltip label={t("Fundstelle im Dokumenttext")} position="top-start">
             <Blockquote p="xs" fz="sm" color="violet" style={{ fontStyle: "italic" }}>
               {wv.source_snippet}
             </Blockquote>
@@ -152,23 +164,23 @@ export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
               onClick={() => void run("confirm")}
               loading={action.isPending}
             >
-              Übernehmen
+              {t("Übernehmen")}
             </Button>
             {onEdit && (
               <Button size="xs" variant="default" leftSection={<IconEdit size={14} />} onClick={() => onEdit(wv)}>
-                Anpassen
+                {t("Anpassen")}
               </Button>
             )}
             {payment && (
               <PaidButton
-                label="Schon bezahlt"
+                label={t("Schon bezahlt")}
                 variant="default"
                 color="gray"
                 loading={setPayment.isPending}
                 onConfirm={async (paidOn) => {
                   try {
                     await setPayment.mutateAsync({ documentId: wv.document_id, status: "bezahlt", paidOn });
-                    notifySuccess(`Bezahlt am ${formatDate(paidOn)}`);
+                    notifySuccess(t("Bezahlt am {{date}}", { date: formatDate(paidOn) }));
                   } catch (e) {
                     notifyError(e);
                   }
@@ -183,14 +195,14 @@ export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
               onClick={() => void run("reject")}
               disabled={busy}
             >
-              Verwerfen
+              {t("Verwerfen")}
             </Button>
           </Group>
         )}
         {wv.status === "offen" && payment && (
           <Group gap="xs">
             <PaidButton
-              label="Bezahlt"
+              label={t("Bezahlt")}
               variant={overdue ? "filled" : "light"}
               loading={action.isPending}
               onConfirm={(paidOn) => run("complete", paidOn)}
@@ -207,7 +219,7 @@ export function WiedervorlageCard({ wv, onEdit, showDocument = false }: Props) {
               onClick={() => void run("complete")}
               loading={action.isPending}
             >
-              Erledigt
+              {t("Erledigt")}
             </Button>
           </Group>
         )}

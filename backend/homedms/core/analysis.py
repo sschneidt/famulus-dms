@@ -21,6 +21,7 @@ from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import ColumnElement
 
+from homedms.i18n import _
 from homedms.models.document import ClassificationStatus, Document, ExtractionStatus, OcrStatus
 
 STUCK_AFTER = timedelta(minutes=10)
@@ -74,21 +75,28 @@ def unanalyzed_expr(now: datetime | None = None) -> ColumnElement[bool]:
 def reasons(document: Document) -> list[str]:
     """Was fehlt - fuer die Anzeige (die Auswahl selbst trifft unanalyzed_expr)."""
     if document.ocr_status == OcrStatus.failed:
-        return ["Texterkennung fehlgeschlagen"]
+        return [_("Texterkennung fehlgeschlagen")]
     if document.ocr_status == OcrStatus.pending:
-        return ["Texterkennung wurde unterbrochen"]
+        return [_("Texterkennung wurde unterbrochen")]
     result = []
     if document.classification_status != ClassificationStatus.confirmed:
         if document.classification_error:
-            result.append("Kategorie: KI war nicht erreichbar")
+            result.append(_("Kategorie: KI war nicht erreichbar"))
         elif document.classification_status == ClassificationStatus.pending:
-            result.append("Kategorie: Einordnung wurde unterbrochen")
+            result.append(_("Kategorie: Einordnung wurde unterbrochen"))
     if (document.ocr_text or "").strip():
         if document.extraction_status == ExtractionStatus.failed:
-            result.append("Betreff, Absender, Fristen: KI war nicht erreichbar")
+            result.append(_("Betreff, Absender, Fristen: KI war nicht erreichbar"))
         elif document.extraction_status == ExtractionStatus.pending:
-            result.append("Betreff, Absender, Fristen: Erkennung wurde unterbrochen")
+            result.append(_("Betreff, Absender, Fristen: Erkennung wurde unterbrochen"))
     return result
+
+
+def needs_ai(document: Document) -> bool:
+    """Fehlt etwas, das nur die KI nachholen kann (Kategorie, Angaben)? Texterkennung geht ohne."""
+    if document.ocr_status in (OcrStatus.failed, OcrStatus.pending):
+        return False
+    return bool(reasons(document))
 
 
 def plan(document: Document) -> list[str]:

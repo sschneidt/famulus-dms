@@ -17,6 +17,7 @@ import {
 import { modals } from "@mantine/modals";
 import { IconArrowMerge, IconDots, IconEdit, IconHome, IconTrash } from "@tabler/icons-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Property } from "../api/client";
 import { useDeleteProperty, useMergeProperty, useProperties, useRenameProperty } from "../api/queries";
 import { notifyError, notifySuccess } from "../lib/notify";
@@ -26,6 +27,7 @@ import { notifyError, notifySuccess } from "../lib/notify";
  * Ordnername auf dem NAS (z. B. "Haus & Reparaturen/<Name>/2026/...").
  */
 export function PropertiesPage() {
+  const { t } = useTranslation();
   const properties = useProperties();
   const remove = useDeleteProperty();
   const [renaming, setRenaming] = useState<Property | null>(null);
@@ -33,28 +35,30 @@ export function PropertiesPage() {
 
   function confirmDelete(p: Property) {
     modals.openConfirmModal({
-      title: "Objekt löschen?",
+      title: t("Objekt löschen?"),
       children: (
         <Text size="sm">
-          „{p.name}" wird gelöscht. Die {p.document_count} zugehörigen Dokumente bleiben erhalten und landen im Ordner
-          „_Ohne Adresse".
+          {t(
+            "„{{name}}“ wird gelöscht. Die {{count}} zugehörigen Dokumente bleiben erhalten und landen im Ordner „_Ohne Adresse“.",
+            { name: p.name, count: p.document_count },
+          )}
         </Text>
       ),
-      labels: { confirm: "Löschen", cancel: "Abbrechen" },
+      labels: { confirm: t("Löschen"), cancel: t("Abbrechen") },
       confirmProps: { color: "red" },
       onConfirm: () =>
-        remove.mutate(p.id, { onSuccess: () => notifySuccess("Objekt gelöscht"), onError: (e) => notifyError(e) }),
+        remove.mutate(p.id, { onSuccess: () => notifySuccess(t("Objekt gelöscht")), onError: (e) => notifyError(e) }),
     });
   }
 
   return (
     <Stack>
       <div>
-        <Title order={2}>Objekte</Title>
+        <Title order={2}>{t("Objekte")}</Title>
         <Text c="dimmed" size="sm" maw={680}>
-          Häuser und Wohnungen, die in Ihren Dokumenten vorkommen. Rechnungen von Handwerkern, Nebenkosten und
-          Gebäudeversicherungen werden auf dem NAS je Objekt in einem eigenen Ordner abgelegt. Neue Adressen erkennt die
-          KI automatisch – hier können Sie Objekte umbenennen oder doppelt erkannte zusammenführen.
+          {t(
+            "Häuser und Wohnungen, die in Ihren Dokumenten vorkommen. Rechnungen von Handwerkern, Nebenkosten und Gebäudeversicherungen werden auf dem NAS je Objekt in einem eigenen Ordner abgelegt. Neue Adressen erkennt die KI automatisch – hier können Sie Objekte umbenennen oder doppelt erkannte zusammenführen.",
+          )}
         </Text>
       </div>
       {properties.isPending ? (
@@ -68,8 +72,9 @@ export function PropertiesPage() {
           <Stack align="center" gap="xs">
             <IconHome size={40} color="var(--mantine-color-dimmed)" />
             <Text c="dimmed" ta="center" maw={420}>
-              Noch keine Objekte. Sobald eine Handwerker-Rechnung oder Nebenkostenabrechnung mit Adresse hochgeladen
-              wird, erscheint das Objekt hier.
+              {t(
+                "Noch keine Objekte. Sobald eine Handwerker-Rechnung oder Nebenkostenabrechnung mit Adresse hochgeladen wird, erscheint das Objekt hier.",
+              )}
             </Text>
           </Stack>
         </Card>
@@ -85,31 +90,34 @@ export function PropertiesPage() {
                       {p.name}
                     </Text>
                     <Text size="sm" c="dimmed">
-                      {p.street}, {p.postal_code} {p.city} · {p.document_count}{" "}
-                      {p.document_count === 1 ? "Dokument" : "Dokumente"}
+                      {p.street}, {p.postal_code} {p.city} · {t("{{count}} Dokumente", { count: p.document_count })}
                     </Text>
                   </div>
                 </Group>
                 <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
                   <Menu position="bottom-end" withinPortal>
                     <Menu.Target>
-                      <ActionIcon variant="subtle" color="gray" aria-label={`Aktionen für ${p.name}`}>
+                      <ActionIcon
+                        variant="subtle"
+                        color="gray"
+                        aria-label={t("Aktionen für {{name}}", { name: p.name })}
+                      >
                         <IconDots size={16} />
                       </ActionIcon>
                     </Menu.Target>
                     <Menu.Dropdown>
                       <Menu.Item leftSection={<IconEdit size={14} />} onClick={() => setRenaming(p)}>
-                        Umbenennen
+                        {t("Umbenennen")}
                       </Menu.Item>
                       <Menu.Item
                         leftSection={<IconArrowMerge size={14} />}
                         disabled={properties.data.length < 2}
                         onClick={() => setMerging(p)}
                       >
-                        Mit anderem Objekt zusammenführen
+                        {t("Mit anderem Objekt zusammenführen")}
                       </Menu.Item>
                       <Menu.Item leftSection={<IconTrash size={14} />} color="red" onClick={() => confirmDelete(p)}>
-                        Löschen
+                        {t("Löschen")}
                       </Menu.Item>
                     </Menu.Dropdown>
                   </Menu>
@@ -126,6 +134,7 @@ export function PropertiesPage() {
 }
 
 function RenameModal({ property, onClose }: { property: Property | null; onClose(): void }) {
+  const { t } = useTranslation();
   const rename = useRenameProperty();
   const [name, setName] = useState("");
   const [lastId, setLastId] = useState<string | null>(null);
@@ -138,18 +147,18 @@ function RenameModal({ property, onClose }: { property: Property | null; onClose
     if (!property || !name.trim()) return;
     try {
       await rename.mutateAsync({ id: property.id, name: name.trim() });
-      notifySuccess("Umbenannt – der Ordner auf dem NAS wird angepasst");
+      notifySuccess(t("Umbenannt – der Ordner auf dem NAS wird angepasst"));
       onClose();
     } catch (e) {
-      notifyError(e, "Umbenennen fehlgeschlagen");
+      notifyError(e, t("Umbenennen fehlgeschlagen"));
     }
   }
 
   return (
-    <Modal opened={property !== null} onClose={onClose} title="Objekt umbenennen">
+    <Modal opened={property !== null} onClose={onClose} title={t("Objekt umbenennen")}>
       <Stack>
         <TextInput
-          label="Name (= Ordnername)"
+          label={t("Name (= Ordnername)")}
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
           onKeyDown={(e) => e.key === "Enter" && void save()}
@@ -157,10 +166,10 @@ function RenameModal({ property, onClose }: { property: Property | null; onClose
         />
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
-            Abbrechen
+            {t("Abbrechen")}
           </Button>
           <Button onClick={() => void save()} loading={rename.isPending} disabled={!name.trim()}>
-            Speichern
+            {t("Speichern")}
           </Button>
         </Group>
       </Stack>
@@ -169,6 +178,7 @@ function RenameModal({ property, onClose }: { property: Property | null; onClose
 }
 
 function MergeModal({ property, all, onClose }: { property: Property | null; all: Property[]; onClose(): void }) {
+  const { t } = useTranslation();
   const merge = useMergeProperty();
   const [target, setTarget] = useState<string | null>(null);
   const options = all.filter((p) => p.id !== property?.id).map((p) => ({ value: p.id, label: p.name }));
@@ -177,28 +187,29 @@ function MergeModal({ property, all, onClose }: { property: Property | null; all
     if (!property || !target) return;
     try {
       await merge.mutateAsync({ id: property.id, intoId: target });
-      notifySuccess("Zusammengeführt");
+      notifySuccess(t("Zusammengeführt"));
       setTarget(null);
       onClose();
     } catch (e) {
-      notifyError(e, "Zusammenführen fehlgeschlagen");
+      notifyError(e, t("Zusammenführen fehlgeschlagen"));
     }
   }
 
   return (
-    <Modal opened={property !== null} onClose={onClose} title="Objekte zusammenführen">
+    <Modal opened={property !== null} onClose={onClose} title={t("Objekte zusammenführen")}>
       <Stack>
         <Text size="sm">
-          Alle Dokumente von „{property?.name}" werden dem gewählten Objekt zugeordnet; „{property?.name}" wird danach
-          gelöscht.
+          {t("Alle Dokumente von „{{name}}“ werden dem gewählten Objekt zugeordnet; „{{name}}“ wird danach gelöscht.", {
+            name: property?.name ?? "",
+          })}
         </Text>
-        <Select label="Zusammenführen mit" data={options} value={target} onChange={setTarget} searchable />
+        <Select label={t("Zusammenführen mit")} data={options} value={target} onChange={setTarget} searchable />
         <Group justify="flex-end">
           <Button variant="default" onClick={onClose}>
-            Abbrechen
+            {t("Abbrechen")}
           </Button>
           <Button onClick={() => void save()} loading={merge.isPending} disabled={!target}>
-            Zusammenführen
+            {t("Zusammenführen")}
           </Button>
         </Group>
       </Stack>

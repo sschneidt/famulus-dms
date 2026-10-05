@@ -19,6 +19,7 @@ from homedms.jobs import app as jobs_app
 from homedms.models.document import Document
 from homedms.models.tenant import User
 from homedms.schemas.system import ActionResult, DiagnosticsResponse
+from homedms.i18n import _, _n
 
 logger = logging.getLogger("homedms.api.system")
 router = APIRouter(prefix="/system", tags=["system"])
@@ -47,14 +48,14 @@ async def run_action(action: str, user: User = Depends(require_admin), db: Async
     if action == "restart-worker":
         async with jobs_app.open_async():
             await jobs_app.configure_task("restart_worker").defer_async()
-        return ActionResult(message="Der Worker startet in wenigen Sekunden neu.")
+        return ActionResult(message=_("Der Worker startet in wenigen Sekunden neu."))
 
     if action == "retry-stalled":
         async with jobs_app.open_async():
             stalled = list(await jobs_app.job_manager.get_stalled_jobs(seconds_since_heartbeat=60))
             for job in stalled:
                 await jobs_app.job_manager.retry_job(job)
-        return ActionResult(message=f"{len(stalled)} hängende(r) Auftrag/Aufträge neu eingereiht.")
+        return ActionResult(message=_n("{count} hängender Auftrag neu eingereiht.", "{count} hängende Aufträge neu eingereiht.", len(stalled)))
 
     if action == "pull-models":
         from homedms.ai import ollama
@@ -68,7 +69,7 @@ async def run_action(action: str, user: User = Depends(require_admin), db: Async
                     await jobs_app.configure_task("pull_model", queueing_lock=f"pull-{model}").defer_async(model=model)
                 except AlreadyEnqueued:
                     pass  # Download laeuft schon
-        return ActionResult(message="Download gestartet - je nach Leitung einige Minuten. Die Seite zeigt es an, sobald es fertig ist.")
+        return ActionResult(message=_("Download gestartet - je nach Leitung einige Minuten. Die Seite zeigt es an, sobald es fertig ist."))
 
     if action == "unload-models":
         from homedms.tasks.system import unload_models
@@ -76,8 +77,8 @@ async def run_action(action: str, user: User = Depends(require_admin), db: Async
         try:
             count = await unload_models()
         except Exception as exc:  # noqa: BLE001
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"KI nicht erreichbar: {exc}") from exc
-        return ActionResult(message=f"{count} Modell(e) aus dem Arbeitsspeicher entfernt.")
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, _("KI nicht erreichbar: {error}", error=exc)) from exc
+        return ActionResult(message=_n("{count} Modell aus dem Arbeitsspeicher entfernt.", "{count} Modelle aus dem Arbeitsspeicher entfernt.", count))
 
     if action == "reindex-search":
         from homedms.core import meili
@@ -93,6 +94,14 @@ async def run_action(action: str, user: User = Depends(require_admin), db: Async
         async with jobs_app.open_async():
             for document_id in ids:
                 await defer_filing(document_id)  # Ablage-Auftrag aktualisiert auch den Suchindex
-        return ActionResult(message=f"{len(ids)} Dokumente werden neu in den Suchindex geschrieben.")
+        return ActionResult(message=_n("{count} Dokument wird neu in den Suchindex geschrieben.", "{count} Dokumente werden neu in den Suchindex geschrieben.", len(ids)))
 
-    raise HTTPException(status.HTTP_404_NOT_FOUND, "Unbekannte Aktion")
+    if action == "install-ocr-languages":
+        from homedms.core import ocr_languages
+
+        queued = await ocr_languages.request_installs(db, await ocr_languages.missing(db, user.tenant_id))
+        if not queued:
+            return ActionResult(message=_("Alle benötigten Sprachpakete sind installiert."))
+        return ActionResult(message=_("Download gestartet: {codes}", codes=", ".join(queued)))
+
+    raise HTTPException(status.HTTP_404_NOT_FOUND, _("Unbekannte Aktion"))

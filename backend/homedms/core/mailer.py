@@ -17,6 +17,7 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 from homedms.config import get_settings
+from homedms.i18n import _
 
 SECURITY_MODES = ("starttls", "ssl", "none")
 TIMEOUT_SECONDS = 20
@@ -40,8 +41,8 @@ def decrypt_password(token: str) -> str:
     try:
         return _fernet().decrypt(token.encode()).decode()
     except (InvalidToken, ValueError) as exc:
-        raise MailError("Das gespeicherte Passwort lässt sich nicht mehr entschlüsseln "
-                        "(JWT_SECRET geändert?) - bitte neu eingeben.") from exc
+        raise MailError(_("Das gespeicherte Passwort lässt sich nicht mehr entschlüsseln "
+                          "(JWT_SECRET geändert?) - bitte neu eingeben.")) from exc
 
 
 def is_configured(settings: dict | None) -> bool:
@@ -82,23 +83,24 @@ def _send_sync(settings: dict, msg: EmailMessage) -> None:
     except MailError:
         raise
     except smtplib.SMTPAuthenticationError as exc:
-        raise MailError("Anmeldung am Mailserver abgelehnt - Benutzername/Passwort prüfen (bei Gmail, GMX "
-                        "u. a. ein App-Passwort verwenden).") from exc
+        raise MailError(_("Anmeldung am Mailserver abgelehnt - Benutzername/Passwort prüfen (bei Gmail, GMX "
+                          "u. a. ein App-Passwort verwenden).")) from exc
     except smtplib.SMTPRecipientsRefused as exc:
-        raise MailError(f"Empfänger abgelehnt: {', '.join(exc.recipients)}") from exc
+        raise MailError(_("Empfänger abgelehnt: {recipients}", recipients=", ".join(exc.recipients))) from exc
     except smtplib.SMTPSenderRefused as exc:
-        raise MailError(f"Absender {exc.sender} abgelehnt - muss meist zum Postfach passen.") from exc
+        raise MailError(_("Absender {sender} abgelehnt - muss meist zum Postfach passen.", sender=exc.sender)) from exc
     except ssl.SSLError as exc:
-        raise MailError(f"Verschlüsselung fehlgeschlagen ({exc.reason or exc}) - passt die Einstellung "
-                        "„Verschlüsselung“ zum Port (587 = STARTTLS, 465 = SSL)?") from exc
+        raise MailError(_("Verschlüsselung fehlgeschlagen ({reason}) - passt die Einstellung "
+                          "„Verschlüsselung“ zum Port (587 = STARTTLS, 465 = SSL)?", reason=exc.reason or exc)) from exc
     except (TimeoutError, OSError) as exc:
-        raise MailError(f"Mailserver {host}:{port} nicht erreichbar ({exc.__class__.__name__}: {exc})") from exc
+        raise MailError(_("Mailserver {host}:{port} nicht erreichbar ({error})", host=host, port=port,
+                          error=f"{exc.__class__.__name__}: {exc}")) from exc
     except smtplib.SMTPException as exc:
-        raise MailError(f"Mailserver meldet: {exc}") from exc
+        raise MailError(_("Mailserver meldet: {error}", error=exc)) from exc
 
 
 async def send(settings: dict, to: str, subject: str, text: str, html: str | None = None) -> None:
     if not is_configured(settings):
-        raise MailError("E-Mail-Versand ist nicht eingerichtet")
+        raise MailError(_("E-Mail-Versand ist nicht eingerichtet"))
     msg = build_message(settings, to, subject, text, html)
     await asyncio.to_thread(_send_sync, settings, msg)

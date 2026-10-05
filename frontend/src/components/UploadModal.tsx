@@ -20,8 +20,10 @@ import { useMediaQuery } from "@mantine/hooks";
 import { IconArrowDown, IconArrowUp, IconCamera, IconFile, IconPhoto, IconUpload, IconX } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import { rectifyPhoto, uploadDocument, type Schemas } from "../api/client";
+import i18n, { intlLocale } from "../i18n";
 import { notifyError, notifySuccess } from "../lib/notify";
 
 const ACCEPTED_TYPES = {
@@ -88,12 +90,13 @@ interface Props {
  */
 export function UploadModal({ opened, onClose, initialFiles }: Props) {
   const isMobile = useMediaQuery("(max-width: 48em)") ?? false;
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   return (
     <Modal
       opened={opened}
       onClose={busy ? () => undefined : onClose}
-      title="Dokumente hochladen"
+      title={t("Dokumente hochladen")}
       size="lg"
       fullScreen={isMobile}
       closeOnClickOutside={!busy}
@@ -117,6 +120,7 @@ function UploadForm({
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const cameraInput = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<Item[]>(() => (initialFiles ?? []).map(toItem));
   const [previewKey, setPreviewKey] = useState<number | null>(null);
@@ -194,7 +198,9 @@ function UploadForm({
             autoCrop: versions.map((v) => v.autoCrop),
           },
         );
-        notifySuccess(`Dokument mit ${files.length} Seiten hochgeladen – Texterkennung läuft im Hintergrund.`);
+        notifySuccess(
+          t("Dokument mit {{count}} Seiten hochgeladen – Texterkennung läuft im Hintergrund.", { count: files.length }),
+        );
         onClose();
         navigate(`/dokumente/${doc.id}`);
         return;
@@ -213,8 +219,8 @@ function UploadForm({
       }
       notifySuccess(
         created.length === 1
-          ? "Dokument hochgeladen – Texterkennung läuft im Hintergrund."
-          : `${created.length} Dokumente hochgeladen – Texterkennung läuft im Hintergrund.`,
+          ? t("Dokument hochgeladen – Texterkennung läuft im Hintergrund.")
+          : t("{{count}} Dokumente hochgeladen – Texterkennung läuft im Hintergrund.", { count: created.length }),
       );
       onClose();
       if (created.length === 1) navigate(`/dokumente/${created[0]}`);
@@ -222,7 +228,9 @@ function UploadForm({
     } catch (e) {
       notifyError(
         e,
-        created.length ? `Nur ${created.length} von ${files.length} hochgeladen` : "Hochladen fehlgeschlagen",
+        created.length
+          ? t("Nur {{done}} von {{total}} hochgeladen", { done: created.length, total: files.length })
+          : t("Hochladen fehlgeschlagen"),
       );
       setFiles((current) => current.slice(created.length));
       setProgress(null);
@@ -256,7 +264,7 @@ function UploadForm({
             rejections
               .map(
                 (r) =>
-                  `${r.file.name}: ${r.errors[0]?.code === "file-too-large" ? "zu groß (max. 50 MB)" : "Dateityp nicht unterstützt"}`,
+                  `${r.file.name}: ${r.errors[0]?.code === "file-too-large" ? t("zu groß (max. 50 MB)") : t("Dateityp nicht unterstützt")}`,
               )
               .join(", "),
           )
@@ -277,10 +285,10 @@ function UploadForm({
           </Dropzone.Idle>
           <div>
             <Text size="lg" inline>
-              {isMobile ? "Datei auswählen" : "Dateien hierher ziehen oder klicken"}
+              {isMobile ? t("Datei auswählen") : t("Dateien hierher ziehen oder klicken")}
             </Text>
             <Text size="sm" c="dimmed" mt={7}>
-              PDF, JPG, PNG, TIFF, HEIC – bis 50 MB
+              {t("PDF, JPG, PNG, TIFF, HEIC – bis 50 MB")}
             </Text>
           </div>
         </Group>
@@ -294,7 +302,7 @@ function UploadForm({
         disabled={busy}
         size={isMobile ? "md" : "sm"}
       >
-        {files.length > 0 ? "Weitere Seite fotografieren" : "Foto aufnehmen"}
+        {files.length > 0 ? t("Weitere Seite fotografieren") : t("Foto aufnehmen")}
       </Button>
 
       {rejected && (
@@ -310,8 +318,8 @@ function UploadForm({
           onChange={(v) => setCombineChoice(v === "eins")}
           disabled={busy}
           data={[
-            { value: "eins", label: `Ein Dokument (${files.length} Seiten)` },
-            { value: "einzeln", label: `${files.length} einzelne Dokumente` },
+            { value: "eins", label: t("Ein Dokument ({{count}} Seiten)", { count: files.length }) },
+            { value: "einzeln", label: t("{{count}} einzelne Dokumente", { count: files.length }) },
           ]}
         />
       )}
@@ -323,13 +331,13 @@ function UploadForm({
               <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
                 {combine && (
                   <Text size="xs" c="dimmed" w={52} style={{ flexShrink: 0 }}>
-                    Seite {index + 1}
+                    {t("Seite {{page}}", { page: index + 1 })}
                   </Text>
                 )}
                 {pending.scan?.status === "done" ? (
                   <UnstyledButton
                     onClick={() => setPreviewKey(pending.key)}
-                    aria-label={`Vorschau ${pending.file.name || "Foto"}`}
+                    aria-label={t("Vorschau {{name}}", { name: pending.file.name || t("Foto") })}
                     style={{ flexShrink: 0 }}
                   >
                     <Image
@@ -349,7 +357,7 @@ function UploadForm({
                 <Stack gap={2} style={{ minWidth: 0 }}>
                   <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
                     <Text size="sm" truncate>
-                      {pending.file.name || "Foto"}
+                      {pending.file.name || t("Foto")}
                     </Text>
                     <Text size="xs" c="dimmed" style={{ flexShrink: 0 }}>
                       {formatSize(pending.file.size)}
@@ -366,7 +374,7 @@ function UploadForm({
                       color="gray"
                       disabled={busy || index === 0}
                       onClick={() => move(index, -1)}
-                      aria-label={`Seite ${index + 1} nach oben`}
+                      aria-label={t("Seite {{page}} nach oben", { page: index + 1 })}
                     >
                       <IconArrowUp size={16} />
                     </ActionIcon>
@@ -375,7 +383,7 @@ function UploadForm({
                       color="gray"
                       disabled={busy || index === files.length - 1}
                       onClick={() => move(index, 1)}
-                      aria-label={`Seite ${index + 1} nach unten`}
+                      aria-label={t("Seite {{page}} nach unten", { page: index + 1 })}
                     >
                       <IconArrowDown size={16} />
                     </ActionIcon>
@@ -386,7 +394,7 @@ function UploadForm({
                   color="gray"
                   disabled={busy}
                   onClick={() => setFiles((current) => current.filter((_, i) => i !== index))}
-                  aria-label={`${pending.file.name} entfernen`}
+                  aria-label={t("{{name}} entfernen", { name: pending.file.name })}
                 >
                   <IconX size={16} />
                 </ActionIcon>
@@ -398,8 +406,8 @@ function UploadForm({
 
       {(files.length === 1 || combine) && (
         <TextInput
-          label="Titel (optional)"
-          placeholder={combine ? "wird automatisch vergeben" : files[0].file.name}
+          label={t("Titel (optional)")}
+          placeholder={combine ? t("wird automatisch vergeben") : files[0].file.name}
           value={title}
           onChange={(e) => setTitle(e.currentTarget.value)}
           disabled={busy}
@@ -408,7 +416,7 @@ function UploadForm({
 
       <div>
         <Text size="sm" fw={500} mb={4}>
-          Papier-Original aufbewahrt?
+          {t("Papier-Original aufbewahrt?")}
         </Text>
         <SegmentedControl
           fullWidth
@@ -416,16 +424,16 @@ function UploadForm({
           onChange={(v) => setOriginal(v as Schemas["OriginalPresent"])}
           disabled={busy}
           data={[
-            { value: "ja", label: "Ja" },
-            { value: "nein", label: "Nein" },
-            { value: "unbekannt", label: "Weiß nicht" },
+            { value: "ja", label: t("Ja") },
+            { value: "nein", label: t("Nein") },
+            { value: "unbekannt", label: t("Weiß nicht") },
           ]}
         />
       </div>
       {original === "ja" && (
         <TextInput
-          label="Wo liegt das Original?"
-          placeholder="z. B. Ordner Versicherungen"
+          label={t("Wo liegt das Original?")}
+          placeholder={t("z. B. Ordner Versicherungen")}
           value={location}
           onChange={(e) => setLocation(e.currentTarget.value)}
           disabled={busy}
@@ -437,7 +445,7 @@ function UploadForm({
       <Modal
         opened={previewItem?.scan?.status === "done"}
         onClose={() => setPreviewKey(null)}
-        title={previewItem?.file.name || "Foto"}
+        title={previewItem?.file.name || t("Foto")}
         size="lg"
         fullScreen={isMobile}
       >
@@ -449,8 +457,8 @@ function UploadForm({
                 value={previewItem.useOriginal ? "original" : "zugeschnitten"}
                 onChange={(v) => setUseOriginal(previewItem.key, v === "original")}
                 data={[
-                  { value: "zugeschnitten", label: "Zugeschnitten" },
-                  { value: "original", label: "Original" },
+                  { value: "zugeschnitten", label: t("Zugeschnitten") },
+                  { value: "original", label: t("Original") },
                 ]}
               />
             )}
@@ -461,14 +469,14 @@ function UploadForm({
               mah={isMobile ? "70vh" : 560}
               radius="sm"
             />
-            <Button onClick={() => setPreviewKey(null)}>Übernehmen</Button>
+            <Button onClick={() => setPreviewKey(null)}>{t("Übernehmen")}</Button>
           </Stack>
         )}
       </Modal>
 
       <Group justify="flex-end">
         <Button variant="default" onClick={onClose} disabled={busy}>
-          Abbrechen
+          {t("Abbrechen")}
         </Button>
         <Button
           onClick={() => void submit()}
@@ -477,10 +485,10 @@ function UploadForm({
           leftSection={<IconUpload size={16} />}
         >
           {combine
-            ? "Als ein Dokument hochladen"
+            ? t("Als ein Dokument hochladen")
             : files.length > 1
-              ? `${files.length} Dokumente hochladen`
-              : "Hochladen"}
+              ? t("{{count}} Dokumente hochladen", { count: files.length })
+              : t("Hochladen")}
         </Button>
       </Group>
     </Stack>
@@ -488,8 +496,10 @@ function UploadForm({
 }
 
 function formatSize(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
+  const number = (value: number, digits: number) =>
+    value.toLocaleString(intlLocale(), { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  if (bytes < 1024 * 1024) return `${number(Math.max(1, Math.round(bytes / 1024)), 0)} ${i18n.t("KB")}`;
+  return `${number(bytes / 1024 / 1024, 1)} ${i18n.t("MB")}`;
 }
 
 function ScanInfo({
@@ -501,6 +511,7 @@ function ScanInfo({
   onToggle(useOriginal: boolean): void;
   disabled: boolean;
 }) {
+  const { t } = useTranslation();
   const scan = item.scan;
   if (!scan) return null;
   if (scan.status === "busy") {
@@ -508,7 +519,7 @@ function ScanInfo({
       <Group gap={6} wrap="nowrap">
         <Loader size={12} />
         <Text size="xs" c="dimmed">
-          wird zugeschnitten …
+          {t("wird zugeschnitten …")}
         </Text>
       </Group>
     );
@@ -517,18 +528,20 @@ function ScanInfo({
   if (!scanChanged(scan)) {
     return (
       <Text size="xs" c="dimmed">
-        Kein Blattrand erkannt – bleibt wie aufgenommen
+        {t("Kein Blattrand erkannt – bleibt wie aufgenommen")}
       </Text>
     );
   }
-  const label = scan.cropped ? "Zugeschnitten" : `Gerade gerichtet (${Math.abs(scan.skew).toLocaleString("de-DE")}°)`;
+  const label = scan.cropped
+    ? t("Zugeschnitten")
+    : t("Gerade gerichtet ({{angle}}°)", { angle: Math.abs(scan.skew).toLocaleString(intlLocale()) });
   return (
     <Group gap={6} wrap="nowrap">
       <Badge size="xs" variant="light" color={item.useOriginal ? "gray" : "teal"}>
-        {item.useOriginal ? "Original" : label}
+        {item.useOriginal ? t("Original") : label}
       </Badge>
       <Button size="compact-xs" variant="subtle" disabled={disabled} onClick={() => onToggle(!item.useOriginal)}>
-        {item.useOriginal ? "Zuschnitt verwenden" : "Original verwenden"}
+        {item.useOriginal ? t("Zuschnitt verwenden") : t("Original verwenden")}
       </Button>
     </Group>
   );

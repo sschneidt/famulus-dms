@@ -96,6 +96,10 @@ Zu sichern sind drei Dinge:
 
 Unter Windows eignen sich der Dateiversionsverlauf oder eine Aufgabe mit `pg_dump`, unter Linux z. B. `restic`/`borg` plus `pg_dump` per Cron.
 
+## Sprachen der Texterkennung
+
+HomeDMS legt einen eigenen Ordner für Tesseract-Sprachpakete an (`TESSDATA_DIR` in `homedms.env`; die Skripte setzen ihn auf `<Datenordner>/tessdata`). Beim Start werden die Pakete der Tesseract-Installation dorthin verlinkt (unter Windows ohne Symlink-Recht kopiert). Weitere Sprachen wählt der Admin auf der Seite „Sprachen“ oder bei der Ersteinrichtung; der Worker lädt sie dann aus dem offiziellen Tesseract-Repository (`tessdata_fast` auf GitHub) – dafür braucht der Server ausgehenden Internetzugang. Ohne Internet: die Datei `<code>.traineddata` von Hand in diesen Ordner legen.
+
 ## Erinnerungen (E-Mail/Push)
 
 Die Uhrzeit der täglichen Zusammenfassung richtet sich nach `TZ` in `homedms.env` (Standard `Europe/Berlin`). Für Push braucht der Server ausgehenden Internetzugang (zu den Push-Diensten von Google, Apple, Mozilla bzw. Microsoft), für E-Mail Zugang zum Mailserver (Port 587 oder 465).

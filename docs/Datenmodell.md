@@ -59,6 +59,7 @@ Ein Mandant. Wird über den Einrichtungsassistenten angelegt (Anforderungsdokume
 | id | UUID, PK | |
 | name | text | Haushaltsname, z. B. "Familie Müller" |
 | default_language | enum(de, en, …) | Standardsprache für OCR/UI, erweiterbar |
+| ocr_languages | jsonb, nullable | Sprachen der Texterkennung, vom Admin gewählt (Tesseract-Codes, z. B. `["deu","eng"]`); `null` = `OCR_LANGUAGES` aus der Konfiguration. Die Oberflächensprachen der aktiven Personen kommen immer dazu (0014) |
 | mail_settings | jsonb, nullable | E-Mail-Versand des Haushalts (0013): host, port, security (starttls/ssl/none), username, password (verschlüsselt, Schlüssel aus `JWT_SECRET` abgeleitet), sender, app_url (für Links), last_ok_at, last_error |
 | created_at | timestamp | |
 
@@ -73,7 +74,7 @@ Ein Haushaltsmitglied. Gehört genau einem Tenant an (kein Cross-Tenant-Zugriff 
 | password_hash | text | Argon2/bcrypt |
 | display_name | text | |
 | role | enum(admin, member) | Admin verwaltet Haushalt, Nutzer, Kategorien; Member unterliegt Rechte-Modell (3.6) |
-| locale | text | Sprache der Oberfläche |
+| locale | text | Sprache der Oberfläche, E-Mails und Push-Nachrichten: `de`, `en` oder `ru` (bei der Ersteinrichtung aus `default_language`) |
 | notification_channels | jsonb | z. B. `{"in_app": true, "email": true, "push": false}` – In-App immer an |
 | digest_hour | smallint, default 7 | Uhrzeit der täglichen Zusammenfassung (Ortszeit `TZ`), 0013 |
 | last_digest_on, last_digest_at | date, timestamp | zuletzt erstellte Zusammenfassung – höchstens eine pro Tag; „neu seit“ zählt ab `last_digest_at` |
@@ -109,7 +110,7 @@ Das zentrale Objekt.
 | category_id | UUID, FK → Category, nullable | Null, solange im Feedback-Loop (Status `needs_review`) |
 | title | text | Anzeigename, initial vom OCR/LLM vorgeschlagen, editierbar |
 | ocr_text | text | Volltext, Quelle für Meilisearch-Index |
-| ocr_language | text | erkannte Sprache |
+| ocr_language | varchar(100) | bei der Texterkennung verwendete Sprachpakete, z. B. `deu+eng+rus` (seit 0014 bis 100 Zeichen) |
 | ocr_status | enum(pending, done, failed) | |
 | classification_status | enum(pending, auto_assigned, needs_review, confirmed) | `confirmed` nach manueller Bestätigung/Korrektur, auch wenn identisch zum Auto-Vorschlag |
 | classification_confidence | numeric, nullable | Score der zuletzt erfolgreichen Stufe |
@@ -239,7 +240,7 @@ Wird eine wiederkehrende Wiedervorlage als `erledigt` markiert, erzeugt das Back
 
 **PushSubscription**: id, user_id (FK), endpoint (eindeutig), keys (jsonb, Web-Push-Schlüssel p256dh/auth), created_at; seit 0013 user_agent (Gerätename), last_success_at, last_error. Meldet der Push-Dienst 404/410, wird das Abo gelöscht.
 
-**AppSetting** (0013): key (PK), value (jsonb), updated_at – serverweite Werte, die mit der Datenbank gesichert werden. Derzeit `vapid`: der Schlüssel, mit dem HomeDMS Push-Nachrichten signiert. Ginge er verloren, müsste jedes Gerät Push neu einschalten.
+**AppSetting** (0013): key (PK), value (jsonb), updated_at – serverweite Werte, die mit der Datenbank gesichert werden. `vapid`: der Schlüssel, mit dem HomeDMS Push-Nachrichten signiert (ginge er verloren, müsste jedes Gerät Push neu einschalten). `ocr_installs` (0014): Stand der Sprachpaket-Downloads je Code (`installing`/`failed` mit Fehlertext).
 
 ### 3.11 KI-Chat-Assistent
 

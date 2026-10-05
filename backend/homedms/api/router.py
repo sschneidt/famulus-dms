@@ -11,6 +11,7 @@ from homedms.api.routes import (
     documents,
     household,
     import_sources,
+    languages,
     notifications,
     pages,
     properties,
@@ -37,3 +38,4 @@ api_router.include_router(import_sources.router)
 api_router.include_router(system.router)
 api_router.include_router(notifications.router)
 api_router.include_router(notifications.mail_router)
+api_router.include_router(languages.router)

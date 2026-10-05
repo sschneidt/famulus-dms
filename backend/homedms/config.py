@@ -26,8 +26,14 @@ class Settings(BaseSettings):
     # pro Dokument durchaus mehrere Minuten (v. a. beim ersten Laden ins RAM).
     ollama_timeout_seconds: int = 900
     # Tesseract-Sprachpakete fuer die Texterkennung (Anforderungsdokument 4.2), "+"-getrennt.
-    # Weitere Sprachen: Paket im Dockerfile ergaenzen (tesseract-ocr-<code>) und hier anhaengen.
+    # Standard, solange ein Admin auf der Seite "Sprachen" nichts anderes waehlt; dazu kommen immer
+    # die Oberflaechensprachen der Personen. Fehlende Pakete laedt HomeDMS selbst nach.
     ocr_languages: str = "deu+eng"
+    # Eigener Ordner fuer Sprachpakete (mitgelieferte + nachinstallierte, core/ocr_languages.py).
+    # Im Container fest "/data/tessdata" (eigenes Volume).
+    tessdata_dir: str = "./data/tessdata"
+    # Woher fehlende Sprachpakete kommen - offizielle Tesseract-Modelle ("fast": klein und schnell)
+    ocr_download_url: str = "https://github.com/tesseract-ocr/tessdata_fast/raw/main/{code}.traineddata"
     # Pfad zu tesseract(.exe), falls nicht im PATH (Windows) - leer = automatisch suchen (runtime.py)
     tesseract_cmd: str = ""
 

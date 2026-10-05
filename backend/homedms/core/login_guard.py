@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 
+from homedms.i18n import _, _n
 from homedms.config import get_settings
 from homedms.core.security import hash_password, verify_password
 from homedms.models.tenant import User
@@ -27,7 +28,9 @@ _dummy_hash: str | None = None
 
 def _wait_text(until: datetime) -> str:
     seconds = max(1, int((until - datetime.now(timezone.utc)).total_seconds()))
-    return f"{seconds} Sekunden" if seconds < 90 else f"{(seconds + 59) // 60} Minuten"
+    if seconds < 90:
+        return _n("{count} Sekunde", "{count} Sekunden", seconds)
+    return _n("{count} Minute", "{count} Minuten", (seconds + 59) // 60)
 
 
 def check_ip(ip: str) -> None:
@@ -37,7 +40,7 @@ def check_ip(ip: str) -> None:
         attempts.popleft()
     if len(attempts) >= IP_MAX_FAILURES:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
-                            "Zu viele Fehlversuche von diesem Gerät - bitte in einigen Minuten erneut versuchen")
+                            _("Zu viele Fehlversuche von diesem Gerät - bitte in einigen Minuten erneut versuchen"))
 
 
 def record_ip_failure(ip: str) -> None:
@@ -51,7 +54,7 @@ def reset_ip(ip: str) -> None:
 def check_locked(user: User) -> None:
     if user.locked_until and user.locked_until > datetime.now(timezone.utc):
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
-                            f"Zu viele Fehlversuche - Anmeldung in {_wait_text(user.locked_until)} wieder möglich")
+                            _("Zu viele Fehlversuche - Anmeldung in {wait} wieder möglich", wait=_wait_text(user.locked_until)))
 
 
 def record_failure(user: User) -> None:

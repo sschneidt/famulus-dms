@@ -10,6 +10,8 @@ volumes:
   # Zertifizierungsstelle + Server-Zertifikat (privater Schluessel!) - bewusst NICHT im
   # Dokumente-Ordner, der evtl. per Netzwerkfreigabe fuer die Familie sichtbar ist.
   tls:
+  # Sprachpakete der Texterkennung (mitgelieferte + auf der Seite "Sprachen" nachinstallierte)
+  tessdata:
 
 services:
   # ---------------------------------------------------------------------------
@@ -142,9 +144,13 @@ services:
       # Einmal-Code fuer die Ersteinrichtung; leer = zufaellig, steht dann im Protokoll
       # (docker compose logs app-api | grep Einrichtungscode)
       SETUP_CODE: ${SETUP_CODE:-}
+      # Sprachen der Texterkennung (Standard; dazu kommen die Oberflaechensprachen der Personen)
+      OCR_LANGUAGES: ${OCR_LANGUAGES:-deu+eng}
+      TESSDATA_DIR: /data/tessdata
     volumes:
       - ${DOCUMENTS_PATH:-./data/documents}:/data/documents
       - tls:/data/tls
+      - tessdata:/data/tessdata
     ports:
       # 8443: HomeDMS per HTTPS. 8000: nur Umleitung auf HTTPS + Zertifikat-Hilfe fuer neue Geraete
       # (http://<nas>:8000/zertifikat). Mit TLS_MODE=off (Synology Reverse Proxy macht HTTPS) besser
@@ -194,8 +200,10 @@ services:
       DOCUMENTS_PATH: /data/documents
       SCAN_PATH: /data/scan
       TZ: ${TZ:-Europe/Berlin}
+      TESSDATA_DIR: /data/tessdata
     volumes:
       - ${DOCUMENTS_PATH:-./data/documents}:/data/documents
+      - tessdata:/data/tessdata
       # Scan-Ordner: der Worker holt Dateien ab und verschiebt sie danach nach _importiert/ bzw.
       # _fehler/ - deshalb mit Schreibrecht (nur hier; die API braucht den Ordner nicht).
       - ${SCAN_FOLDER_PATH:-./data/scan}:/data/scan

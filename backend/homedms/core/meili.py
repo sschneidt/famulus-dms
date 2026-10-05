@@ -8,6 +8,7 @@ from typing import Any
 
 import httpx
 
+from homedms.i18n import _
 from homedms.config import get_settings
 from homedms.core.search import HL_POST, HL_PRE
 
@@ -36,7 +37,7 @@ class MeiliClient:
 
     async def _request(self, method: str, path: str, json: Any = None, timeout: float = 10) -> dict:
         if not self.base_url:
-            raise SearchUnavailable("Meilisearch ist nicht eingerichtet (MEILISEARCH_URL leer)")
+            raise SearchUnavailable(_("Meilisearch ist nicht eingerichtet (MEILISEARCH_URL leer)"))
         try:
             async with httpx.AsyncClient(
                 base_url=self.base_url, timeout=timeout, transport=self._transport,
@@ -44,7 +45,7 @@ class MeiliClient:
             ) as client:
                 resp = await client.request(method, path, json=json)
         except httpx.HTTPError as exc:
-            raise SearchUnavailable(f"Meilisearch nicht erreichbar ({self.base_url}): {exc}") from exc
+            raise SearchUnavailable(_("Meilisearch nicht erreichbar ({url}): {error}", url=self.base_url, error=exc)) from exc
         if resp.status_code >= 400:
             raise SearchUnavailable(f"Meilisearch {method} {path}: {resp.status_code} {resp.text[:300]}")
         return resp.json() if resp.content else {}

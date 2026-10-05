@@ -11,6 +11,7 @@ Ablauf:
   es kopiert -> die ganze Sitzung wird beendet. Beendete Sitzungen sperren sofort (api/deps.py).
 - Anmeldeschutz (Sperrzeit nach Fehlversuchen): core/login_guard.py.
 """
+import logging
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -19,6 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from homedms.i18n import _, _n
 from homedms.api.deps import get_current_user
 from homedms.config import get_settings
 from homedms.core import login_guard, totp
@@ -124,12 +126,12 @@ async def login(payload: LoginRequest, request: Request, response: Response, db:
     if user is None:
         login_guard.burn_time(payload.password)
         login_guard.record_ip_failure(ip)
-        raise _unauthorized("E-Mail oder Passwort falsch")
+        raise _unauthorized(_("E-Mail oder Passwort falsch"))
     login_guard.check_locked(user)
     if not verify_password(payload.password, user.password_hash):
-        raise await _failed(db, user, ip, "E-Mail oder Passwort falsch")
+        raise await _failed(db, user, ip, _("E-Mail oder Passwort falsch"))
     if not user.is_active:
-        raise _unauthorized("Dieses Konto ist deaktiviert - bitte an den Admin wenden")
+        raise _unauthorized(_("Dieses Konto ist deaktiviert - bitte an den Admin wenden"))
     if user.two_factor_enabled:
         return TokenResponse(two_factor_required=True, challenge=create_challenge_token(user.id))
     return await _logged_in(db, user, ip, request, response)
@@ -151,12 +153,12 @@ async def login_two_factor(payload: TwoFactorLogin, request: Request, response: 
     try:
         claims = decode_token(payload.challenge)
     except jwt.InvalidTokenError:
-        raise _unauthorized("Die Anmeldung ist abgelaufen - bitte noch einmal mit dem Passwort beginnen")
+        raise _unauthorized(_("Die Anmeldung ist abgelaufen - bitte noch einmal mit dem Passwort beginnen"))
     if claims.get("type") != "2fa":
-        raise _unauthorized("Ungültige Anmeldung")
+        raise _unauthorized(_("Ungültige Anmeldung"))
     user = await db.get(User, uuid.UUID(claims["sub"]))
     if user is None or not user.is_active or not user.two_factor_enabled:
-        raise _unauthorized("Ungültige Anmeldung")
+        raise _unauthorized(_("Ungültige Anmeldung"))
     login_guard.check_locked(user)
 
     step = totp.verify(user.totp_secret, payload.code, user.totp_last_step)
@@ -166,9 +168,9 @@ async def login_two_factor(payload: TwoFactorLogin, request: Request, response: 
     remaining = totp.use_recovery_code(user.recovery_codes, payload.code)
     if remaining is not None:
         user.recovery_codes = remaining
-        notice = f"Wiederherstellungscode benutzt - noch {len(remaining)} übrig."
+        notice = _n("Wiederherstellungscode benutzt - noch {count} übrig.", "Wiederherstellungscode benutzt - noch {count} übrig.", len(remaining))
         return await _logged_in(db, user, ip, request, response, notice)
-    raise await _failed(db, user, ip, "Der Code stimmt nicht")
+    raise await _failed(db, user, ip, _("Der Code stimmt nicht"))
 
 
 def _token_from(request: Request, payload: RefreshRequest | None) -> str | None:
@@ -192,18 +194,18 @@ async def refresh(request: Request, response: Response, payload: RefreshRequest 
     now = datetime.now(timezone.utc)
     if stored is None or stored.revoked_at is not None or stored.expires_at < now:
         _clear_cookie(response)
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Anmeldung abgelaufen", headers=_clear_headers(response))
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, _("Anmeldung abgelaufen"), headers=_clear_headers(response))
     if stored.rotated_at is not None and stored.rotated_at < now - ROTATION_GRACE:
         # Ein laengst ersetztes Token taucht wieder auf -> es wurde kopiert. Ganze Sitzung beenden.
         await _end_session(db, stored.session_id)
         await db.commit()
         _clear_cookie(response)
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Sitzung aus Sicherheitsgründen beendet - bitte neu anmelden",
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, _("Sitzung aus Sicherheitsgründen beendet - bitte neu anmelden"),
                             headers=_clear_headers(response))
     user = await db.get(User, stored.user_id)
     if user is None or not user.is_active:
         _clear_cookie(response)
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Nutzer nicht gefunden oder deaktiviert", headers=_clear_headers(response))
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, _("Nutzer nicht gefunden oder deaktiviert"), headers=_clear_headers(response))
     stored.rotated_at = stored.rotated_at or now
     return await _issue_tokens(user, db, request, response, stored.session_id, stored.session_started_at)
 
@@ -251,12 +253,22 @@ async def me(user: User = Depends(get_current_user), db: AsyncSession = Depends(
 async def update_me(
     payload: ProfileUpdate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ) -> MeResponse:
-    """Eigenen Anzeigenamen aendern (E-Mail und Rolle aendert nur ein Admin)."""
-    name = payload.display_name.strip()
-    if not name:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Bitte einen Namen angeben")
-    user.display_name = name
+    """Eigenen Anzeigenamen bzw. die eigene Sprache aendern (E-Mail und Rolle aendert nur ein Admin)."""
+    if payload.display_name is not None:
+        name = payload.display_name.strip()
+        if not name:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Bitte einen Namen angeben"))
+        user.display_name = name
+    if payload.locale is not None:
+        user.locale = payload.locale
     await db.commit()
+    if payload.locale is not None:  # Texterkennung folgt der Oberflaechensprache - Paket ggf. nachladen
+        from homedms.core import ocr_languages
+
+        try:
+            await ocr_languages.request_installs(db, await ocr_languages.missing(db, user.tenant_id))
+        except Exception as exc:  # noqa: BLE001 - Sprache ist gespeichert, das Paket kommt spaeter
+            logging.getLogger("homedms.auth").warning("Sprachpaket nicht angefordert: %s", exc)
     return await _me(user, db)
 
 
@@ -274,7 +286,7 @@ async def _confirm_password(db: AsyncSession, user: User, password: str, request
     if not verify_password(password, user.password_hash):
         login_guard.record_failure(user)
         await db.commit()
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Das Passwort stimmt nicht")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, _("Das Passwort stimmt nicht"))
 
 
 @router.put("/password", status_code=status.HTTP_204_NO_CONTENT)
@@ -286,7 +298,7 @@ async def change_password(
     if not verify_password(payload.current_password, user.password_hash):
         login_guard.record_failure(user)
         await db.commit()
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Das bisherige Passwort stimmt nicht")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, _("Das bisherige Passwort stimmt nicht"))
     user.password_hash = hash_password(payload.new_password)
     await revoke_refresh_tokens(db, user.id, except_session=getattr(request.state, "session_id", None))
     await db.commit()
@@ -298,19 +310,19 @@ async def change_password(
 def device_name(user_agent: str | None) -> str:
     ua = (user_agent or "").lower()
     if not ua:
-        return "Unbekanntes Gerät"
+        return _("Unbekanntes Gerät")
     system = next((name for key, name in (
         ("iphone", "iPhone"), ("ipad", "iPad"), ("android", "Android"), ("windows", "Windows"),
         ("mac os", "Mac"), ("cros", "ChromeOS"), ("linux", "Linux"),
     ) if key in ua), None)
     browser = next((name for key, name in (
         ("edg/", "Edge"), ("samsungbrowser", "Samsung Internet"), ("firefox", "Firefox"), ("fxios", "Firefox"),
-        ("crios", "Chrome"), ("chrome", "Chrome"), ("safari", "Safari"), ("python", "Skript"),
+        ("crios", "Chrome"), ("chrome", "Chrome"), ("safari", "Safari"), ("python", _("Skript")),
         ("powershell", "PowerShell"), ("curl", "curl"),
     ) if key in ua), None)
     if browser and system:
-        return f"{browser} auf {system}"
-    return browser or system or "Unbekanntes Gerät"
+        return _("{browser} auf {system}", browser=browser, system=system)
+    return browser or system or _("Unbekanntes Gerät")
 
 
 @router.get("/sessions", response_model=list[SessionInfo])
@@ -371,10 +383,10 @@ async def two_factor_enable(payload: TwoFactorCode, user: User = Depends(get_cur
                             db: AsyncSession = Depends(get_db)) -> RecoveryCodes:
     """Schritt 2: ersten Code aus der App bestaetigen -> aktiv; Wiederherstellungscodes einmal anzeigen."""
     if not user.totp_pending_secret:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Bitte die Einrichtung neu beginnen")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Bitte die Einrichtung neu beginnen"))
     step = totp.verify(user.totp_pending_secret, payload.code, None)
     if step is None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Der Code stimmt nicht - Uhrzeit des Handys prüfen und den aktuellen Code eingeben")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, _("Der Code stimmt nicht - Uhrzeit des Handys prüfen und den aktuellen Code eingeben"))
     codes, hashes = totp.new_recovery_codes()
     user.totp_secret, user.totp_pending_secret, user.totp_last_step = user.totp_pending_secret, None, step
     user.recovery_codes = hashes
@@ -395,7 +407,7 @@ async def new_recovery_codes(payload: PasswordConfirm, request: Request, user: U
                              db: AsyncSession = Depends(get_db)) -> RecoveryCodes:
     await _confirm_password(db, user, payload.password, request)
     if not user.two_factor_enabled:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Zwei-Faktor-Anmeldung ist nicht eingeschaltet")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Zwei-Faktor-Anmeldung ist nicht eingeschaltet"))
     codes, hashes = totp.new_recovery_codes()
     user.recovery_codes = hashes
     await db.commit()

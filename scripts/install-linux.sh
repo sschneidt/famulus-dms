@@ -64,7 +64,7 @@ step "Pakete installieren (PostgreSQL, Tesseract)"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq postgresql postgresql-contrib tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng \
-  tesseract-ocr-osd curl ca-certificates xz-utils >/dev/null
+  tesseract-ocr-rus tesseract-ocr-osd curl ca-certificates xz-utils >/dev/null
 systemctl enable --now postgresql >/dev/null
 
 # --- 2. Werkzeuge ---------------------------------------------------------------------------
@@ -132,6 +132,7 @@ if [ ! -f "$ENV_FILE" ]; then
       -e "s|^LOG_DIR=.*|LOG_DIR=$DATA_DIR/logs|" \
       -e "s|^MEILISEARCH_DATA=.*|MEILISEARCH_DATA=$DATA_DIR/meilisearch|" \
       -e "s|^TLS_DIR=.*|TLS_DIR=$DATA_DIR/tls|" \
+      -e "s|^TESSDATA_DIR=.*|TESSDATA_DIR=$DATA_DIR/tessdata|" \
       -e "s|^SETUP_CODE=.*|SETUP_CODE=$(secret 12 | sed 's/.\{4\}/&-/g; s/-$//')|" \
       "$APP_DIR/homedms.env.example" > "$ENV_FILE"
 else

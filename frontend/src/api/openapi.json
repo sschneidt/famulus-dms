@@ -229,7 +229,7 @@
           "auth"
         ],
         "summary": "Update Me",
-        "description": "Eigenen Anzeigenamen aendern (E-Mail und Rolle aendert nur ein Admin).",
+        "description": "Eigenen Anzeigenamen bzw. die eigene Sprache aendern (E-Mail und Rolle aendert nur ein Admin).",
         "operationId": "update_me_api_v1_auth_me_patch",
         "requestBody": {
           "content": {
@@ -3674,6 +3674,104 @@
           }
         ]
       }
+    },
+    "/api/v1/ocr-languages": {
+      "get": {
+        "tags": [
+          "languages"
+        ],
+        "summary": "Get Languages",
+        "operationId": "get_languages_api_v1_ocr_languages_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OcrLanguagesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "languages"
+        ],
+        "summary": "Save Languages",
+        "description": "Auswahl speichern und fehlende Pakete im Hintergrund herunterladen.",
+        "operationId": "save_languages_api_v1_ocr_languages_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OcrLanguagesUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OcrLanguagesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ocr-languages/install": {
+      "post": {
+        "tags": [
+          "languages"
+        ],
+        "summary": "Install Missing",
+        "description": "Fehlende (oder fehlgeschlagene) Pakete erneut herunterladen.",
+        "operationId": "install_missing_api_v1_ocr_languages_install_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OcrLanguagesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -3827,11 +3925,29 @@
           },
           "default_language": {
             "type": "string",
-            "maxLength": 10,
+            "enum": [
+              "de",
+              "en",
+              "ru"
+            ],
             "title": "Default Language",
             "default": "de",
             "examples": [
               "de"
+            ]
+          },
+          "ocr_languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Ocr Languages",
+            "examples": [
+              [
+                "deu",
+                "eng"
+              ]
             ]
           },
           "admin_email": {
@@ -5654,6 +5770,102 @@
         "type": "object",
         "title": "NotificationSettingsUpdate"
       },
+      "OcrLanguage": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "installed": {
+            "type": "boolean",
+            "title": "Installed"
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "Selected"
+          },
+          "required_by": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required By",
+            "default": []
+          },
+          "active": {
+            "type": "boolean",
+            "title": "Active"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "installed",
+          "selected",
+          "active",
+          "status"
+        ],
+        "title": "OcrLanguage"
+      },
+      "OcrLanguagesResponse": {
+        "properties": {
+          "languages": {
+            "items": {
+              "$ref": "#/components/schemas/OcrLanguage"
+            },
+            "type": "array",
+            "title": "Languages"
+          },
+          "effective": {
+            "type": "string",
+            "title": "Effective"
+          }
+        },
+        "type": "object",
+        "required": [
+          "languages",
+          "effective"
+        ],
+        "title": "OcrLanguagesResponse"
+      },
+      "OcrLanguagesUpdate": {
+        "properties": {
+          "languages": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Languages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "languages"
+        ],
+        "title": "OcrLanguagesUpdate"
+      },
       "OcrStatus": {
         "type": "string",
         "enum": [
@@ -5752,19 +5964,39 @@
       "ProfileUpdate": {
         "properties": {
           "display_name": {
-            "type": "string",
-            "maxLength": 200,
-            "minLength": 1,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Display Name",
             "examples": [
               "Max Mustermann"
             ]
+          },
+          "locale": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "de",
+                  "en",
+                  "ru"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locale"
           }
         },
         "type": "object",
-        "required": [
-          "display_name"
-        ],
         "title": "ProfileUpdate"
       },
       "PropertyMerge": {
@@ -6632,6 +6864,11 @@
             "type": "array",
             "title": "Reasons",
             "default": []
+          },
+          "needs_ai": {
+            "type": "boolean",
+            "title": "Needs Ai",
+            "default": false
           }
         },
         "type": "object",

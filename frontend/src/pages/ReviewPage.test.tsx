@@ -15,8 +15,13 @@ const unanalyzed = (aiAvailable: boolean) => ({
       ...doc({ id: "d1", title: "Kreditvertrag", classification_status: "needs_review" }),
       classification_error: "KI nicht erreichbar: Verbindung abgelehnt",
       reasons: ["Kategorie: KI war nicht erreichbar", "Betreff, Absender, Fristen: KI war nicht erreichbar"],
+      needs_ai: true,
     },
-    { ...doc({ id: "d2", title: "Scan_0815.pdf", ocr_status: "failed" }), reasons: ["Texterkennung fehlgeschlagen"] },
+    {
+      ...doc({ id: "d2", title: "Scan_0815.pdf", ocr_status: "failed" }),
+      reasons: ["Texterkennung fehlgeschlagen"],
+      needs_ai: false,
+    },
   ],
 });
 

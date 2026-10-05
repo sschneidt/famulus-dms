@@ -9,16 +9,36 @@ Zusammenfassung nicht jeden Tag dieselben 30 Tage Vorlauf wiederholt:
     3 morgen      noch 1 Tag
     4 heute       am Termin selbst
     5 ueberfaellig danach - und dann woechentlich wieder, bis erledigt
+
+Texte erscheinen in der Sprache der Person (homedms/i18n): die Zusammenfassung wird mit
+use_language(user.locale) erstellt.
 """
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from html import escape
+
+from homedms import i18n
+from homedms.i18n import N_, _, _n
 
 LEAD, WEEK, TOMORROW, TODAY, OVERDUE = 1, 2, 3, 4, 5
 OVERDUE_REPEAT_DAYS = 7
 MAX_PUSH_LINES = 3
 
-WEEKDAYS = ("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
+WEEKDAYS = {
+    "de": ("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"),
+    "en": ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"),
+    "ru": ("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"),
+}
+
+# Einheitliche Bezeichnungen der KI-Fristen (ai/extraction.py, _CANONICAL_LABELS)
+NOTE_LABELS = {N_("Kündigungsfrist"), N_("Widerspruchsfrist"), N_("Zahlungsfrist"), N_("Vertragsende"),
+               N_("TÜV-Termin"), N_("Prüftermin"), N_("Frist")}
+# Text der Aufbewahrungs-Termine (core/wiedervorlage.py, retention_note) - wie im Frontend (lib/format.ts)
+RETENTION_NOTE = re.compile(
+    r"^Aufbewahrungsfrist \((.+), (?:(\d+) Jahre?)? ?(?:(\d+) Monate?)?\) endet - Dokument kann danach vernichtet "
+    r"werden\.( Das Papier-Original muss bis dahin aufbewahrt werden\.)?$"
+)
 
 
 def stage_for(days_left: int, lead_days: int) -> int:
@@ -44,6 +64,31 @@ def should_remind(stage: int, last_stage: int, reminded_on: date | None, today: 
     if stage == OVERDUE and reminded_on is not None:
         return (today - reminded_on).days >= OVERDUE_REPEAT_DAYS
     return False
+
+
+def duration_text(months: int) -> str:
+    years, rest = divmod(months, 12)
+    parts = []
+    if years:
+        parts.append(_n("{count} Jahr", "{count} Jahre", years))
+    if rest:
+        parts.append(_n("{count} Monat", "{count} Monate", rest))
+    return " ".join(parts) or _n("{count} Monat", "{count} Monate", 0)
+
+
+def note_label(note: str | None) -> str:
+    """Bezeichnung eines Termins in der aktuellen Sprache (eigene Texte bleiben, wie sie sind)."""
+    if not note:
+        return _("Termin")
+    if note in NOTE_LABELS:
+        return _(note)
+    m = RETENTION_NOTE.match(note)
+    if m:
+        months = int(m.group(2) or 0) * 12 + int(m.group(3) or 0)
+        text = _("Aufbewahrungsfrist ({category}, {duration}) endet – Dokument kann danach vernichtet werden.",
+                 category=i18n.translate_stored(m.group(1)), duration=duration_text(months))
+        return f"{text} {_('Das Papier-Original muss bis dahin aufbewahrt werden.')}" if m.group(4) else text
+    return note
 
 
 @dataclass
@@ -85,26 +130,24 @@ class Digest:
     def counts(self) -> list[str]:
         parts = []
         if self.overdue:
-            parts.append(f"{len(self.overdue)} überfällig")
+            parts.append(_("{count} überfällig", count=len(self.overdue)))
         if self.due_today:
-            parts.append(f"{len(self.due_today)} heute fällig")
+            parts.append(_("{count} heute fällig", count=len(self.due_today)))
         if self.upcoming:
-            parts.append(f"{len(self.upcoming)} demnächst")
+            parts.append(_("{count} demnächst", count=len(self.upcoming)))
         if self.new_proposals:
-            parts.append(f"{self.new_proposals} neue{'r' if self.new_proposals == 1 else ''} Fristvorschlag"
-                         f"{'' if self.new_proposals == 1 else 'e'}")
+            parts.append(_n("{count} neuer Fristvorschlag", "{count} neue Fristvorschläge", self.new_proposals))
         if self.new_review:
-            parts.append(f"{self.new_review} zu prüfen")
+            parts.append(_("{count} zu prüfen", count=self.new_review))
         if self.new_imports:
-            parts.append(f"{self.new_imports} neu{'es' if self.new_imports == 1 else 'e'} Dokument"
-                         f"{'' if self.new_imports == 1 else 'e'}")
+            parts.append(_n("{count} neues Dokument", "{count} neue Dokumente", self.new_imports))
         return parts
 
     def subject(self) -> str:
         return "HomeDMS: " + ", ".join(self.counts()[:3])
 
     def text(self, app_url: str) -> str:
-        lines = ["Hallo,", "", "das steht in HomeDMS an:", ""]
+        lines = [_("Hallo,"), "", _("das steht in HomeDMS an:"), ""]
         for title, items in self._groups():
             lines.append(f"{title}:")
             for item in items:
@@ -121,14 +164,14 @@ class Digest:
 
     def html(self, app_url: str) -> str:
         parts = ['<div style="font-family:Segoe UI,Arial,sans-serif;font-size:15px;color:#222;max-width:640px">',
-                 "<p>Hallo,</p><p>das steht in HomeDMS an:</p>"]
-        for title, items in self._groups():
-            color = "#c92a2a" if title == "Überfällig" else ("#e8590c" if title == "Heute fällig" else "#1c7ed6")
+                 f"<p>{escape(_('Hallo,'))}</p><p>{escape(_('das steht in HomeDMS an:'))}</p>"]
+        for key, title, items in self._groups(with_key=True):
+            color = {"overdue": "#c92a2a", "today": "#e8590c"}.get(key, "#1c7ed6")
             parts.append(f'<h3 style="margin:18px 0 6px;color:{color};font-size:16px">{escape(title)}</h3>'
                          '<ul style="padding-left:18px;margin:0">')
             for item in items:
-                label = escape(item.note or "Termin")
-                doc = escape(item.document_title or "Dokument")
+                label = escape(note_label(item.note))
+                doc = escape(item.document_title or _("Dokument"))
                 link = f'<a href="{escape(app_url)}/dokumente/{item.document_id}" style="color:#1c7ed6">{doc}</a>' if app_url else doc
                 parts.append(f'<li style="margin:4px 0"><b>{label}</b> – {link}<br>'
                              f'<span style="color:#555">{escape(when(item))}</span></li>')
@@ -146,55 +189,60 @@ class Digest:
 
     def push(self) -> dict:
         """Kurzfassung fuer die Handy-Benachrichtigung."""
-        lines = [f"{i.note or 'Termin'} – {i.document_title}: {when(i)}" for i in self.items[:MAX_PUSH_LINES]]
+        lines = [item_line(i) for i in self.items[:MAX_PUSH_LINES]]
         rest = len(self.items) - MAX_PUSH_LINES
         if rest > 0:
-            lines.append(f"und {rest} weitere Termine")
-        lines += [line for line, _ in self._extras()]
+            lines.append(_n("und {count} weiterer Termin", "und {count} weitere Termine", rest))
+        lines += [line for line, _path in self._extras()]
         url = "/termine" if self.items or self.new_proposals else ("/pruefen" if self.new_review else "/")
         title = "HomeDMS: " + ", ".join(self.counts()[:2])
         return {"title": title, "body": "\n".join(lines), "url": url, "tag": "homedms-digest"}
 
-    def _groups(self) -> list[tuple[str, list[ReminderItem]]]:
-        groups = [("Überfällig", self.overdue), ("Heute fällig", self.due_today), ("Demnächst", self.upcoming)]
-        return [(t, sorted(items, key=lambda i: i.due_date)) for t, items in groups if items]
+    def _groups(self, with_key: bool = False) -> list[tuple]:
+        groups = [("overdue", _("Überfällig"), self.overdue), ("today", _("Heute fällig"), self.due_today),
+                  ("upcoming", _("Demnächst"), self.upcoming)]
+        result = [(k, t, sorted(items, key=lambda i: i.due_date)) for k, t, items in groups if items]
+        return result if with_key else [(t, items) for _k, t, items in result]
 
     def _extras(self) -> list[tuple[str, str]]:
         extras = []
         if self.new_proposals:
-            extras.append((f"Die KI hat {self.new_proposals} neue Frist{'' if self.new_proposals == 1 else 'en'} "
-                           f"erkannt - bitte bestätigen (insgesamt {self.open_proposals} offen).", "/termine"))
+            extras.append((_n("Die KI hat {count} neue Frist erkannt - bitte bestätigen (insgesamt {total} offen).",
+                              "Die KI hat {count} neue Fristen erkannt - bitte bestätigen (insgesamt {total} offen).",
+                              self.new_proposals, total=self.open_proposals), "/termine"))
         if self.new_review:
-            extras.append((f"{self.new_review} neue{'s' if self.new_review == 1 else ''} Dokument"
-                           f"{'' if self.new_review == 1 else 'e'}: Kategorie bitte prüfen "
-                           f"(insgesamt {self.open_review}).", "/pruefen"))
+            extras.append((_n("{count} neues Dokument: Kategorie bitte prüfen (insgesamt {total}).",
+                              "{count} neue Dokumente: Kategorie bitte prüfen (insgesamt {total}).",
+                              self.new_review, total=self.open_review), "/pruefen"))
         if self.new_imports:
-            extras.append((f"{self.new_imports} Dokument{' ist' if self.new_imports == 1 else 'e sind'} "
-                           f"über den Scan-Ordner eingegangen.", "/"))
+            extras.append((_n("{count} Dokument ist über den Scan-Ordner eingegangen.",
+                              "{count} Dokumente sind über den Scan-Ordner eingegangen.", self.new_imports), "/"))
         return extras
 
 
 def fmt_date(d: date) -> str:
-    return f"{WEEKDAYS[d.weekday()]}, {d:%d.%m.%Y}"
+    return f"{WEEKDAYS[i18n.current()][d.weekday()]}, {i18n.format_date(d)}"
 
 
 def when(item: ReminderItem) -> str:
+    day = fmt_date(item.due_date)
     if item.days_left < -1:
-        return f"seit {-item.days_left} Tagen überfällig ({fmt_date(item.due_date)})"
+        return _n("seit {count} Tag überfällig ({date})", "seit {count} Tagen überfällig ({date})",
+                  -item.days_left, date=day)
     if item.days_left == -1:
-        return f"seit gestern überfällig ({fmt_date(item.due_date)})"
+        return _("seit gestern überfällig ({date})", date=day)
     if item.days_left == 0:
-        return f"heute fällig ({fmt_date(item.due_date)})"
+        return _("heute fällig ({date})", date=day)
     if item.days_left == 1:
-        return f"morgen fällig ({fmt_date(item.due_date)})"
-    return f"in {item.days_left} Tagen fällig ({fmt_date(item.due_date)})"
+        return _("morgen fällig ({date})", date=day)
+    return _n("in {count} Tag fällig ({date})", "in {count} Tagen fällig ({date})", item.days_left, date=day)
 
 
 def item_line(item: ReminderItem) -> str:
-    return f"{item.note or 'Termin'} – {item.document_title or 'Dokument'}: {when(item)}"
+    return f"{note_label(item.note)} – {item.document_title or _('Dokument')}: {when(item)}"
 
 
 def _footer(app_url: str) -> list[str]:
-    settings = f" unter {app_url}/konto" if app_url else " unter „Konto & Sicherheit“"
-    return ["Diese Zusammenfassung kommt einmal täglich, nur wenn etwas ansteht.",
-            f"Uhrzeit und Wege lassen sich in HomeDMS{settings} ändern."]
+    where = (_("unter {url}", url=f"{app_url}/konto") if app_url else _("unter „Konto & Sicherheit“"))
+    return [_("Diese Zusammenfassung kommt einmal täglich, nur wenn etwas ansteht."),
+            _("Uhrzeit und Wege lassen sich in HomeDMS {where} ändern.", where=where)]

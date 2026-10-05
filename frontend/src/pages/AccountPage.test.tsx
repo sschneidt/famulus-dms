@@ -129,4 +129,25 @@ describe("Konto & Sicherheit", () => {
       "http://localhost:8000/zertifikat",
     );
   });
+
+  it("Sprache umschalten: wird im Konto gespeichert und gilt sofort", async () => {
+    let locale = "de";
+    tokenStore.set("a");
+    const { calls } = mockFetch([
+      { path: "/api/v1/auth/me", body: () => ({ ...me, locale }) },
+      { method: "PATCH", path: "/api/v1/auth/me", body: () => ((locale = "ru"), { ...me, locale }) },
+      ...BASIS,
+    ]);
+    renderWithProviders(<></>, { routes, path: "/konto" });
+    const user = userEvent.setup();
+    const select = await screen.findByRole("combobox", { name: "Sprache" });
+    calls.length = 0;
+    await user.click(select);
+    await user.click(await screen.findByRole("option", { name: "Русский", hidden: true }));
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === "PATCH" && c.path === "/api/v1/auth/me")?.body).toEqual({ locale: "ru" }),
+    );
+    expect(await screen.findByText("Двухфакторный вход")).toBeInTheDocument();
+    expect(document.documentElement.lang).toBe("ru");
+  });
 });

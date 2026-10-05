@@ -8,13 +8,16 @@ noch nicht eingerichtet ist.
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy import func, select
 
 from homedms.api.router import api_router
 from homedms.api.routes.health import router as health_router
 from homedms.config import get_settings
 from homedms.frontend import mount_frontend
+from homedms.i18n import LanguageMiddleware, translate_stored
 from homedms.security_headers import SecurityHeadersMiddleware
 
 logger = logging.getLogger("homedms.main")
@@ -22,6 +25,12 @@ logger = logging.getLogger("homedms.main")
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    try:  # Sprachpakete der Texterkennung (fuer Anzeige und Diagnose)
+        from homedms.core import ocr_languages
+
+        ocr_languages.prepare()
+    except OSError as exc:
+        logger.warning("Sprachpakete nicht vorbereitet: %s", exc)
     try:
         from homedms.core import setup_code
         from homedms.db import async_session_factory
@@ -43,6 +52,16 @@ app = FastAPI(
     openapi_url="/openapi.json" if docs else None,
 )
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(LanguageMiddleware)  # Sprache der Meldungen je Anfrage (Accept-Language)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def translated_http_exception(request: Request, exc: StarletteHTTPException):
+    """Meldungen, die (noch) nicht mit _() markiert sind, ueber den Katalog uebersetzen."""
+    if isinstance(exc.detail, str):
+        exc.detail = translate_stored(exc.detail)
+    return await http_exception_handler(request, exc)
+
 
 app.include_router(health_router)  # /health bewusst ausserhalb von /api/v1
 app.include_router(api_router)

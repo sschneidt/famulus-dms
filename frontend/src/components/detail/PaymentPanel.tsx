@@ -1,4 +1,5 @@
 import { Badge, Button, Group, Paper, Stack, Text, Title } from "@mantine/core";
+import { useTranslation } from "react-i18next";
 import type { DocumentDetail } from "../../api/client";
 import { usePatchDocument, useSetPayment } from "../../api/queries";
 import { formatAmount, formatDate } from "../../lib/format";
@@ -9,6 +10,7 @@ import { PaidButton } from "../PaidButton";
 export function PaymentPanel({ doc, readOnly = false }: { doc: DocumentDetail; readOnly?: boolean }) {
   const setPayment = useSetPayment();
   const setInvoice = usePatchDocument();
+  const { t } = useTranslation();
   if (doc.is_invoice === false) return null;
   if (!doc.is_invoice && !doc.payment_status && doc.amount === null) return null;
 
@@ -16,7 +18,11 @@ export function PaymentPanel({ doc, readOnly = false }: { doc: DocumentDetail; r
     try {
       await setPayment.mutateAsync({ documentId: doc.id, status, paidOn });
       notifySuccess(
-        status === "bezahlt" ? "Als bezahlt markiert" : status === "offen" ? "Als offen markiert" : "Gespeichert",
+        status === "bezahlt"
+          ? t("Als bezahlt markiert")
+          : status === "offen"
+            ? t("Als offen markiert")
+            : t("Gespeichert"),
       );
     } catch (e) {
       notifyError(e);
@@ -27,33 +33,33 @@ export function PaymentPanel({ doc, readOnly = false }: { doc: DocumentDetail; r
     <Paper withBorder p="md" radius="md">
       <Stack gap="sm">
         <Group justify="space-between">
-          <Title order={4}>Zahlung</Title>
+          <Title order={4}>{t("Zahlung")}</Title>
           {doc.payment_status === "bezahlt" ? (
             <Badge color="green" variant="light">
-              bezahlt
+              {t("bezahlt")}
             </Badge>
           ) : doc.payment_status === "offen" ? (
             <Badge color="orange" variant="light">
-              offen
+              {t("offen")}
             </Badge>
           ) : (
             <Badge color="gray" variant="light">
-              nicht erfasst
+              {t("nicht erfasst")}
             </Badge>
           )}
         </Group>
         {doc.amount !== null && (
           <Text size="sm">
-            Betrag: <b>{formatAmount(doc.amount)}</b>
+            {t("Betrag:")} <b>{formatAmount(doc.amount)}</b>
           </Text>
         )}
         {doc.payment_status === "bezahlt" && (
           <Text size="sm" c="dimmed">
             {doc.paid_assumed
-              ? "Automatisch angenommen – die Zahlungsfrist lag beim Einlesen mehr als 3 Monate zurück."
+              ? t("Automatisch angenommen – die Zahlungsfrist lag beim Einlesen mehr als 3 Monate zurück.")
               : doc.paid_on
-                ? `Bezahlt am ${formatDate(doc.paid_on)}`
-                : "Bezahlt (Datum unbekannt)"}
+                ? t("Bezahlt am {{date}}", { date: formatDate(doc.paid_on) })
+                : t("Bezahlt (Datum unbekannt)")}
           </Text>
         )}
         {!readOnly && (
@@ -63,7 +69,7 @@ export function PaymentPanel({ doc, readOnly = false }: { doc: DocumentDetail; r
             ) : (
               <>
                 <PaidButton
-                  label={doc.paid_on ? "Datum ändern" : "Zahlungsdatum eintragen"}
+                  label={doc.paid_on ? t("Datum ändern") : t("Zahlungsdatum eintragen")}
                   initial={doc.paid_on}
                   variant="default"
                   color="gray"
@@ -71,13 +77,13 @@ export function PaymentPanel({ doc, readOnly = false }: { doc: DocumentDetail; r
                   onConfirm={(d) => save("bezahlt", d)}
                 />
                 <Button size="xs" variant="subtle" color="gray" onClick={() => void save("offen")}>
-                  Doch nicht bezahlt
+                  {t("Doch nicht bezahlt")}
                 </Button>
               </>
             )}
             {!doc.payment_status && (
               <Button size="xs" variant="subtle" color="orange" onClick={() => void save("offen")}>
-                Als offen markieren
+                {t("Als offen markieren")}
               </Button>
             )}
             <Button
@@ -89,13 +95,13 @@ export function PaymentPanel({ doc, readOnly = false }: { doc: DocumentDetail; r
                 setInvoice.mutate(
                   { id: doc.id, body: { is_invoice: false } },
                   {
-                    onSuccess: () => notifySuccess("Als „Keine Rechnung“ markiert – Betrag und Zahlung entfernt"),
+                    onSuccess: () => notifySuccess(t("Als „Keine Rechnung“ markiert – Betrag und Zahlung entfernt")),
                     onError: (e) => notifyError(e),
                   },
                 )
               }
             >
-              Keine Rechnung
+              {t("Keine Rechnung")}
             </Button>
           </Group>
         )}

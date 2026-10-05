@@ -1,3 +1,5 @@
+import i18n from "../i18n";
+
 /**
  * Web-Push im Browser: Berechtigung holen, beim Push-Dienst des Browsers anmelden.
  * Die eigentliche Anzeige uebernimmt der Service Worker (public/push-sw.js).
@@ -42,7 +44,7 @@ function sameKey(current: ArrayBuffer | null | undefined, expected: Uint8Array):
 async function registration(): Promise<ServiceWorkerRegistration> {
   const timeout = new Promise<never>((_, reject) =>
     setTimeout(
-      () => reject(new Error("Der Hintergrunddienst der App läuft nicht – bitte die Seite neu laden.")),
+      () => reject(new Error(i18n.t("Der Hintergrunddienst der App läuft nicht – bitte die Seite neu laden."))),
       10_000,
     ),
   );
@@ -67,8 +69,8 @@ export async function subscribePush(publicKey: string): Promise<BrowserSubscript
   if (permission !== "granted") {
     throw new Error(
       permission === "denied"
-        ? "Benachrichtigungen sind für HomeDMS blockiert – in den Website-Einstellungen des Browsers erlauben."
-        : "Benachrichtigungen wurden nicht erlaubt.",
+        ? i18n.t("Benachrichtigungen sind für HomeDMS blockiert – in den Website-Einstellungen des Browsers erlauben.")
+        : i18n.t("Benachrichtigungen wurden nicht erlaubt."),
     );
   }
   const reg = await registration();
@@ -81,7 +83,7 @@ export async function subscribePush(publicKey: string): Promise<BrowserSubscript
   sub ??= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
   const json = sub.toJSON();
   if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth)
-    throw new Error("Der Browser hat keine Push-Adresse geliefert.");
+    throw new Error(i18n.t("Der Browser hat keine Push-Adresse geliefert."));
   return { endpoint: json.endpoint, keys: { p256dh: json.keys.p256dh, auth: json.keys.auth } };
 }
 

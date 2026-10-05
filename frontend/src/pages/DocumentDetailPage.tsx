@@ -2,6 +2,7 @@ import { ActionIcon, Alert, Button, Center, Grid, Group, Loader, Menu, Stack, Ta
 import { useMediaQuery } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
 import { IconArrowLeft, IconDots, IconDownload, IconRefresh, IconRestore, IconTrash } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router";
 import { ApiError, type DocumentDetail } from "../api/client";
 import { useDeleteDocument, useDocument, useReprocessDocument, useRestoreDocument } from "../api/queries";
@@ -20,6 +21,7 @@ import { notifyError, notifySuccess } from "../lib/notify";
 export function DocumentDetailPage() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const isMobile = useMediaQuery("(max-width: 48em)") ?? false;
   const document = useDocument(id);
 
@@ -35,8 +37,8 @@ export function DocumentDetailPage() {
     return (
       <Stack>
         <BackButton onClick={() => navigate(-1)} />
-        <Alert color={notFound ? "yellow" : "red"} title={notFound ? "Dokument nicht gefunden" : "Fehler"}>
-          {notFound ? "Das Dokument existiert nicht (mehr) oder Sie haben keinen Zugriff." : document.error.message}
+        <Alert color={notFound ? "yellow" : "red"} title={notFound ? t("Dokument nicht gefunden") : t("Fehler")}>
+          {notFound ? t("Das Dokument existiert nicht (mehr) oder Sie haben keinen Zugriff.") : document.error.message}
         </Alert>
       </Stack>
     );
@@ -61,10 +63,10 @@ export function DocumentDetailPage() {
           <BackButton onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/"))} />
           <div style={{ minWidth: 0 }}>
             <Title order={isMobile ? 3 : 2} style={{ overflowWrap: "anywhere" }}>
-              {doc.title || "Ohne Titel"}
+              {doc.title || t("Ohne Titel")}
             </Title>
             <Text size="xs" c="dimmed">
-              hochgeladen {formatDateTime(doc.created_at)}
+              {t("hochgeladen {{date}}", { date: formatDateTime(doc.created_at) })}
             </Text>
           </div>
         </Group>
@@ -76,9 +78,9 @@ export function DocumentDetailPage() {
       {isMobile ? (
         <Tabs defaultValue="details" keepMounted={false}>
           <Tabs.List grow>
-            <Tabs.Tab value="details">Details</Tabs.Tab>
-            <Tabs.Tab value="vorschau">Vorschau</Tabs.Tab>
-            <Tabs.Tab value="mehr">Text & Verlauf</Tabs.Tab>
+            <Tabs.Tab value="details">{t("Details")}</Tabs.Tab>
+            <Tabs.Tab value="vorschau">{t("Vorschau")}</Tabs.Tab>
+            <Tabs.Tab value="mehr">{t("Text & Verlauf")}</Tabs.Tab>
           </Tabs.List>
           <Tabs.Panel value="details" pt="sm">
             {side}
@@ -118,8 +120,9 @@ export function DocumentDetailPage() {
 }
 
 function BackButton({ onClick }: { onClick(): void }) {
+  const { t } = useTranslation();
   return (
-    <ActionIcon variant="subtle" size="lg" onClick={onClick} aria-label="Zurück">
+    <ActionIcon variant="subtle" size="lg" onClick={onClick} aria-label={t("Zurück")}>
       <IconArrowLeft size={20} />
     </ActionIcon>
   );
@@ -127,24 +130,24 @@ function BackButton({ onClick }: { onClick(): void }) {
 
 function DocumentActions({ doc }: { doc: DocumentDetail }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const remove = useDeleteDocument();
   const reprocess = useReprocessDocument();
 
   function confirmReprocess() {
     modals.openConfirmModal({
-      title: "Erneut analysieren?",
+      title: t("Erneut analysieren?"),
       children: (
         <Text size="sm">
-          Text, Kategorie und die von der KI erkannten Angaben (Betreff, Absender, Datum, Betrag, Objekt, nicht
-          bestätigte Fristvorschläge) werden neu ermittelt – dort von Ihnen geänderte Werte gehen dabei verloren. Ein
-          eigener Titel, eine bestätigte Kategorie, die Zahlung und bestätigte Termine bleiben erhalten. Ein Foto wird
-          dabei zur PDF.
+          {t(
+            "Text, Kategorie und die von der KI erkannten Angaben (Betreff, Absender, Datum, Betrag, Objekt, nicht bestätigte Fristvorschläge) werden neu ermittelt – dort von Ihnen geänderte Werte gehen dabei verloren. Ein eigener Titel, eine bestätigte Kategorie, die Zahlung und bestätigte Termine bleiben erhalten. Ein Foto wird dabei zur PDF.",
+          )}
         </Text>
       ),
-      labels: { confirm: "Neu analysieren", cancel: "Abbrechen" },
+      labels: { confirm: t("Neu analysieren"), cancel: t("Abbrechen") },
       onConfirm: () =>
         reprocess.mutate(doc.id, {
-          onSuccess: () => notifySuccess("KI-Auswertung läuft erneut"),
+          onSuccess: () => notifySuccess(t("KI-Auswertung läuft erneut")),
           onError: (e) => notifyError(e),
         }),
     });
@@ -152,16 +155,20 @@ function DocumentActions({ doc }: { doc: DocumentDetail }) {
 
   function confirmDelete() {
     modals.openConfirmModal({
-      title: "In den Papierkorb verschieben?",
+      title: t("In den Papierkorb verschieben?"),
       children: (
-        <Text size="sm">„{doc.title}" wird in den Papierkorb verschoben und kann dort wiederhergestellt werden.</Text>
+        <Text size="sm">
+          {t("„{{title}}“ wird in den Papierkorb verschoben und kann dort wiederhergestellt werden.", {
+            title: doc.title,
+          })}
+        </Text>
       ),
-      labels: { confirm: "In den Papierkorb", cancel: "Abbrechen" },
+      labels: { confirm: t("In den Papierkorb"), cancel: t("Abbrechen") },
       confirmProps: { color: "red" },
       onConfirm: () =>
         remove.mutate(doc.id, {
           onSuccess: () => {
-            notifySuccess("In den Papierkorb verschoben");
+            notifySuccess(t("In den Papierkorb verschoben"));
             navigate("/");
           },
           onError: (e) => notifyError(e),
@@ -180,29 +187,29 @@ function DocumentActions({ doc }: { doc: DocumentDetail }) {
           loading={reprocess.isPending}
           onClick={() => confirmReprocess()}
         >
-          Erneut analysieren
+          {t("Erneut analysieren")}
         </Button>
       )}
       <Button
         variant="default"
         leftSection={<IconDownload size={16} />}
         visibleFrom="sm"
-        onClick={() => downloadDocument(doc).catch((e) => notifyError(e, "Download fehlgeschlagen"))}
+        onClick={() => downloadDocument(doc).catch((e) => notifyError(e, t("Download fehlgeschlagen")))}
       >
-        Herunterladen
+        {t("Herunterladen")}
       </Button>
       <Menu position="bottom-end" withinPortal>
         <Menu.Target>
-          <ActionIcon variant="default" size="lg" aria-label="Weitere Aktionen">
+          <ActionIcon variant="default" size="lg" aria-label={t("Weitere Aktionen")}>
             <IconDots size={18} />
           </ActionIcon>
         </Menu.Target>
         <Menu.Dropdown>
           <Menu.Item
             leftSection={<IconDownload size={14} />}
-            onClick={() => downloadDocument(doc).catch((e) => notifyError(e, "Download fehlgeschlagen"))}
+            onClick={() => downloadDocument(doc).catch((e) => notifyError(e, t("Download fehlgeschlagen")))}
           >
-            Herunterladen
+            {t("Herunterladen")}
           </Menu.Item>
           {!doc.deleted_at && (
             <Menu.Item
@@ -210,12 +217,12 @@ function DocumentActions({ doc }: { doc: DocumentDetail }) {
               disabled={isProcessing(doc)}
               onClick={() => confirmReprocess()}
             >
-              Erneut analysieren
+              {t("Erneut analysieren")}
             </Menu.Item>
           )}
           {!doc.deleted_at && (
             <Menu.Item leftSection={<IconTrash size={14} />} color="red" onClick={confirmDelete}>
-              In den Papierkorb
+              {t("In den Papierkorb")}
             </Menu.Item>
           )}
         </Menu.Dropdown>
@@ -226,22 +233,25 @@ function DocumentActions({ doc }: { doc: DocumentDetail }) {
 
 function DeletedNotice({ doc }: { doc: DocumentDetail }) {
   const restore = useRestoreDocument();
+  const { t } = useTranslation();
   return (
-    <Alert color="orange" title="Dieses Dokument liegt im Papierkorb">
+    <Alert color="orange" title={t("Dieses Dokument liegt im Papierkorb")}>
       <Group justify="space-between">
-        <Text size="sm">Gelöscht am {formatDateTime(doc.deleted_at)}. Zum Bearbeiten erst wiederherstellen.</Text>
+        <Text size="sm">
+          {t("Gelöscht am {{date}}. Zum Bearbeiten erst wiederherstellen.", { date: formatDateTime(doc.deleted_at) })}
+        </Text>
         <Button
           size="xs"
           leftSection={<IconRestore size={14} />}
           loading={restore.isPending}
           onClick={() =>
             restore.mutate(doc.id, {
-              onSuccess: () => notifySuccess("Wiederhergestellt"),
+              onSuccess: () => notifySuccess(t("Wiederhergestellt")),
               onError: (e) => notifyError(e),
             })
           }
         >
-          Wiederherstellen
+          {t("Wiederherstellen")}
         </Button>
       </Group>
     </Alert>

@@ -9,6 +9,7 @@ Start (lokal): `uv run python -m homedms.worker`
 Start (Container, APP_ROLE=worker): dasselbe Kommando, siehe Dockerfile (CMD-Weiche je nach APP_ROLE).
 """
 import asyncio
+import logging
 import signal
 
 from homedms import runtime
@@ -38,6 +39,12 @@ def request_restart() -> bool:
 
 async def _main() -> None:
     runtime.setup_logging("worker")
+    try:  # Sprachpakete der Texterkennung im eigenen Ordner bereitstellen (core/ocr_languages.py)
+        from homedms.core import ocr_languages
+
+        ocr_languages.prepare()
+    except OSError as exc:
+        logging.getLogger("homedms.worker").warning("Sprachpakete nicht vorbereitet: %s", exc)
     async with app.open_async():
         workers = [
             asyncio.create_task(

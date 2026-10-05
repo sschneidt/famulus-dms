@@ -13,6 +13,7 @@ from dataclasses import dataclass
 import pymupdf
 from PIL import Image, ImageOps
 
+from homedms.i18n import _
 from homedms.core import docscan
 
 try:
@@ -57,7 +58,7 @@ def _load(content: bytes, auto_crop: bool) -> Image.Image:
             img = ImageOps.exif_transpose(img)  # Handy-Fotos stehen sonst oft quer
             img = img.convert("RGB")
     except Exception as exc:  # noqa: BLE001 - jedes defekte Bild
-        raise PageError("Ein Bild konnte nicht gelesen werden") from exc
+        raise PageError(_("Ein Bild konnte nicht gelesen werden")) from exc
     if auto_crop:
         img = docscan.rectify(img).image
     return img
@@ -84,7 +85,7 @@ def preview(content: bytes) -> tuple[bytes, docscan.ScanResult]:
     es danach als Seite hoch, wird es nicht ein zweites Mal zugeschnitten (auto_crop=False)."""
     img = _load(content, auto_crop=False)
     result = docscan.rectify(img)
-    jpeg, _, _ = _jpeg(result.image)
+    jpeg, _width, _height = _jpeg(result.image)
     return jpeg, result
 
 
@@ -92,18 +93,18 @@ def rectify_page(pdf: bytes, page: int) -> bytes:
     """Eine bereits gespeicherte Foto-/Scan-Seite nachtraeglich zuschneiden und gerade richten."""
     with pymupdf.open(stream=pdf, filetype="pdf") as doc:
         if not 1 <= page <= doc.page_count:
-            raise PageError("Diese Seite gibt es nicht")
+            raise PageError(_("Diese Seite gibt es nicht"))
         images = doc[page - 1].get_images(full=True)
         if len(images) != 1:
-            raise PageError("Nur Seiten aus einem Foto oder Scan lassen sich zuschneiden")
+            raise PageError(_("Nur Seiten aus einem Foto oder Scan lassen sich zuschneiden"))
         try:
             content = doc.extract_image(images[0][0])["image"]
             with Image.open(io.BytesIO(content)) as img:
                 result = docscan.rectify(img.convert("RGB"))
         except Exception as exc:  # noqa: BLE001
-            raise PageError("Das Bild dieser Seite konnte nicht gelesen werden") from exc
+            raise PageError(_("Das Bild dieser Seite konnte nicht gelesen werden")) from exc
         if not result.changed:
-            raise PageError("Kein Blattrand und keine Schräglage erkannt - die Seite bleibt, wie sie ist")
+            raise PageError(_("Kein Blattrand und keine Schräglage erkannt - die Seite bleibt, wie sie ist"))
         jpeg, width, height = _jpeg(result.image)
         new = doc.new_page(page - 1, width=PAGE_WIDTH_PT, height=PAGE_WIDTH_PT * height / width)
         new.insert_image(new.rect, stream=jpeg)
@@ -116,28 +117,28 @@ def _append(doc: pymupdf.Document, part: Part) -> None:
         try:
             with pymupdf.open(stream=part.content, filetype="pdf") as src:
                 if src.needs_pass:
-                    raise PageError("Passwortgeschuetzte PDFs koennen nicht zusammengefuegt werden")
+                    raise PageError(_("Passwortgeschuetzte PDFs koennen nicht zusammengefuegt werden"))
                 doc.insert_pdf(src)
         except PageError:
             raise
         except Exception as exc:  # noqa: BLE001
-            raise PageError("Eine PDF-Datei ist beschaedigt") from exc
+            raise PageError(_("Eine PDF-Datei ist beschaedigt")) from exc
     elif part.kind == "image":
         _image_page(doc, part.content, part.auto_crop)
     else:
-        raise PageError(f"{part.filename or 'Datei'}: nur PDF und Bilder lassen sich zu Seiten zusammenfassen")
+        raise PageError(_("{name}: nur PDF und Bilder lassen sich zu Seiten zusammenfassen", name=part.filename or _("Datei")))
 
 
 def _save(doc: pymupdf.Document) -> bytes:
     if doc.page_count > MAX_PAGES:
-        raise PageError(f"Hoechstens {MAX_PAGES} Seiten je Dokument")
+        raise PageError(_("Hoechstens {count} Seiten je Dokument", count=MAX_PAGES))
     return doc.tobytes(garbage=3, deflate=True)
 
 
 def combine(parts: list[Part]) -> bytes:
     """Mehrere PDFs/Bilder in der angegebenen Reihenfolge zu einer PDF zusammenfassen."""
     if not parts:
-        raise PageError("Keine Seiten")
+        raise PageError(_("Keine Seiten"))
     doc = pymupdf.open()
     try:
         for part in parts:
@@ -181,7 +182,7 @@ def insert_pages(pdf: bytes, parts: list[Part], position: int | None = None) -> 
             doc.insert_pdf(new)
         else:
             if position < 1:
-                raise PageError("Ungueltige Position")
+                raise PageError(_("Ungueltige Position"))
             doc.insert_pdf(new, start_at=position - 1)
         return _save(doc)
 
@@ -189,9 +190,9 @@ def insert_pages(pdf: bytes, parts: list[Part], position: int | None = None) -> 
 def delete_page(pdf: bytes, page: int) -> bytes:
     with pymupdf.open(stream=pdf, filetype="pdf") as doc:
         if not 1 <= page <= doc.page_count:
-            raise PageError("Diese Seite gibt es nicht")
+            raise PageError(_("Diese Seite gibt es nicht"))
         if doc.page_count == 1:
-            raise PageError("Die letzte Seite kann nicht entfernt werden - dann lieber das Dokument loeschen")
+            raise PageError(_("Die letzte Seite kann nicht entfernt werden - dann lieber das Dokument loeschen"))
         doc.delete_page(page - 1)
         return _save(doc)
 
@@ -200,7 +201,7 @@ def reorder(pdf: bytes, order: list[int]) -> bytes:
     """order: neue Reihenfolge als 1-basierte Seitennummern, z. B. [2, 1, 3]."""
     with pymupdf.open(stream=pdf, filetype="pdf") as doc:
         if sorted(order) != list(range(1, doc.page_count + 1)):
-            raise PageError("Die Reihenfolge muss jede Seite genau einmal enthalten")
+            raise PageError(_("Die Reihenfolge muss jede Seite genau einmal enthalten"))
         doc.select([p - 1 for p in order])
         return _save(doc)
 
@@ -211,7 +212,7 @@ def thumbnail(current: Part, page: int, width: int = 240) -> bytes:
     if current.kind == "pdf":
         with pymupdf.open(stream=current.content, filetype="pdf") as doc:
             if not 1 <= page <= doc.page_count:
-                raise PageError("Diese Seite gibt es nicht")
+                raise PageError(_("Diese Seite gibt es nicht"))
             p = doc[page - 1]
             zoom = width / p.rect.width
             return p.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom)).tobytes("png")
@@ -222,4 +223,4 @@ def thumbnail(current: Part, page: int, width: int = 240) -> bytes:
             buf = io.BytesIO()
             img.save(buf, format="PNG")
             return buf.getvalue()
-    raise PageError("Keine Seitenvorschau fuer diesen Dateityp")
+    raise PageError(_("Keine Seitenvorschau fuer diesen Dateityp"))

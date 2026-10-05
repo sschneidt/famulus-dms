@@ -27,6 +27,7 @@ from homedms.models.document import (
     OcrStatus,
 )
 from homedms.models.tenant import User
+from homedms.i18n import _
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -41,21 +42,21 @@ class PagesResponse(BaseModel):
 
 def _current(document: Document) -> tuple[DocumentFile, pages.Part]:
     if not document.files:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Keine Datei zu diesem Dokument vorhanden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Keine Datei zu diesem Dokument vorhanden"))
     file = document.files[0]
     try:
         content = Path(file.file_path).read_bytes()
     except OSError as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Datei nicht gefunden") from exc
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Datei nicht gefunden")) from exc
     return file, pages.Part(content, Path(file.file_path).name, file.mime_type)
 
 
 async def _editable(db: AsyncSession, user: User, document_id: uuid.UUID) -> Document:
     document = await _get_editable_document(db, user, document_id)
     if document.deleted_at is not None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Dokument liegt im Papierkorb - erst wiederherstellen")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Dokument liegt im Papierkorb - erst wiederherstellen"))
     if document.ocr_status == OcrStatus.pending:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Das Dokument wird gerade verarbeitet - bitte kurz warten")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Das Dokument wird gerade verarbeitet - bitte kurz warten"))
     return document
 
 
@@ -172,9 +173,9 @@ async def rectify_photo(
     """
     content = await file.read(MAX_PREVIEW_BYTES + 1)
     if len(content) > MAX_PREVIEW_BYTES:
-        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Foto zu gross (max. 50 MB)")
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, _("Foto zu gross (max. 50 MB)"))
     if pages.Part(content, file.filename or "", file.content_type or "").kind != "image":
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Nur Fotos lassen sich zuschneiden")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Nur Fotos lassen sich zuschneiden"))
     # Rechenarbeit (ca. 0,5 s) nicht im Event-Loop - sonst stockt die API fuer alle anderen
     jpeg, result = await run_in_threadpool(_apply, pages.preview, content)
     return Response(jpeg, media_type="image/jpeg", headers={

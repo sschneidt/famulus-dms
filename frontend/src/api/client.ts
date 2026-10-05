@@ -8,6 +8,7 @@
  *   dabei EINE Erneuerung (sonst wuerde das rotierende Refresh-Token sich selbst entwerten).
  */
 import createClient from "openapi-fetch";
+import i18n, { currentLanguage } from "../i18n";
 import type { components, paths } from "./schema";
 
 export type Schemas = components["schemas"];
@@ -99,6 +100,7 @@ export function createAuthFetch(baseFetch: typeof fetch = (...args) => fetch(...
     const headers = new Headers(request.headers);
     const token = tokenStore.access;
     if (token) headers.set("Authorization", `Bearer ${token}`);
+    headers.set("Accept-Language", currentLanguage()); // Meldungen des Servers in der Sprache der Oberflaeche
     return new Request(request, { headers });
   }
 
@@ -152,8 +154,8 @@ function messageFrom(error: unknown, status: number): string {
       .map((d: { loc?: unknown[]; msg?: string }) => `${(d.loc ?? []).slice(1).join(".")}: ${d.msg}`)
       .join("; ");
   }
-  if (status === 0) return "Server nicht erreichbar";
-  return `Fehler ${status}`;
+  if (status === 0) return i18n.t("Server nicht erreichbar");
+  return i18n.t("Fehler {{status}}", { status });
 }
 
 /** Ergebnis eines api.GET/POST/...-Aufrufs auspacken oder ApiError werfen. */
@@ -168,7 +170,8 @@ export async function call<T>(request: Promise<{ data?: T; error?: unknown; resp
 /** Datei eines Dokuments mit Anmeldung laden (fuer Vorschau und Download). */
 export async function fetchDocumentFile(documentId: string): Promise<Blob> {
   const resp = await authFetch(`${api_base()}/api/v1/documents/${documentId}/download`);
-  if (!resp.ok) throw new ApiError(resp.status, `Datei konnte nicht geladen werden (${resp.status})`);
+  if (!resp.ok)
+    throw new ApiError(resp.status, i18n.t("Datei konnte nicht geladen werden ({{status}})", { status: resp.status }));
   return resp.blob();
 }
 
@@ -253,7 +256,8 @@ export async function rectifyPhoto(photo: File, signal?: AbortSignal): Promise<R
   const form = new FormData();
   form.append("file", photo);
   const resp = await authFetch(`${api_base()}/api/v1/photos/rectify`, { method: "POST", body: form, signal });
-  if (!resp.ok) throw new ApiError(resp.status, `Zuschnitt nicht moeglich (${resp.status})`);
+  if (!resp.ok)
+    throw new ApiError(resp.status, i18n.t("Zuschnitt nicht möglich ({{status}})", { status: resp.status }));
   const bytes = await resp.arrayBuffer();
   const name = (photo.name || "Foto").replace(/\.[^.]+$/, "") + ".jpg";
   return {
@@ -266,6 +270,7 @@ export async function rectifyPhoto(photo: File, signal?: AbortSignal): Promise<R
 /** Vorschaubild einer Seite (mit Anmeldung geladen). */
 export async function fetchPageThumbnail(documentId: string, page: number, width = 240): Promise<Blob> {
   const resp = await authFetch(`${api_base()}/api/v1/documents/${documentId}/pages/${page}/thumbnail?width=${width}`);
-  if (!resp.ok) throw new ApiError(resp.status, `Vorschau nicht verfuegbar (${resp.status})`);
+  if (!resp.ok)
+    throw new ApiError(resp.status, i18n.t("Vorschau nicht verfügbar ({{status}})", { status: resp.status }));
   return resp.blob();
 }

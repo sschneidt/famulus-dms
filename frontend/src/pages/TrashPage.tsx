@@ -1,5 +1,6 @@
 import { Alert, Anchor, Button, Card, Center, Group, Loader, Stack, Text, Title } from "@mantine/core";
 import { IconRestore, IconTrash } from "@tabler/icons-react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { useRestoreDocument, useTrash } from "../api/queries";
 import { useCategoryNames } from "../lib/categories";
@@ -7,6 +8,7 @@ import { formatDateTime } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
 
 export function TrashPage() {
+  const { t } = useTranslation();
   const trash = useTrash();
   const restore = useRestoreDocument();
   const categoryName = useCategoryNames();
@@ -14,9 +16,9 @@ export function TrashPage() {
   return (
     <Stack>
       <div>
-        <Title order={2}>Papierkorb</Title>
+        <Title order={2}>{t("Papierkorb")}</Title>
         <Text c="dimmed" size="sm">
-          Gelöschte Dokumente lassen sich hier wiederherstellen.
+          {t("Gelöschte Dokumente lassen sich hier wiederherstellen.")}
         </Text>
       </div>
       {trash.isPending ? (
@@ -29,7 +31,7 @@ export function TrashPage() {
         <Card withBorder padding="xl" radius="md">
           <Stack align="center" gap="xs">
             <IconTrash size={40} color="var(--mantine-color-dimmed)" />
-            <Text c="dimmed">Der Papierkorb ist leer.</Text>
+            <Text c="dimmed">{t("Der Papierkorb ist leer.")}</Text>
           </Stack>
         </Card>
       ) : (
@@ -39,10 +41,10 @@ export function TrashPage() {
               <Group justify="space-between" wrap="nowrap">
                 <div style={{ minWidth: 0 }}>
                   <Anchor component={Link} to={`/dokumente/${doc.id}`} fw={500} style={{ overflowWrap: "anywhere" }}>
-                    {doc.title || "Ohne Titel"}
+                    {doc.title || t("Ohne Titel")}
                   </Anchor>
                   <Text size="xs" c="dimmed">
-                    {categoryName(doc.category_id)} · gelöscht {formatDateTime(doc.deleted_at)}
+                    {categoryName(doc.category_id)} · {t("gelöscht {{date}}", { date: formatDateTime(doc.deleted_at) })}
                   </Text>
                 </div>
                 <Button
@@ -52,13 +54,13 @@ export function TrashPage() {
                   loading={restore.isPending && restore.variables === doc.id}
                   onClick={() =>
                     restore.mutate(doc.id, {
-                      onSuccess: () => notifySuccess(`„${doc.title}" wiederhergestellt`),
+                      onSuccess: () => notifySuccess(t("„{{title}}“ wiederhergestellt", { title: doc.title })),
                       onError: (e) => notifyError(e),
                     })
                   }
                   style={{ flexShrink: 0 }}
                 >
-                  Wiederherstellen
+                  {t("Wiederherstellen")}
                 </Button>
               </Group>
             </Card>

@@ -17,11 +17,12 @@ import {
 } from "@mantine/core";
 import { IconAlertTriangle, IconCheck, IconConfetti, IconRefresh } from "@tabler/icons-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 import type { DocumentItem } from "../api/client";
 import { useAnalyzeAll, useAssignCategory, useNeedsReview, useUnanalyzed } from "../api/queries";
 import { useCategoryOptions } from "../lib/categories";
-import { formatDate, formatPercent, stageLabels } from "../lib/format";
+import { formatDate, formatPercent, stageLabel } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
 
 /**
@@ -30,6 +31,7 @@ import { notifyError, notifySuccess } from "../lib/notify";
  * mit "Alle analysieren" nachholen.
  */
 export function ReviewPage() {
+  const { t } = useTranslation();
   const review = useNeedsReview();
   const unanalyzed = useUnanalyzed();
   const [params, setParams] = useSearchParams();
@@ -40,7 +42,7 @@ export function ReviewPage() {
 
   return (
     <Stack>
-      <Title order={2}>Prüfen</Title>
+      <Title order={2}>{t("Prüfen")}</Title>
       <Tabs value={tab} onChange={(v) => v && setParams({ ansicht: v }, { replace: true })} keepMounted={false}>
         <Tabs.List>
           <Tabs.Tab
@@ -53,7 +55,7 @@ export function ReviewPage() {
               ) : null
             }
           >
-            Kategorie prüfen
+            {t("Kategorie prüfen")}
           </Tabs.Tab>
           <Tabs.Tab
             value="nicht-analysiert"
@@ -65,7 +67,7 @@ export function ReviewPage() {
               ) : null
             }
           >
-            Nicht analysiert
+            {t("Nicht analysiert")}
           </Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="kategorie" pt="md">
@@ -80,10 +82,11 @@ export function ReviewPage() {
 }
 
 function ReviewList({ review }: { review: ReturnType<typeof useNeedsReview> }) {
+  const { t } = useTranslation();
   return (
     <Stack>
       <Text c="dimmed" size="sm">
-        Bei diesen Dokumenten war sich die KI nicht sicher. Jede Bestätigung verbessert die künftige Einordnung.
+        {t("Bei diesen Dokumenten war sich die KI nicht sicher. Jede Bestätigung verbessert die künftige Einordnung.")}
       </Text>
       {review.isPending ? (
         <Center py="xl">
@@ -97,9 +100,9 @@ function ReviewList({ review }: { review: ReturnType<typeof useNeedsReview> }) {
             <ThemeIcon size={48} radius="xl" variant="light" color="green">
               <IconConfetti size={28} />
             </ThemeIcon>
-            <Text fw={500}>Alles eingeordnet</Text>
+            <Text fw={500}>{t("Alles eingeordnet")}</Text>
             <Text size="sm" c="dimmed">
-              Es gibt nichts zu prüfen.
+              {t("Es gibt nichts zu prüfen.")}
             </Text>
           </Stack>
         </Card>
@@ -115,6 +118,7 @@ function ReviewList({ review }: { review: ReturnType<typeof useNeedsReview> }) {
 }
 
 function ReviewCard({ doc }: { doc: DocumentItem }) {
+  const { t } = useTranslation();
   const options = useCategoryOptions();
   const assign = useAssignCategory();
   const [choice, setChoice] = useState<string | null>(doc.category_id);
@@ -123,16 +127,13 @@ function ReviewCard({ doc }: { doc: DocumentItem }) {
     if (!choice) return;
     try {
       await assign.mutateAsync({ documentId: doc.id, categoryId: choice });
-      notifySuccess(`„${doc.title}" eingeordnet`);
+      notifySuccess(t("„{{title}}“ eingeordnet", { title: doc.title }));
     } catch (e) {
-      notifyError(e, "Einordnen fehlgeschlagen");
+      notifyError(e, t("Einordnen fehlgeschlagen"));
     }
   }
 
-  const suggestion = [
-    doc.classification_stage ? stageLabels[doc.classification_stage] : null,
-    formatPercent(doc.classification_confidence) || null,
-  ]
+  const suggestion = [stageLabel(doc.classification_stage), formatPercent(doc.classification_confidence) || null]
     .filter(Boolean)
     .join(", ");
 
@@ -141,7 +142,7 @@ function ReviewCard({ doc }: { doc: DocumentItem }) {
       <Stack gap="sm">
         <div>
           <Anchor component={Link} to={`/dokumente/${doc.id}`} fw={600} style={{ overflowWrap: "anywhere" }}>
-            {doc.title || "Ohne Titel"}
+            {doc.title || t("Ohne Titel")}
           </Anchor>
           <Text size="xs" c="dimmed">
             {[doc.issuer, formatDate(doc.document_date ?? doc.created_at)].filter(Boolean).join(" · ")}
@@ -150,12 +151,12 @@ function ReviewCard({ doc }: { doc: DocumentItem }) {
         <Select
           label={
             doc.classification_error
-              ? "KI war nicht erreichbar – selbst wählen oder unter „Nicht analysiert“ nachholen"
+              ? t("KI war nicht erreichbar – selbst wählen oder unter „Nicht analysiert“ nachholen")
               : doc.category_id
-                ? `Vorschlag der KI${suggestion ? ` (${suggestion})` : ""}`
-                : "Keine Kategorie erkannt"
+                ? `${t("Vorschlag der KI")}${suggestion ? ` (${suggestion})` : ""}`
+                : t("Keine Kategorie erkannt")
           }
-          placeholder="Kategorie wählen"
+          placeholder={t("Kategorie wählen")}
           data={options}
           value={choice}
           onChange={setChoice}
@@ -169,7 +170,7 @@ function ReviewCard({ doc }: { doc: DocumentItem }) {
             disabled={!choice}
             loading={assign.isPending}
           >
-            {choice && choice === doc.category_id ? "Bestätigen" : "Zuordnen"}
+            {choice && choice === doc.category_id ? t("Bestätigen") : t("Zuordnen")}
           </Button>
         </Group>
       </Stack>
@@ -178,6 +179,7 @@ function ReviewCard({ doc }: { doc: DocumentItem }) {
 }
 
 function UnanalyzedList({ query }: { query: ReturnType<typeof useUnanalyzed> }) {
+  const { t } = useTranslation();
   const analyze = useAnalyzeAll();
 
   if (query.isPending) {
@@ -197,9 +199,9 @@ function UnanalyzedList({ query }: { query: ReturnType<typeof useUnanalyzed> }) 
           <ThemeIcon size={48} radius="xl" variant="light" color="green">
             <IconConfetti size={28} />
           </ThemeIcon>
-          <Text fw={500}>Alles analysiert</Text>
+          <Text fw={500}>{t("Alles analysiert")}</Text>
           <Text size="sm" c="dimmed">
-            Texterkennung, Kategorie und Angaben sind bei allen Dokumenten durchgelaufen.
+            {t("Texterkennung, Kategorie und Angaben sind bei allen Dokumenten durchgelaufen.")}
           </Text>
         </Stack>
       </Card>
@@ -211,29 +213,33 @@ function UnanalyzedList({ query }: { query: ReturnType<typeof useUnanalyzed> }) 
       onSuccess: (r) =>
         notifySuccess(
           r.queued
-            ? `${r.queued} ${r.queued === 1 ? "Dokument wird" : "Dokumente werden"} analysiert – das kann je nach KI einige Minuten dauern.`
-            : "Nichts mehr zu tun.",
+            ? t("{{count}} Dokumente werden analysiert – das kann je nach KI einige Minuten dauern.", {
+                count: r.queued,
+              })
+            : t("Nichts mehr zu tun."),
         ),
-      onError: (e) => notifyError(e, "Analyse konnte nicht gestartet werden"),
+      onError: (e) => notifyError(e, t("Analyse konnte nicht gestartet werden")),
     });
   }
 
-  const needsAi = items.some((d) => d.reasons.some((r) => !r.startsWith("Texterkennung")));
+  const needsAi = items.some((d) => d.needs_ai);
   return (
     <Stack>
       <Group justify="space-between" align="flex-start" wrap="wrap">
         <Text c="dimmed" size="sm" maw={640}>
-          Bei diesen Dokumenten fehlt ein Teil der Auswertung – meist, weil die KI (Ollama) nicht lief, oder weil die
-          Verarbeitung unterbrochen wurde. Nachgeholt wird nur, was fehlt; deine Eingaben bleiben.
+          {t(
+            "Bei diesen Dokumenten fehlt ein Teil der Auswertung – meist, weil die KI (Ollama) nicht lief, oder weil die Verarbeitung unterbrochen wurde. Nachgeholt wird nur, was fehlt; deine Eingaben bleiben.",
+          )}
         </Text>
         <Button leftSection={<IconRefresh size={16} />} onClick={start} loading={analyze.isPending}>
-          Alle analysieren ({items.length})
+          {t("Alle analysieren ({{count}})", { count: items.length })}
         </Button>
       </Group>
       {!aiAvailable && needsAi && (
-        <Alert color="yellow" icon={<IconAlertTriangle />} title="Die KI antwortet gerade nicht">
-          Kategorie, Betreff und Fristen lassen sich erst nachholen, wenn Ollama läuft (unter Windows: am PC anmelden
-          bzw. Ollama starten; auf der NAS: Container „ollama“ prüfen). Die Texterkennung klappt auch ohne.
+        <Alert color="yellow" icon={<IconAlertTriangle />} title={t("Die KI antwortet gerade nicht")}>
+          {t(
+            "Kategorie, Betreff und Fristen lassen sich erst nachholen, wenn Ollama läuft (unter Windows: am PC anmelden bzw. Ollama starten; auf der NAS: Container „ollama“ prüfen). Die Texterkennung klappt auch ohne.",
+          )}
         </Alert>
       )}
       <Stack gap="xs">
@@ -242,10 +248,10 @@ function UnanalyzedList({ query }: { query: ReturnType<typeof useUnanalyzed> }) 
             <Group justify="space-between" wrap="nowrap" align="flex-start">
               <div style={{ minWidth: 0 }}>
                 <Anchor component={Link} to={`/dokumente/${doc.id}`} fw={600} style={{ overflowWrap: "anywhere" }}>
-                  {doc.title || "Ohne Titel"}
+                  {doc.title || t("Ohne Titel")}
                 </Anchor>
                 <Text size="xs" c="dimmed">
-                  hochgeladen {formatDate(doc.created_at)}
+                  {t("hochgeladen {{date}}", { date: formatDate(doc.created_at) })}
                 </Text>
               </div>
             </Group>

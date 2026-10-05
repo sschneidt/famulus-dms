@@ -18,6 +18,7 @@ from homedms.models.document import Document, Property
 from homedms.models.tenant import User
 from homedms.schemas.property import PropertyMerge, PropertyResponse, PropertyUpdate
 from homedms.tasks.filing import defer_filing
+from homedms.i18n import _
 
 router = APIRouter(prefix="/properties", tags=["properties"])
 
@@ -25,7 +26,7 @@ router = APIRouter(prefix="/properties", tags=["properties"])
 async def _get(db: AsyncSession, user: User, property_id: uuid.UUID) -> Property:
     prop = await db.get(Property, property_id)
     if prop is None or prop.tenant_id != user.tenant_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Objekt nicht gefunden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Objekt nicht gefunden"))
     return prop
 
 
@@ -75,14 +76,14 @@ async def rename_property(
     prop = await _get(db, user, property_id)
     name = payload.name.strip()
     if not name:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Name darf nicht leer sein")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Name darf nicht leer sein"))
     clash = await db.scalar(
         select(Property.id).where(
             Property.tenant_id == user.tenant_id, func.lower(Property.name) == name.lower(), Property.id != prop.id
         )
     )
     if clash:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Ein Objekt mit diesem Namen gibt es schon - ggf. zusammenfuehren")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Ein Objekt mit diesem Namen gibt es schon - ggf. zusammenfuehren"))
     prop.name = name
     await db.commit()
     await _refile(await _document_ids(db, prop.id))  # Ordner auf dem NAS umbenennen
@@ -97,7 +98,7 @@ async def merge_property(
     source = await _get(db, user, property_id)
     target = await _get(db, user, payload.into_id)
     if source.id == target.id:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Ein Objekt kann nicht mit sich selbst zusammengefuehrt werden")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Ein Objekt kann nicht mit sich selbst zusammengefuehrt werden"))
     moved = await _document_ids(db, source.id)
     await db.execute(update(Document).where(Document.property_id == source.id).values(property_id=target.id))
     await db.delete(source)

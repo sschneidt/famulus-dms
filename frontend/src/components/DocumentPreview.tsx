@@ -3,6 +3,7 @@ import { useMediaQuery } from "@mantine/hooks";
 import { IconExternalLink, IconFileOff } from "@tabler/icons-react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { fetchDocumentFile, type DocumentDetail } from "../api/client";
 
 /**
@@ -12,6 +13,7 @@ import { fetchDocumentFile, type DocumentDetail } from "../api/client";
  */
 export function DocumentPreview({ doc }: { doc: DocumentDetail }) {
   const isMobile = useMediaQuery("(max-width: 48em)") ?? false;
+  const { t } = useTranslation();
   const file = doc.files[0];
   const blob = useQuery({
     queryKey: ["document", doc.id, "file", file?.id, doc.updated_at], // neu laden, wenn Seiten geaendert wurden
@@ -22,7 +24,7 @@ export function DocumentPreview({ doc }: { doc: DocumentDetail }) {
   const url = useObjectUrl(blob.data);
 
   if (!file) {
-    return <EmptyPreview text="Keine Datei vorhanden" />;
+    return <EmptyPreview text={t("Keine Datei vorhanden")} />;
   }
   if (blob.isPending) {
     return (
@@ -34,7 +36,7 @@ export function DocumentPreview({ doc }: { doc: DocumentDetail }) {
   if (blob.isError || !url) {
     return (
       <Alert color="red" icon={<IconFileOff />}>
-        Vorschau konnte nicht geladen werden: {blob.error?.message}
+        {t("Vorschau konnte nicht geladen werden: {{error}}", { error: blob.error?.message ?? "" })}
       </Alert>
     );
   }
@@ -57,9 +59,9 @@ export function DocumentPreview({ doc }: { doc: DocumentDetail }) {
     );
   }
   return (
-    <EmptyPreview text={isPdf ? "PDF-Dokument" : `Keine Vorschau für ${file.mime_type}`}>
+    <EmptyPreview text={isPdf ? t("PDF-Dokument") : t("Keine Vorschau für {{type}}", { type: file.mime_type })}>
       <Button component="a" href={url} target="_blank" rel="noopener" leftSection={<IconExternalLink size={16} />}>
-        Datei öffnen
+        {t("Datei öffnen")}
       </Button>
     </EmptyPreview>
   );

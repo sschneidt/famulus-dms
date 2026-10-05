@@ -1,6 +1,7 @@
 import { ActionIcon, Alert, Badge, Button, Group, Loader, Select, Stack, Switch, Text, Tooltip } from "@mantine/core";
 import { IconBellRinging, IconDeviceMobile, IconMail, IconTrash } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router";
 import {
   useNotificationSettings,
@@ -9,13 +10,13 @@ import {
   useTestNotification,
   useUpdateNotificationSettings,
 } from "../api/queries";
-import { formatDateTime } from "../lib/format";
+import { formatDateTime, tk } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
 import { currentEndpoint, pushSupport, subscribePush, unsubscribePush } from "../lib/push";
 
 const HOURS = Array.from({ length: 24 }, (_, h) => ({
   value: String(h),
-  label: `${String(h).padStart(2, "0")}:00 Uhr`,
+  label: String(h).padStart(2, "0"),
 }));
 
 /**
@@ -24,6 +25,7 @@ const HOURS = Array.from({ length: 24 }, (_, h) => ({
  */
 export function NotificationSettingsSection() {
   const settings = useNotificationSettings();
+  const { t } = useTranslation();
   const update = useUpdateNotificationSettings();
   const test = useTestNotification();
   const ref = useRef<HTMLDivElement>(null);
@@ -38,27 +40,27 @@ export function NotificationSettingsSection() {
   const s = settings.data;
 
   function save(body: Parameters<typeof update.mutate>[0]) {
-    update.mutate(body, { onError: (e) => notifyError(e, "Speichern fehlgeschlagen") });
+    update.mutate(body, { onError: (e) => notifyError(e, t("Speichern fehlgeschlagen")) });
   }
 
   function sendTest(channel: "email" | "push") {
     test.mutate(channel, {
-      onSuccess: (r) => (r.ok ? notifySuccess(r.message) : notifyError(new Error(r.message), "Test fehlgeschlagen")),
-      onError: (e) => notifyError(e, "Test fehlgeschlagen"),
+      onSuccess: (r) => (r.ok ? notifySuccess(r.message) : notifyError(new Error(r.message), t("Test fehlgeschlagen"))),
+      onError: (e) => notifyError(e, t("Test fehlgeschlagen")),
     });
   }
 
   return (
     <Stack ref={ref} id="benachrichtigungen" gap="md">
       <Text size="sm" c="dimmed">
-        Einmal täglich eine Zusammenfassung – nur wenn etwas ansteht: Termine im Vorlauf, eine Woche und einen Tag
-        vorher, am Tag selbst und danach wöchentlich, bis sie erledigt sind. Dazu neue Fristvorschläge der KI und
-        Dokumente zum Prüfen. In der App (Glocke oben) erscheint sie immer.
+        {t(
+          "Einmal täglich eine Zusammenfassung – nur wenn etwas ansteht: Termine im Vorlauf, eine Woche und einen Tag vorher, am Tag selbst und danach wöchentlich, bis sie erledigt sind. Dazu neue Fristvorschläge der KI und Dokumente zum Prüfen. In der App (Glocke oben) erscheint sie immer.",
+        )}
       </Text>
       <Select
-        label="Uhrzeit"
-        description={`Zeitzone des Servers: ${s.timezone}`}
-        data={HOURS}
+        label={t("Uhrzeit")}
+        description={t("Zeitzone des Servers: {{tz}}", { tz: s.timezone })}
+        data={HOURS.map((h) => ({ value: h.value, label: t(tk("{{hour}}:00 Uhr"), { hour: h.label }) }))}
         value={String(s.digest_hour)}
         onChange={(v) => v !== null && save({ digest_hour: Number(v) })}
         allowDeselect={false}
@@ -69,13 +71,13 @@ export function NotificationSettingsSection() {
         <Switch
           label={
             <Group gap={6}>
-              <IconMail size={16} /> Per E-Mail an {s.email_address}
+              <IconMail size={16} /> {t("Per E-Mail an {{email}}", { email: s.email_address })}
             </Group>
           }
           description={
             s.email_available
               ? undefined
-              : "Der E-Mail-Versand ist noch nicht eingerichtet (Admin: Seite „Benutzer“ > „E-Mail-Versand“)."
+              : t("Der E-Mail-Versand ist noch nicht eingerichtet (Admin: Seite „Benutzer“ > „E-Mail-Versand“).")
           }
           checked={s.email && s.email_available}
           disabled={!s.email_available}
@@ -88,7 +90,7 @@ export function NotificationSettingsSection() {
             onClick={() => sendTest("email")}
             loading={test.isPending && test.variables === "email"}
           >
-            Test-E-Mail
+            {t("Test-E-Mail")}
           </Button>
         )}
       </Group>
@@ -129,6 +131,7 @@ function PushSettings({
   onTest(): void;
   testing: boolean;
 }) {
+  const { t } = useTranslation();
   const support = pushSupport();
   const subscribe = useSubscribePush();
   const remove = useRemovePushDevice();
@@ -147,9 +150,9 @@ function PushSettings({
       const sub = await subscribePush(publicKey);
       await subscribe.mutateAsync(sub);
       setEndpoint(sub.endpoint);
-      notifySuccess("Push auf diesem Gerät eingeschaltet");
+      notifySuccess(t("Push auf diesem Gerät eingeschaltet"));
     } catch (e) {
-      notifyError(e, "Push einschalten fehlgeschlagen");
+      notifyError(e, t("Push einschalten fehlgeschlagen"));
     } finally {
       setBusy(false);
     }
@@ -164,7 +167,7 @@ function PushSettings({
       }
       await remove.mutateAsync(device.id);
     } catch (e) {
-      notifyError(e, "Entfernen fehlgeschlagen");
+      notifyError(e, t("Entfernen fehlgeschlagen"));
     } finally {
       setBusy(false);
     }
@@ -175,41 +178,43 @@ function PushSettings({
       <Group justify="space-between" wrap="wrap">
         <Group gap={6}>
           <IconDeviceMobile size={16} />
-          <Text size="sm">Push-Benachrichtigung aufs Handy oder den PC</Text>
+          <Text size="sm">{t("Push-Benachrichtigung aufs Handy oder den PC")}</Text>
         </Group>
         {support === "supported" &&
           (thisDevice ? (
             <Button size="xs" variant="default" color="red" onClick={() => void turnOff(thisDevice)} loading={busy}>
-              Auf diesem Gerät ausschalten
+              {t("Auf diesem Gerät ausschalten")}
             </Button>
           ) : (
             <Button size="xs" leftSection={<IconBellRinging size={14} />} onClick={() => void turnOn()} loading={busy}>
-              Auf diesem Gerät einschalten
+              {t("Auf diesem Gerät einschalten")}
             </Button>
           ))}
       </Group>
       {support === "ios-needs-install" && (
         <Alert color="blue" variant="light">
-          Auf dem iPhone/iPad gibt es Push nur für Apps auf dem Home-Bildschirm: in Safari „Teilen“ → „Zum
-          Home-Bildschirm“, HomeDMS von dort öffnen und hier einschalten (ab iOS 16.4).
+          {t(
+            "Auf dem iPhone/iPad gibt es Push nur für Apps auf dem Home-Bildschirm: in Safari „Teilen“ → „Zum Home-Bildschirm“, HomeDMS von dort öffnen und hier einschalten (ab iOS 16.4).",
+          )}
         </Alert>
       )}
       {support === "insecure" && (
         <Alert color="yellow" variant="light">
-          Push geht nur über eine verschlüsselte Verbindung (https://), der dieses Gerät vertraut – siehe „Neues Gerät
-          verbinden“ unten.
+          {t(
+            "Push geht nur über eine verschlüsselte Verbindung (https://), der dieses Gerät vertraut – siehe „Neues Gerät verbinden“ unten.",
+          )}
         </Alert>
       )}
       {support === "unsupported" && (
         <Text size="sm" c="dimmed">
-          Dieser Browser unterstützt keine Push-Benachrichtigungen.
+          {t("Dieser Browser unterstützt keine Push-Benachrichtigungen.")}
         </Text>
       )}
 
       {devices.length > 0 && (
         <Stack gap={6}>
           <Switch
-            label="Push-Benachrichtigungen schicken"
+            label={t("Push-Benachrichtigungen schicken")}
             checked={enabled}
             onChange={(e) => onToggle(e.currentTarget.checked)}
           />
@@ -220,24 +225,24 @@ function PushSettings({
                   <Text size="sm">{d.name}</Text>
                   {d.endpoint === endpoint && (
                     <Badge size="xs" variant="light">
-                      dieses Gerät
+                      {t("dieses Gerät")}
                     </Badge>
                   )}
                 </Group>
                 <Text size="xs" c={d.last_error ? "red" : "dimmed"}>
                   {d.last_error
-                    ? `Fehler: ${d.last_error}`
+                    ? t("Fehler: {{error}}", { error: d.last_error })
                     : d.last_success_at
-                      ? `zuletzt erreicht ${formatDateTime(d.last_success_at)}`
-                      : `seit ${formatDateTime(d.created_at)}`}
+                      ? t("zuletzt erreicht {{date}}", { date: formatDateTime(d.last_success_at) })
+                      : t("seit {{date}}", { date: formatDateTime(d.created_at) })}
                 </Text>
               </div>
-              <Tooltip label="Push auf diesem Gerät beenden">
+              <Tooltip label={t("Push auf diesem Gerät beenden")}>
                 <ActionIcon
                   variant="subtle"
                   color="red"
                   onClick={() => void turnOff(d)}
-                  aria-label={`${d.name} entfernen`}
+                  aria-label={t("{{name}} entfernen", { name: d.name })}
                 >
                   <IconTrash size={16} />
                 </ActionIcon>
@@ -247,7 +252,7 @@ function PushSettings({
           {enabled && (
             <Group>
               <Button size="xs" variant="default" onClick={onTest} loading={testing}>
-                Test-Push an alle Geräte
+                {t("Test-Push an alle Geräte")}
               </Button>
             </Group>
           )}

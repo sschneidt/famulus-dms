@@ -1,6 +1,7 @@
 import { ActionIcon, Button, Group, Indicator, Popover, ScrollArea, Stack, Text, UnstyledButton } from "@mantine/core";
 import { IconBell, IconCalendarDue, IconChecklist, IconFiles, IconSparkles } from "@tabler/icons-react";
 import { useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import type { Schemas } from "../api/client";
 import { useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from "../api/queries";
@@ -18,6 +19,7 @@ const ICONS: Record<string, ReactNode> = {
 /** Glocke oben rechts: Benachrichtigungscenter mit den Eintraegen der taeglichen Zusammenfassung. */
 export function NotificationBell() {
   const [opened, setOpened] = useState(false);
+  const { t } = useTranslation();
   const list = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
@@ -45,7 +47,9 @@ export function NotificationBell() {
           variant="subtle"
           size="lg"
           onClick={() => setOpened((o) => !o)}
-          aria-label={unread ? `Benachrichtigungen (${unread} ungelesen)` : "Benachrichtigungen"}
+          aria-label={
+            unread ? t("Benachrichtigungen ({{count}} ungelesen)", { count: unread }) : t("Benachrichtigungen")
+          }
         >
           <Indicator label={unread > 9 ? "9+" : unread} size={16} color="red" disabled={!unread} offset={2}>
             <IconBell size={18} style={{ display: "block" }} />
@@ -60,11 +64,11 @@ export function NotificationBell() {
           style={{ borderBottom: "1px solid var(--mantine-color-default-border)" }}
         >
           <Text fw={600} size="sm">
-            Benachrichtigungen
+            {t("Benachrichtigungen")}
           </Text>
           {unread > 0 && (
             <Button size="compact-xs" variant="subtle" onClick={() => markAll.mutate()} loading={markAll.isPending}>
-              Alle gelesen
+              {t("Alle gelesen")}
             </Button>
           )}
         </Group>
@@ -105,8 +109,8 @@ export function NotificationBell() {
           ) : (
             <Text size="sm" c="dimmed" p="md">
               {list.isPending
-                ? "Wird geladen …"
-                : "Keine Benachrichtigungen. Fällige Termine erscheinen hier einmal täglich."}
+                ? t("Wird geladen …")
+                : t("Keine Benachrichtigungen. Fällige Termine erscheinen hier einmal täglich.")}
             </Text>
           )}
         </ScrollArea.Autosize>
@@ -119,7 +123,7 @@ export function NotificationBell() {
               void navigate("/konto#benachrichtigungen");
             }}
           >
-            Einstellungen
+            {t("Einstellungen")}
           </Button>
         </Group>
       </Popover.Dropdown>

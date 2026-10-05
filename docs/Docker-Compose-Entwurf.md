@@ -39,6 +39,7 @@ Beide Container nutzen **dasselbe Docker-Image**, gesteuert über die Umgebungsv
 | `pgdata` | benanntes Docker-Volume | Datenbank (Dokumente-Metadaten, Kategorien, Wiedervorlagen, Klassifikations-Exemplare …) |
 | `meilidata` | benanntes Docker-Volume | Such-Index |
 | `ollama_models` | benanntes Docker-Volume | heruntergeladene KI-Modelle (Chat + Embedding) |
+| `tessdata` | benanntes Docker-Volume, in `app-api` und `app-worker` unter `/data/tessdata` (`TESSDATA_DIR`) | Sprachpakete der Texterkennung: die im Image enthaltenen (deu, eng, rus, osd) werden beim Start hineinverlinkt, nachgeladene (Seite „Sprachen“) bleiben bei Updates erhalten |
 | `DOCUMENTS_PATH` (`.env`) | Bind-Mount auf NAS-Ordner | die eigentlichen Dokument-Dateien – bewusst ein normaler NAS-Ordner, nicht in einem Docker-Volume versteckt, damit er z. B. über Synology File Station einsehbar bleibt (Anforderungsdokument 4.4) und von Hyper Backup erfasst wird |
 | `SCAN_FOLDER_PATH` (`.env`) | Bind-Mount auf NAS-Ordner, nur im Worker, mit Schreibrecht | der überwachte Scan-Ordner (Anforderungsdokument 4.1); importierte Originale werden nach `_importiert/` verschoben |
 

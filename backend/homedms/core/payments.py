@@ -23,7 +23,7 @@ from homedms.models.wiedervorlage import Wiedervorlage
 
 ASSUME_PAID_AFTER_MONTHS = 3
 PAYMENT_STATUSES = ("offen", "bezahlt")
-PAYMENT_PATTERN = "zahl|überweis|ueberweis|fällig|faellig|begleich"  # auch fuer SQL (~*)
+PAYMENT_PATTERN = "zahl|überweis|ueberweis|fällig|faellig|begleich|payment|оплат|плат[её]ж"  # auch fuer SQL (~*); en/ru fuer eigene Termine
 _PAYMENT_WORDS = re.compile(PAYMENT_PATTERN, re.IGNORECASE)
 
 

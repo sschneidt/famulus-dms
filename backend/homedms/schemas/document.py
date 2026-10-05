@@ -95,6 +95,7 @@ class DocumentListResponse(BaseModel):
 
 class UnanalyzedItem(DocumentResponse):
     reasons: list[str] = []  # was fehlt, z. B. "Kategorie: KI war nicht erreichbar"
+    needs_ai: bool = False  # nur mit laufender KI nachholbar (Kategorie, Angaben)
 
 
 class UnanalyzedListResponse(BaseModel):

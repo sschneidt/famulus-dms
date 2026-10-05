@@ -40,7 +40,7 @@ except ImportError:  # pragma: no cover - optionale Abhaengigkeit, siehe pyproje
 
 logger = logging.getLogger("homedms.tasks.ocr")
 
-TESSERACT_LANG = get_settings().ocr_languages  # Standard "deu+eng", siehe config.py
+TESSERACT_LANG = get_settings().ocr_languages  # Standard "deu+eng", siehe config.py - je Haushalt: core/ocr_languages.py
 MIN_EMBEDDED_TEXT_CHARS = 20  # darunter gilt eine PDF als "nur Bild" (Scan), nicht als "digital"
 UNSUPPORTED_SUFFIXES = {".doc", ".docx", ".xls", ".xlsx", ".msg"}
 
@@ -106,12 +106,15 @@ async def ocr_document(document_id: str) -> None:
             return
 
         try:
+            from homedms.core import ocr_languages
+
+            lang = await ocr_languages.lang_for(db, document.tenant_id)
             texts = []
             for doc_file in sorted(document.files, key=lambda f: f.page_number):
-                text = await asyncio.to_thread(extract_text, Path(doc_file.file_path))
+                text = await asyncio.to_thread(extract_text, Path(doc_file.file_path), lang=lang)
                 texts.append(text)
             document.ocr_text = "\n\n".join(texts)
-            document.ocr_language = TESSERACT_LANG
+            document.ocr_language = lang[:100]
             document.ocr_status = OcrStatus.done
         except Exception:
             logger.exception("OCR fehlgeschlagen fuer Dokument %s", document_id)

@@ -21,6 +21,7 @@ from dataclasses import dataclass
 import pytesseract
 from PIL import Image, ImageFilter, ImageMath, ImageOps
 
+from homedms.core.ocr_languages import tesseract_config
 from homedms.runtime import configure_tesseract
 
 logger = logging.getLogger("homedms.core.ocr_image")
@@ -71,7 +72,7 @@ def flatten(gray: Image.Image) -> Image.Image:
 def detect_rotation(gray: Image.Image) -> int | None:
     """Drehung in Grad (0/90/180/270), die das Bild aufrecht stellt - None, wenn unsicher."""
     try:
-        osd = pytesseract.image_to_osd(gray, output_type=pytesseract.Output.DICT, config="--psm 0")
+        osd = pytesseract.image_to_osd(gray, output_type=pytesseract.Output.DICT, config=f"--psm 0 {tesseract_config()}")
     except pytesseract.TesseractError:
         return None  # zu wenig Text fuer eine Aussage oder osd-Daten fehlen
     rotate = int(osd.get("rotate", 0)) % 360
@@ -86,7 +87,8 @@ def _rotate(gray: Image.Image, degrees: int) -> Image.Image:
 
 
 def _ocr(img: Image.Image, lang: str, rotation: int, variant: str) -> OcrResult:
-    data = pytesseract.image_to_data(img, lang=lang, output_type=pytesseract.Output.DICT, config="--psm 3")
+    data = pytesseract.image_to_data(img, lang=lang, output_type=pytesseract.Output.DICT,
+                                     config=f"--psm 3 {tesseract_config()}")
     lines: dict[tuple, list[str]] = {}
     good = 0
     for i, word in enumerate(data["text"]):

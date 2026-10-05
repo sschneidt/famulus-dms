@@ -54,11 +54,69 @@ describe("LoginPage", () => {
       admin_email: "anna@example.com",
       admin_password: "geheim123",
       setup_code: "ABCD-EFGH-JKLM",
+      ocr_languages: ["deu", "eng"],
     });
     // Anmeldung als Weboberflaeche: Refresh-Token nur als HttpOnly-Cookie
     const loginCall = calls.find((c) => c.path === "/api/v1/auth/login");
     expect(loginCall).toBeDefined();
     expect(tokenStore.access).toBe("a");
+  });
+
+  it("Sprache vor der Anmeldung umschalten: Einrichtung auf Englisch, OCR-Sprachen passend vorgeschlagen", async () => {
+    const { calls } = mockFetch([
+      {
+        path: "/api/v1/setup/status",
+        body: {
+          bootstrapped: false,
+          ocr_languages: [
+            { code: "deu", name: "Deutsch", installed: true },
+            { code: "eng", name: "English", installed: true },
+            { code: "rus", name: "Русский", installed: true },
+            { code: "fra", name: "Français", installed: false },
+          ],
+        },
+      },
+      {
+        method: "POST",
+        path: "/api/v1/setup/bootstrap",
+        status: 201,
+        body: { tenant_id: "t1", admin_user_id: "u1", categories_created: 12 },
+      },
+      {
+        method: "POST",
+        path: "/api/v1/auth/login",
+        body: { access_token: "a", refresh_token: "r", token_type: "bearer" },
+      },
+      { path: "/api/v1/auth/me", body: me },
+      { method: "PATCH", path: "/api/v1/auth/me", body: { ...me, locale: "en" } },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(<LoginPage />, { path: "/login", routes });
+
+    expect(await screen.findByText("Ersteinrichtung")).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "English" }));
+    expect(await screen.findByText("Initial setup")).toBeInTheDocument();
+    expect(document.documentElement.lang).toBe("en");
+    // Auswahl der OCR-Sprachen; Vorschlag = Oberflaechensprache + Deutsch (siehe Anfrage unten)
+    expect(screen.getAllByLabelText("Languages of your documents").length).toBeGreaterThan(0);
+
+    await user.type(screen.getByLabelText("Setup code"), "ABCD-EFGH-JKLM");
+    await user.type(screen.getByLabelText("Household name"), "The Smiths");
+    await user.type(screen.getByLabelText("Your name"), "Anna");
+    await user.type(screen.getByLabelText("Email"), "anna@example.com");
+    await user.type(screen.getByLabelText("Password"), "geheim123");
+    await user.type(screen.getByLabelText("Repeat password"), "geheim123");
+    await user.click(screen.getByRole("button", { name: "Create household" }));
+
+    expect(await screen.findByText("Startseite")).toBeInTheDocument();
+    expect(calls.find((c) => c.path === "/api/v1/setup/bootstrap")?.body).toMatchObject({
+      default_language: "en",
+      ocr_languages: ["eng", "deu"],
+    });
+    // die vor der Anmeldung gewaehlte Sprache wandert ins Konto
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === "PATCH" && c.path === "/api/v1/auth/me")?.body).toEqual({ locale: "en" }),
+    );
   });
 
   it("zeigt die Fehlermeldung des Servers bei falschem Passwort", async () => {

@@ -18,6 +18,7 @@ import { modals } from "@mantine/modals";
 import { IconArrowLeft, IconArrowRight, IconCamera, IconCrop, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { addPages, api, call, fetchPageThumbnail, rectifyPage, type DocumentDetail } from "../../api/client";
 import { isProcessing } from "../../lib/format";
 import { notifyError, notifySuccess } from "../../lib/notify";
@@ -28,6 +29,7 @@ import { notifyError, notifySuccess } from "../../lib/notify";
  */
 export function PagesPanel({ doc, readOnly = false }: { doc: DocumentDetail; readOnly?: boolean }) {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const camera = useRef<HTMLInputElement>(null);
   const count = doc.page_count ?? 1;
   const busy = isProcessing(doc);
@@ -56,17 +58,20 @@ export function PagesPanel({ doc, readOnly = false }: { doc: DocumentDetail; rea
     onSuccess: (result, action) => {
       notifySuccess(
         action.kind === "add"
-          ? `Jetzt ${result.page_count} Seiten – Text wird neu erkannt`
+          ? t("Jetzt {{count}} Seiten – Text wird neu erkannt", { count: result.page_count })
           : action.kind === "delete"
-            ? "Seite entfernt"
+            ? t("Seite entfernt")
             : action.kind === "rectify"
-              ? `Seite ${action.page} zugeschnitten und gerade gerichtet – Text wird neu erkannt`
-              : "Reihenfolge geändert",
+              ? t("Seite {{page}} zugeschnitten und gerade gerichtet – Text wird neu erkannt", { page: action.page })
+              : t("Reihenfolge geändert"),
       );
       void refresh();
     },
     onError: (e, action) =>
-      notifyError(e, action.kind === "rectify" ? "Zuschneiden nicht möglich" : "Seiten konnten nicht geändert werden"),
+      notifyError(
+        e,
+        action.kind === "rectify" ? t("Zuschneiden nicht möglich") : t("Seiten konnten nicht geändert werden"),
+      ),
   });
 
   function move(page: number, delta: number) {
@@ -78,9 +83,9 @@ export function PagesPanel({ doc, readOnly = false }: { doc: DocumentDetail; rea
 
   function confirmDelete(page: number) {
     modals.openConfirmModal({
-      title: `Seite ${page} entfernen?`,
-      children: <Text size="sm">Die Seite wird aus dem Dokument gelöscht.</Text>,
-      labels: { confirm: "Entfernen", cancel: "Abbrechen" },
+      title: t("Seite {{page}} entfernen?", { page }),
+      children: <Text size="sm">{t("Die Seite wird aus dem Dokument gelöscht.")}</Text>,
+      labels: { confirm: t("Entfernen"), cancel: t("Abbrechen") },
       confirmProps: { color: "red" },
       onConfirm: () => change.mutate({ kind: "delete", page }),
     });
@@ -94,7 +99,7 @@ export function PagesPanel({ doc, readOnly = false }: { doc: DocumentDetail; rea
       <Stack gap="sm">
         <Group justify="space-between">
           <Group gap="xs">
-            <Title order={4}>Seiten</Title>
+            <Title order={4}>{t("Seiten")}</Title>
             <Badge variant="light" color="gray">
               {count}
             </Badge>
@@ -110,7 +115,7 @@ export function PagesPanel({ doc, readOnly = false }: { doc: DocumentDetail; rea
               >
                 {(props) => (
                   <Button {...props} size="xs" variant="light" leftSection={<IconPlus size={14} />} disabled={locked}>
-                    Seite hinzufügen
+                    {t("Seite hinzufügen")}
                   </Button>
                 )}
               </FileButton>
@@ -122,7 +127,7 @@ export function PagesPanel({ doc, readOnly = false }: { doc: DocumentDetail; rea
                 disabled={locked}
                 onClick={() => camera.current?.click()}
               >
-                Fotografieren
+                {t("Fotografieren")}
               </Button>
               <input
                 ref={camera}
@@ -141,7 +146,7 @@ export function PagesPanel({ doc, readOnly = false }: { doc: DocumentDetail; rea
         </Group>
         {busy && (
           <Text size="xs" c="dimmed">
-            Text wird erkannt – Seiten lassen sich danach wieder bearbeiten.
+            {t("Text wird erkannt – Seiten lassen sich danach wieder bearbeiten.")}
           </Text>
         )}
         {canPage && (
@@ -155,52 +160,52 @@ export function PagesPanel({ doc, readOnly = false }: { doc: DocumentDetail; rea
                   </Text>
                   {!readOnly && (
                     <Group gap={0} wrap="nowrap">
-                      <Tooltip label="zuschneiden & gerade richten">
+                      <Tooltip label={t("zuschneiden & gerade richten")}>
                         <ActionIcon
                           size="sm"
                           variant="subtle"
                           color="gray"
                           disabled={locked}
                           onClick={() => change.mutate({ kind: "rectify", page })}
-                          aria-label={`Seite ${page} zuschneiden`}
+                          aria-label={t("Seite {{page}} zuschneiden", { page })}
                         >
                           <IconCrop size={14} />
                         </ActionIcon>
                       </Tooltip>
                       {count > 1 && (
                         <>
-                          <Tooltip label="nach vorn">
+                          <Tooltip label={t("nach vorn")}>
                             <ActionIcon
                               size="sm"
                               variant="subtle"
                               color="gray"
                               disabled={locked || page === 1}
                               onClick={() => move(page, -1)}
-                              aria-label={`Seite ${page} nach vorn`}
+                              aria-label={t("Seite {{page}} nach vorn", { page })}
                             >
                               <IconArrowLeft size={14} />
                             </ActionIcon>
                           </Tooltip>
-                          <Tooltip label="nach hinten">
+                          <Tooltip label={t("nach hinten")}>
                             <ActionIcon
                               size="sm"
                               variant="subtle"
                               color="gray"
                               disabled={locked || page === count}
                               onClick={() => move(page, 1)}
-                              aria-label={`Seite ${page} nach hinten`}
+                              aria-label={t("Seite {{page}} nach hinten", { page })}
                             >
                               <IconArrowRight size={14} />
                             </ActionIcon>
                           </Tooltip>
-                          <Tooltip label="entfernen">
+                          <Tooltip label={t("entfernen")}>
                             <ActionIcon
                               size="sm"
                               variant="subtle"
                               color="red"
                               disabled={locked}
                               onClick={() => confirmDelete(page)}
-                              aria-label={`Seite ${page} entfernen`}
+                              aria-label={t("Seite {{page}} entfernen", { page })}
                             >
                               <IconTrash size={14} />
                             </ActionIcon>
@@ -220,6 +225,7 @@ export function PagesPanel({ doc, readOnly = false }: { doc: DocumentDetail; rea
 }
 
 function Thumbnail({ documentId, page, version }: { documentId: string; page: number; version: string }) {
+  const { t } = useTranslation();
   const blob = useQuery({
     queryKey: ["document", documentId, "thumb", version, page],
     queryFn: () => fetchPageThumbnail(documentId, page),
@@ -237,7 +243,7 @@ function Thumbnail({ documentId, page, version }: { documentId: string; page: nu
       <Stack h={120} align="center" justify="center">
         {blob.isError ? (
           <Text size="xs" c="dimmed">
-            keine Vorschau
+            {t("keine Vorschau")}
           </Text>
         ) : (
           <Loader size="xs" />
@@ -245,5 +251,5 @@ function Thumbnail({ documentId, page, version }: { documentId: string; page: nu
       </Stack>
     );
   }
-  return <Image src={url} alt={`Seite ${page}`} radius="xs" fit="contain" mah={220} />;
+  return <Image src={url} alt={t("Seite {{page}}", { page })} radius="xs" fit="contain" mah={220} />;
 }

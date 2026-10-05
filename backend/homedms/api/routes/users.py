@@ -19,6 +19,7 @@ from homedms.core.security import hash_password
 from homedms.db import get_db
 from homedms.models.tenant import User, UserRole
 from homedms.schemas.user import PasswordReset, UserCreate, UserResponse, UserUpdate
+from homedms.i18n import _
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -26,7 +27,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 async def _member(db: AsyncSession, admin: User, user_id: uuid.UUID) -> User:
     user = await db.get(User, user_id)
     if user is None or user.tenant_id != admin.tenant_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Nutzer nicht gefunden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Nutzer nicht gefunden"))
     return user
 
 
@@ -52,7 +53,7 @@ async def create_user(payload: UserCreate, admin: User = Depends(require_admin),
     email = str(payload.email).strip()
     taken = await db.scalar(select(func.count()).select_from(User).where(func.lower(User.email) == email.lower()))
     if taken:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Diese E-Mail-Adresse wird schon verwendet")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Diese E-Mail-Adresse wird schon verwendet"))
     user = User(
         tenant_id=admin.tenant_id,
         email=email,
@@ -77,24 +78,24 @@ async def update_user(
     if payload.display_name is not None:
         name = payload.display_name.strip()
         if not name:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Bitte einen Namen angeben")
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Bitte einen Namen angeben"))
         user.display_name = name
 
     demote = payload.role == "member" and user.role == UserRole.admin
     deactivate = payload.is_active is False and user.is_active
     if (demote or deactivate) and user.id == admin.id:
         raise HTTPException(
-            status.HTTP_409_CONFLICT, "Die eigene Admin-Rolle bzw. das eigene Konto kann nur ein anderer Admin aendern"
+            status.HTTP_409_CONFLICT, _("Die eigene Admin-Rolle bzw. das eigene Konto kann nur ein anderer Admin aendern")
         )
     if (demote or deactivate) and user.role == UserRole.admin and user.is_active:
         if await _active_admins(db, admin.tenant_id) <= 1:
-            raise HTTPException(status.HTTP_409_CONFLICT, "Es muss mindestens ein aktiver Admin bleiben")
+            raise HTTPException(status.HTTP_409_CONFLICT, _("Es muss mindestens ein aktiver Admin bleiben"))
 
     if payload.role is not None:
         user.role = UserRole(payload.role)
     if payload.reset_two_factor:
         if user.id == admin.id:
-            raise HTTPException(status.HTTP_409_CONFLICT, "Die eigene Zwei-Faktor-Anmeldung unter „Konto & Sicherheit“ ändern")
+            raise HTTPException(status.HTTP_409_CONFLICT, _("Die eigene Zwei-Faktor-Anmeldung unter „Konto & Sicherheit“ ändern"))
         clear_two_factor(user)
         await revoke_refresh_tokens(db, user.id)
     if payload.is_active is not None:

@@ -105,6 +105,10 @@ HomeDMS speichert Dokumente unverschlüsselt im Dateisystem. Das ist nötig, dam
 - **Push:** Jede Nachricht ist Ende-zu-Ende für das jeweilige Gerät verschlüsselt (RFC 8291) und mit dem eigenen VAPID-Schlüssel signiert (RFC 8292). Google, Apple oder Mozilla sehen nur verschlüsselte Daten und die Geräteadresse. Der Server schickt nur an bekannte Push-Dienste (Google, Apple, Mozilla, Microsoft), damit über ein gefälschtes Abo keine beliebigen Adressen im Heimnetz angesprochen werden können. Push braucht ausgehenden Internetzugang des Servers – eingehend bleibt alles zu.
 - **Wer bekommt was:** nur Termine und Dokumente, die die Person ohnehin sehen darf.
 
+## 7b. Nachladen von Sprachpaketen
+
+Sprachpakete der Texterkennung lädt nur der Worker, nur auf Anweisung eines Admins (bzw. wenn eine Person eine Oberflächensprache wählt, deren Paket fehlt), nur Codes aus einem festen Katalog (Muster `^[a-z]{3}(_[a-z]{3,4})?$`, keine Pfadangaben) und nur von der festen Adresse `OCR_DOWNLOAD_URL` (Standard: offizielles Repository `tesseract-ocr/tessdata_fast` auf GitHub, HTTPS mit Zertifikatsprüfung). Die Datei wird erst vollständig in eine temporäre Datei geschrieben, auf Mindestgröße geprüft und dann atomar an ihren Platz verschoben – halbe oder leere Dateien landen nie im Sprachordner. Tesseract-Modelle sind Daten, kein ausführbarer Code.
+
 ## 8. Zugriff von unterwegs
 
 Empfohlen: **VPN**, also Synology VPN Server, WireGuard (z. B. in der FRITZ!Box) oder Tailscale. HomeDMS bleibt von außen unsichtbar; über das VPN gilt das Heimnetz-Zertifikat. Tailscale-Adressen (100.64/10, `*.ts.net`) sind in der Namensbeschränkung enthalten.

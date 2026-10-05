@@ -126,7 +126,7 @@ class Document(Base, UUIDPKMixin, TimestampMixin):
         ForeignKey("properties.id", ondelete="SET NULL"), nullable=True, index=True
     )
     ocr_text: Mapped[str] = mapped_column(Text, default="")
-    ocr_language: Mapped[str] = mapped_column(String(10), default="")
+    ocr_language: Mapped[str] = mapped_column(String(100), default="")  # z. B. "deu+eng+rus" (0014)
     ocr_status: Mapped[OcrStatus] = mapped_column(
         SAEnum(OcrStatus, name="ocr_status"), default=OcrStatus.pending
     )

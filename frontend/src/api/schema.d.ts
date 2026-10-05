@@ -105,7 +105,7 @@ export interface paths {
     head?: never;
     /**
      * Update Me
-     * @description Eigenen Anzeigenamen aendern (E-Mail und Rolle aendert nur ein Admin).
+     * @description Eigenen Anzeigenamen bzw. die eigene Sprache aendern (E-Mail und Rolle aendert nur ein Admin).
      */
     patch: operations["update_me_api_v1_auth_me_patch"];
     trace?: never;
@@ -1215,6 +1215,47 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/ocr-languages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get Languages */
+    get: operations["get_languages_api_v1_ocr_languages_get"];
+    /**
+     * Save Languages
+     * @description Auswahl speichern und fehlende Pakete im Hintergrund herunterladen.
+     */
+    put: operations["save_languages_api_v1_ocr_languages_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ocr-languages/install": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Install Missing
+     * @description Fehlende (oder fehlgeschlagene) Pakete erneut herunterladen.
+     */
+    post: operations["install_missing_api_v1_ocr_languages_install_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1294,8 +1335,17 @@ export interface components {
        * Default Language
        * @default de
        * @example de
+       * @enum {string}
        */
-      default_language: string;
+      default_language: "de" | "en" | "ru";
+      /**
+       * Ocr Languages
+       * @example [
+       *       "deu",
+       *       "eng"
+       *     ]
+       */
+      ocr_languages?: string[];
       /**
        * Admin Email
        * Format: email
@@ -1978,6 +2028,40 @@ export interface components {
       /** Digest Hour */
       digest_hour?: number | null;
     };
+    /** OcrLanguage */
+    OcrLanguage: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /** Installed */
+      installed: boolean;
+      /** Selected */
+      selected: boolean;
+      /**
+       * Required By
+       * @default []
+       */
+      required_by: string[];
+      /** Active */
+      active: boolean;
+      /** Status */
+      status: string;
+      /** Error */
+      error?: string | null;
+    };
+    /** OcrLanguagesResponse */
+    OcrLanguagesResponse: {
+      /** Languages */
+      languages: components["schemas"]["OcrLanguage"][];
+      /** Effective */
+      effective: string;
+    };
+    /** OcrLanguagesUpdate */
+    OcrLanguagesUpdate: {
+      /** Languages */
+      languages: string[];
+    };
     /**
      * OcrStatus
      * @enum {string}
@@ -2021,7 +2105,9 @@ export interface components {
        * Display Name
        * @example Max Mustermann
        */
-      display_name: string;
+      display_name?: string | null;
+      /** Locale */
+      locale?: ("de" | "en" | "ru") | null;
     };
     /**
      * PropertyMerge
@@ -2360,6 +2446,11 @@ export interface components {
        * @default []
        */
       reasons: string[];
+      /**
+       * Needs Ai
+       * @default false
+       */
+      needs_ai: boolean;
     };
     /**
      * UnanalyzedListResponse
@@ -4971,6 +5062,79 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["MailSettings"];
+        };
+      };
+    };
+  };
+  get_languages_api_v1_ocr_languages_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OcrLanguagesResponse"];
+        };
+      };
+    };
+  };
+  save_languages_api_v1_ocr_languages_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OcrLanguagesUpdate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OcrLanguagesResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  install_missing_api_v1_ocr_languages_install_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OcrLanguagesResponse"];
         };
       };
     };

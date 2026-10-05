@@ -13,6 +13,7 @@ export interface MockRoute {
   method?: string;
   path: string | RegExp;
   status?: number;
+  /** Antwort; eine Funktion wird bei jedem Aufruf neu ausgewertet (Zustand, der sich aendert) */
   body?: unknown;
   /** Rohdaten statt JSON (z. B. ein Bild) */
   raw?: string;
@@ -42,7 +43,8 @@ export function mockFetch(routes: MockRoute[]) {
     if (route.raw !== undefined) {
       return new Response(route.raw, { status: route.status ?? 200, headers: route.headers });
     }
-    return new Response(route.body === undefined ? null : JSON.stringify(route.body), {
+    const payload = typeof route.body === "function" ? (route.body as () => unknown)() : route.body;
+    return new Response(payload === undefined ? null : JSON.stringify(payload), {
       status: route.status ?? 200,
       headers: { "Content-Type": "application/json", ...route.headers },
     });

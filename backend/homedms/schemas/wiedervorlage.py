@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from homedms.i18n import _
+
 
 class WiedervorlageResponse(BaseModel):
     id: uuid.UUID
@@ -55,7 +57,7 @@ class WiedervorlageCreate(BaseModel):
     @model_validator(mode="after")
     def _interval(self):
         if self.recurrence == "custom_months" and not self.recurrence_interval_months:
-            raise ValueError("Bei recurrence=custom_months ist recurrence_interval_months (1-120) noetig")
+            raise ValueError(_("Bei recurrence=custom_months ist recurrence_interval_months (1-120) noetig"))
         if self.recurrence != "custom_months":
             self.recurrence_interval_months = None
         return self

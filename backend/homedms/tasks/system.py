@@ -32,6 +32,24 @@ async def pull_model(model: str) -> None:
     logger.info("KI-Modell %s geladen", model)
 
 
+@app.task(name="install_ocr_language", queue="default", pass_context=False)
+async def install_ocr_language(code: str) -> None:
+    """Sprachpaket der Texterkennung herunterladen (core/ocr_languages.py). Fehler stehen danach auf
+    der Seite "Sprachen" bzw. in der Diagnose - kein endloses Wiederholen."""
+    from homedms.core import ocr_languages
+    from homedms.db import async_session_factory
+
+    async with async_session_factory() as db:
+        try:
+            path = await ocr_languages.download(code)
+        except ocr_languages.OcrLanguageError as exc:
+            logger.warning("Sprachpaket %s nicht installiert: %s", code, exc)
+            await ocr_languages.set_state(db, code, {"status": "failed", "error": str(exc)})
+            return
+        logger.info("Sprachpaket %s installiert (%s)", code, path)
+        await ocr_languages.set_state(db, code, None)
+
+
 async def unload_models() -> int:
     """Geladene Modelle aus dem Arbeitsspeicher werfen (keep_alive 0) - laeuft direkt in der API."""
     from homedms.ai import ollama

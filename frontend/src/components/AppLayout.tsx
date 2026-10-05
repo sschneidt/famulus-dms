@@ -23,6 +23,7 @@ import {
   IconFiles,
   IconFolderSearch,
   IconHome,
+  IconLanguage,
   IconLogout,
   IconMoon,
   IconShieldCheck,
@@ -35,6 +36,7 @@ import {
 } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { NavLink as RouterNavLink, Outlet, useLocation } from "react-router";
 import { useNeedsReview, useUnanalyzed, useUnpaid, useWiedervorlagen } from "../api/queries";
 import { useAuth, useUser } from "../auth/AuthContext";
@@ -54,6 +56,7 @@ interface NavItem {
 export function AppLayout() {
   const user = useUser();
   const { logout } = useAuth();
+  const { t } = useTranslation();
   const [navOpen, nav] = useDisclosure(false);
   const isMobile = useMediaQuery("(max-width: 48em)") ?? false;
   const location = useLocation();
@@ -75,22 +78,22 @@ export function AppLayout() {
   const overdueUnpaid = unpaid.data?.items.some((d) => d.payment_due && d.payment_due < today) ?? false;
 
   const items: NavItem[] = [
-    { to: "/", label: "Dokumente", icon: <IconFiles size={20} />, end: true },
+    { to: "/", label: t("Dokumente"), icon: <IconFiles size={20} />, end: true },
     {
       to: "/pruefen",
-      label: "Prüfen",
+      label: t("Prüfen"),
       icon: <IconChecklist size={20} />,
       badge: (
         <Group gap={4}>
           {review.data?.total ? (
-            <Tooltip label="Kategorie prüfen">
+            <Tooltip label={t("Kategorie prüfen")}>
               <Badge size="sm" color="orange" circle={review.data.total < 10}>
                 {review.data.total}
               </Badge>
             </Tooltip>
           ) : null}
           {unanalyzed.data?.total ? (
-            <Tooltip label="nicht analysiert">
+            <Tooltip label={t("nicht analysiert")}>
               <Badge size="sm" color="red" variant="light" circle={unanalyzed.data.total < 10}>
                 {unanalyzed.data.total}
               </Badge>
@@ -101,19 +104,19 @@ export function AppLayout() {
     },
     {
       to: "/termine",
-      label: "Termine",
+      label: t("Termine"),
       icon: <IconCalendarDue size={20} />,
       badge: (
         <Group gap={4}>
           {dueCount > 0 && (
-            <Tooltip label="fällig oder überfällig">
+            <Tooltip label={t("fällig oder überfällig")}>
               <Badge size="sm" color="red">
                 {dueCount}
               </Badge>
             </Tooltip>
           )}
           {proposals.data?.total ? (
-            <Tooltip label="Vorschläge zum Bestätigen">
+            <Tooltip label={t("Vorschläge zum Bestätigen")}>
               <Badge size="sm" color="orange" variant="light">
                 {proposals.data.total}
               </Badge>
@@ -124,7 +127,7 @@ export function AppLayout() {
     },
     {
       to: "/unbezahlt",
-      label: "Unbezahlt",
+      label: t("Unbezahlt"),
       icon: <IconCash size={20} />,
       badge: unpaid.data?.total ? (
         <Badge size="sm" color={overdueUnpaid ? "red" : "orange"} variant={overdueUnpaid ? "filled" : "light"}>
@@ -132,14 +135,15 @@ export function AppLayout() {
         </Badge>
       ) : null,
     },
-    { to: "/objekte", label: "Objekte", icon: <IconHome size={20} /> },
-    { to: "/papierkorb", label: "Papierkorb", icon: <IconTrash size={20} /> },
+    { to: "/objekte", label: t("Objekte"), icon: <IconHome size={20} /> },
+    { to: "/papierkorb", label: t("Papierkorb"), icon: <IconTrash size={20} /> },
   ];
   if (user.role === "admin") {
-    items.push({ to: "/aufbewahrung", label: "Aufbewahrung", icon: <IconShieldCheck size={20} /> });
-    items.push({ to: "/scan-ordner", label: "Scan-Ordner", icon: <IconFolderSearch size={20} /> });
-    items.push({ to: "/benutzer", label: "Benutzer", icon: <IconUsers size={20} /> });
-    items.push({ to: "/diagnose", label: "Diagnose", icon: <IconStethoscope size={20} /> });
+    items.push({ to: "/aufbewahrung", label: t("Aufbewahrung"), icon: <IconShieldCheck size={20} /> });
+    items.push({ to: "/scan-ordner", label: t("Scan-Ordner"), icon: <IconFolderSearch size={20} /> });
+    items.push({ to: "/benutzer", label: t("Benutzer"), icon: <IconUsers size={20} /> });
+    items.push({ to: "/sprachen", label: t("Sprachen"), icon: <IconLanguage size={20} /> });
+    items.push({ to: "/diagnose", label: t("Diagnose"), icon: <IconStethoscope size={20} /> });
   }
 
   const isActive = (item: NavItem) =>
@@ -159,24 +163,24 @@ export function AppLayout() {
         <AppShell.Header>
           <Group h="100%" px="md" justify="space-between" wrap="nowrap">
             <Group gap="sm" wrap="nowrap">
-              <Burger opened={navOpen} onClick={nav.toggle} hiddenFrom="sm" size="sm" aria-label="Menü" />
+              <Burger opened={navOpen} onClick={nav.toggle} hiddenFrom="sm" size="sm" aria-label={t("Menü")} />
               <Logo />
             </Group>
             <Group gap="xs" wrap="nowrap">
               {isMobile ? (
-                <ActionIcon variant="filled" size="lg" onClick={() => openUpload("files")} aria-label="Hochladen">
+                <ActionIcon variant="filled" size="lg" onClick={() => openUpload("files")} aria-label={t("Hochladen")}>
                   <IconUpload size={18} />
                 </ActionIcon>
               ) : (
                 <Button leftSection={<IconUpload size={18} />} onClick={() => openUpload("files")}>
-                  Hochladen
+                  {t("Hochladen")}
                 </Button>
               )}
               <NotificationBell />
               <ColorSchemeToggle />
               <Menu position="bottom-end" withinPortal>
                 <Menu.Target>
-                  <ActionIcon variant="subtle" size="lg" radius="xl" aria-label="Benutzermenü">
+                  <ActionIcon variant="subtle" size="lg" radius="xl" aria-label={t("Benutzermenü")}>
                     <Avatar size={32} radius="xl" color="blue">
                       {initials(user.display_name || user.email)}
                     </Avatar>
@@ -189,16 +193,16 @@ export function AppLayout() {
                     </Text>
                     <Text size="xs">{user.email}</Text>
                     <Text size="xs">
-                      {user.role === "admin" ? "Administrator" : "Mitglied"}
+                      {user.role === "admin" ? t("Administrator") : t("Mitglied")}
                       {user.household_name ? ` · ${user.household_name}` : ""}
                     </Text>
                   </Menu.Label>
                   <Menu.Item leftSection={<IconUserEdit size={16} />} component={RouterNavLink} to="/konto">
-                    Konto &amp; Sicherheit
+                    {t("Konto & Sicherheit")}
                   </Menu.Item>
                   <Menu.Divider />
                   <Menu.Item leftSection={<IconLogout size={16} />} onClick={() => void logout()}>
-                    Abmelden
+                    {t("Abmelden")}
                   </Menu.Item>
                 </Menu.Dropdown>
               </Menu>
@@ -234,7 +238,7 @@ export function AppLayout() {
             radius="xl"
             variant="filled"
             onClick={() => openUpload("camera")}
-            aria-label="Foto aufnehmen"
+            aria-label={t("Foto aufnehmen")}
           >
             <IconCamera size={26} />
           </ActionIcon>
@@ -265,13 +269,14 @@ function initials(name: string): string {
 
 function ColorSchemeToggle() {
   const { setColorScheme } = useMantineColorScheme();
+  const { t } = useTranslation();
   const computed = useComputedColorScheme("light", { getInitialValueInEffect: true });
   return (
     <ActionIcon
       variant="subtle"
       size="lg"
       onClick={() => setColorScheme(computed === "light" ? "dark" : "light")}
-      aria-label="Hell/Dunkel umschalten"
+      aria-label={t("Hell/Dunkel umschalten")}
     >
       {computed === "light" ? <IconMoon size={18} /> : <IconSun size={18} />}
     </ActionIcon>

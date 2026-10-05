@@ -23,6 +23,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from homedms.i18n import N_, _, translate_stored
 from homedms.api.deps import get_current_user
 from homedms.ai import ollama
 from homedms.core import analysis, meili
@@ -83,7 +84,7 @@ logger = logging.getLogger("homedms.api.documents")
 
 
 def _not_found() -> HTTPException:
-    return HTTPException(status.HTTP_404_NOT_FOUND, "Dokument nicht gefunden")
+    return HTTPException(status.HTTP_404_NOT_FOUND, _("Dokument nicht gefunden"))
 
 
 async def _get_visible_document(db: AsyncSession, user: User, document_id: uuid.UUID) -> Document:
@@ -93,7 +94,7 @@ async def _get_visible_document(db: AsyncSession, user: User, document_id: uuid.
     if visible is None:
         raise _not_found()
     if not visible:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Kein Zugriff auf dieses Dokument")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, _("Kein Zugriff auf dieses Dokument"))
     document = await db.get(Document, document_id)
     assert document is not None
     return document
@@ -104,7 +105,7 @@ async def _get_editable_document(db: AsyncSession, user: User, document_id: uuid
     if editable is None:
         raise _not_found()
     if not editable:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Kein Schreibzugriff auf dieses Dokument")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, _("Kein Schreibzugriff auf dieses Dokument"))
     document = await db.get(Document, document_id)
     assert document is not None
     return document
@@ -252,7 +253,10 @@ async def list_unanalyzed(user: User = Depends(get_current_user), db: AsyncSessi
         .order_by(Document.created_at.asc())
         .limit(MAX_ANALYZE_ALL)
     )).scalars().all()
-    items = [UnanalyzedItem.model_validate(d).model_copy(update={"reasons": analysis.reasons(d)}) for d in rows]
+    items = [
+        UnanalyzedItem.model_validate(d).model_copy(update={"reasons": analysis.reasons(d), "needs_ai": analysis.needs_ai(d)})
+        for d in rows
+    ]
     return UnanalyzedListResponse(items=items, total=len(items), ai_available=await _ai_available(db, user.tenant_id))
 
 
@@ -433,13 +437,13 @@ async def update_document(
 ) -> Document:
     document = await _get_editable_document(db, user, document_id)
     if document.deleted_at is not None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Dokument liegt im Papierkorb - erst wiederherstellen")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Dokument liegt im Papierkorb - erst wiederherstellen"))
 
     updates = payload.model_dump(exclude_unset=True)
     if "title" in updates:
         title = (updates["title"] or "").strip()
         if not title:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Titel darf nicht leer sein")
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Titel darf nicht leer sein"))
         updates["title"] = title
         # Selbst gesetzter Titel bleibt - ausser im selben Aufruf wird title_locked=false verlangt
         updates.setdefault("title_locked", True)
@@ -448,13 +452,13 @@ async def update_document(
     if updates.get("property_id") is not None:
         prop = await db.get(Property, updates["property_id"])
         if prop is None or prop.tenant_id != user.tenant_id:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Objekt nicht gefunden")
+            raise HTTPException(status.HTTP_404_NOT_FOUND, _("Objekt nicht gefunden"))
     if updates.get("title_locked") is None:
         updates.pop("title_locked", None)
     if "is_invoice" in updates:
         invoice = updates.pop("is_invoice")
         if invoice is None:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "is_invoice muss true oder false sein")
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("is_invoice muss true oder false sein"))
         document.is_invoice, document.is_invoice_locked = invoice, True  # Nutzer entscheidet - KI nie wieder
         if invoice is False:  # "Keine Rechnung": Betrag und Zahlung verschwinden
             document.amount = None
@@ -465,7 +469,7 @@ async def update_document(
     payment = updates.pop("payment_status", "unset")
     paid_on = updates.pop("paid_on", None)
     if payment in ("bezahlt", "offen") and document.is_invoice is False:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Das Dokument ist als 'Keine Rechnung' markiert")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Das Dokument ist als 'Keine Rechnung' markiert"))
     if payment == "bezahlt":
         await mark_paid(db, document, paid_on or today(), today=today(), user_id=user.id)
     elif payment == "offen":
@@ -474,7 +478,7 @@ async def update_document(
         document.payment_status, document.paid_on, document.paid_assumed = None, None, False
     elif paid_on is not None:  # nur Zahlungsdatum korrigieren
         if document.payment_status != "bezahlt":
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Zahlungsdatum nur bei bezahlten Dokumenten")
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Zahlungsdatum nur bei bezahlten Dokumenten"))
         document.paid_on, document.paid_assumed = paid_on, False
     for field, value in updates.items():
         setattr(document, field, value)
@@ -505,7 +509,7 @@ async def restore_document(
 ) -> Document:
     document = await _get_editable_document(db, user, document_id)
     if document.deleted_at is None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Dokument liegt nicht im Papierkorb")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Dokument liegt nicht im Papierkorb"))
     document.deleted_at = None
     await db.commit()
     await request_filing(document.id)  # zurueck in den Kategorie-Ordner
@@ -520,7 +524,7 @@ async def download_document(
     document = await _get_visible_document(db, user, document_id)
     first_file = next((f for f in sorted(document.files, key=lambda f: f.page_number)), None)
     if first_file is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Keine Datei zu diesem Dokument vorhanden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Keine Datei zu diesem Dokument vorhanden"))
     return FileResponse(
         path=first_file.file_path,
         media_type=first_file.mime_type,
@@ -540,11 +544,11 @@ async def assign_category(
     dient als neues Lernbeispiel fuer die Klassifikation."""
     document = await _get_editable_document(db, user, document_id)
     if document.deleted_at is not None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Dokument liegt im Papierkorb - erst wiederherstellen")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Dokument liegt im Papierkorb - erst wiederherstellen"))
 
     category = await db.get(Category, payload.category_id)
     if category is None or category.tenant_id != user.tenant_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kategorie nicht gefunden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Kategorie nicht gefunden"))
     if category.is_restricted and user.role != UserRole.admin:
         allowed = await db.scalar(
             select(CategoryAccess.can_edit).where(
@@ -552,9 +556,9 @@ async def assign_category(
             )
         )
         if not allowed:
-            raise HTTPException(status.HTTP_403_FORBIDDEN, "Keine Berechtigung fuer diese Kategorie")
+            raise HTTPException(status.HTTP_403_FORBIDDEN, _("Keine Berechtigung fuer diese Kategorie"))
 
-    note = "Kategorie bestaetigt" if document.category_id == category.id else "Kategorie manuell zugeordnet"
+    note = N_("Kategorie bestaetigt") if document.category_id == category.id else N_("Kategorie manuell zugeordnet")
     db.add(ClassificationEvent(
         document_id=document.id, previous_category_id=document.category_id, new_category_id=category.id,
         stage="manual", confidence=None, triggered_by_user_id=user.id, note=note,
@@ -587,11 +591,11 @@ async def reprocess_document(
     und bestaetigte Termine bleiben. Ein Foto wird dabei zur PDF."""
     document = await _get_editable_document(db, user, document_id)
     if document.deleted_at is not None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Dokument liegt im Papierkorb - erst wiederherstellen")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Dokument liegt im Papierkorb - erst wiederherstellen"))
     if document.ocr_status == OcrStatus.pending or document.extraction_status == ExtractionStatus.pending or (
         document.classification_status == ClassificationStatus.pending
     ):
-        raise HTTPException(status.HTTP_409_CONFLICT, "Das Dokument wird gerade schon verarbeitet")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Das Dokument wird gerade schon verarbeitet"))
 
     if document.files:
         current = document.files[0]
@@ -639,11 +643,13 @@ async def reprocess_document(
 @router.get("/{document_id}/classification-history", response_model=list[ClassificationEventResponse])
 async def classification_history(
     document_id: uuid.UUID, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
-) -> list[ClassificationEvent]:
+) -> list[ClassificationEventResponse]:
     await _get_visible_document(db, user, document_id)
     result = await db.execute(
         select(ClassificationEvent)
         .where(ClassificationEvent.document_id == document_id)
         .order_by(ClassificationEvent.created_at, ClassificationEvent.id)
     )
-    return list(result.scalars().all())
+    # Feste Hinweise uebersetzen; Begruendungen der KI bleiben, wie das Sprachmodell sie schrieb
+    return [ClassificationEventResponse.model_validate(e).model_copy(update={"note": translate_stored(e.note)})
+            for e in result.scalars().all()]

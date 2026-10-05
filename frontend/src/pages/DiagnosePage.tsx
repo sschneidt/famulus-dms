@@ -17,6 +17,7 @@ import {
 import { modals } from "@mantine/modals";
 import {
   IconAlertTriangle,
+  IconBell,
   IconBrain,
   IconCircleCheck,
   IconCircleMinus,
@@ -24,6 +25,7 @@ import {
   IconCpu,
   IconDatabase,
   IconFolder,
+  IconLanguage,
   IconLock,
   IconRefresh,
   IconScan,
@@ -31,21 +33,22 @@ import {
   IconServer,
 } from "@tabler/icons-react";
 import type { ReactNode } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import type { Schemas } from "../api/client";
 import { useDiagnostics, useSystemAction } from "../api/queries";
 import { useUser } from "../auth/AuthContext";
-import { formatDateTime } from "../lib/format";
+import { formatDateTime, tk } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
 
 type Component = Schemas["DiagnosticComponent"];
 type Status = Component["status"];
 
 const STATUS: Record<Status, { label: string; color: string; icon: ReactNode }> = {
-  ok: { label: "OK", color: "green", icon: <IconCircleCheck size={16} /> },
-  warning: { label: "Warnung", color: "yellow", icon: <IconAlertTriangle size={16} /> },
-  error: { label: "Fehler", color: "red", icon: <IconCircleX size={16} /> },
-  disabled: { label: "aus", color: "gray", icon: <IconCircleMinus size={16} /> },
+  ok: { label: tk("OK"), color: "green", icon: <IconCircleCheck size={16} /> },
+  warning: { label: tk("Warnung"), color: "yellow", icon: <IconAlertTriangle size={16} /> },
+  error: { label: tk("Fehler"), color: "red", icon: <IconCircleX size={16} /> },
+  disabled: { label: tk("aus"), color: "gray", icon: <IconCircleMinus size={16} /> },
 };
 
 const ICONS: Record<string, ReactNode> = {
@@ -57,6 +60,8 @@ const ICONS: Record<string, ReactNode> = {
   ocr: <IconScan size={20} />,
   storage: <IconFolder size={20} />,
   tls: <IconLock size={20} />,
+  notifications: <IconBell size={20} />,
+  ocr_languages: <IconLanguage size={20} />,
 };
 
 /**
@@ -65,18 +70,19 @@ const ICONS: Record<string, ReactNode> = {
  */
 export function DiagnosePage() {
   const user = useUser();
+  const { t } = useTranslation();
   const diagnostics = useDiagnostics();
 
-  if (user.role !== "admin") return <Alert color="yellow">Die Diagnose ist nur für Administratoren.</Alert>;
+  if (user.role !== "admin") return <Alert color="yellow">{t("Die Diagnose ist nur für Administratoren.")}</Alert>;
 
   return (
     <Stack>
       <Group justify="space-between" align="flex-start" wrap="wrap">
         <div>
-          <Title order={2}>Diagnose</Title>
+          <Title order={2}>{t("Diagnose")}</Title>
           <Text c="dimmed" size="sm">
-            Zustand aller Bausteine von HomeDMS
-            {diagnostics.data && ` · geprüft ${formatDateTime(diagnostics.data.checked_at)}`}
+            {t("Zustand aller Bausteine von HomeDMS")}
+            {diagnostics.data && ` · ${t("geprüft {{date}}", { date: formatDateTime(diagnostics.data.checked_at) })}`}
           </Text>
         </div>
         <Button
@@ -85,7 +91,7 @@ export function DiagnosePage() {
           loading={diagnostics.isFetching}
           onClick={() => void diagnostics.refetch()}
         >
-          Jetzt prüfen
+          {t("Jetzt prüfen")}
         </Button>
       </Group>
 
@@ -94,7 +100,7 @@ export function DiagnosePage() {
           <Loader />
         </Center>
       ) : diagnostics.isError ? (
-        <Alert color="red" title="Diagnose nicht möglich">
+        <Alert color="red" title={t("Diagnose nicht möglich")}>
           {diagnostics.error.message}
         </Alert>
       ) : (
@@ -113,11 +119,12 @@ export function DiagnosePage() {
 }
 
 function Summary({ components }: { components: Component[] }) {
+  const { t } = useTranslation();
   const problems = components.filter((c) => c.status === "error" || c.status === "warning");
   if (problems.length === 0) {
     return (
-      <Alert color="green" icon={<IconCircleCheck />} title="Alles in Ordnung">
-        Alle Bausteine laufen.
+      <Alert color="green" icon={<IconCircleCheck />} title={t("Alles in Ordnung")}>
+        {t("Alle Bausteine laufen.")}
       </Alert>
     );
   }
@@ -126,7 +133,7 @@ function Summary({ components }: { components: Component[] }) {
     <Alert
       color={hasError ? "red" : "yellow"}
       icon={hasError ? <IconCircleX /> : <IconAlertTriangle />}
-      title={`${problems.length} ${problems.length === 1 ? "Baustein braucht" : "Bausteine brauchen"} Aufmerksamkeit`}
+      title={t("{{count}} Bausteine brauchen Aufmerksamkeit", { count: problems.length })}
     >
       {problems.map((c) => `${c.name}: ${c.summary}`).join(" · ")}
     </Alert>
@@ -134,6 +141,7 @@ function Summary({ components }: { components: Component[] }) {
 }
 
 function ComponentCard({ component }: { component: Component }) {
+  const { t } = useTranslation();
   const action = useSystemAction();
   const state = STATUS[component.status];
 
@@ -141,13 +149,13 @@ function ComponentCard({ component }: { component: Component }) {
     const go = () =>
       action.mutate(a.id, {
         onSuccess: (r) => notifySuccess(r.message),
-        onError: (e) => notifyError(e, `${a.label} nicht möglich`),
+        onError: (e) => notifyError(e, t("{{action}} nicht möglich", { action: a.label })),
       });
     if (!a.confirm) return go();
     modals.openConfirmModal({
       title: `${a.label}?`,
       children: <Text size="sm">{a.confirm}</Text>,
-      labels: { confirm: a.label, cancel: "Abbrechen" },
+      labels: { confirm: a.label, cancel: t("Abbrechen") },
       onConfirm: go,
     });
   }
@@ -168,7 +176,7 @@ function ComponentCard({ component }: { component: Component }) {
             </div>
           </Group>
           <Badge color={state.color} variant="light" leftSection={state.icon} style={{ flexShrink: 0 }}>
-            {state.label}
+            {t(state.label)}
           </Badge>
         </Group>
 
@@ -214,24 +222,24 @@ function ComponentCard({ component }: { component: Component }) {
 }
 
 function Failures({ items }: { items: Schemas["FailedJob"][] }) {
+  const { t } = useTranslation();
   if (items.length === 0) return null;
   return (
     <Stack gap="xs">
-      <Title order={4}>Fehlgeschlagene Aufträge (7 Tage)</Title>
+      <Title order={4}>{t("Fehlgeschlagene Aufträge (7 Tage)")}</Title>
       <Text size="sm" c="dimmed">
-        Betroffene Dokumente lassen sich unter{" "}
-        <Anchor component={Link} to="/pruefen?ansicht=nicht-analysiert">
-          Prüfen &gt; Nicht analysiert
-        </Anchor>{" "}
-        neu analysieren.
+        <Trans
+          i18nKey="Betroffene Dokumente lassen sich unter <anchor>Prüfen > Nicht analysiert</anchor> neu analysieren."
+          components={{ anchor: <Anchor component={Link} to="/pruefen?ansicht=nicht-analysiert" /> }}
+        />
       </Text>
       <Card withBorder padding={0} radius="md">
         <Table striped fz="sm">
           <Table.Thead>
             <Table.Tr>
-              <Table.Th>Zeit</Table.Th>
-              <Table.Th>Auftrag</Table.Th>
-              <Table.Th>Dokument</Table.Th>
+              <Table.Th>{t("Zeit")}</Table.Th>
+              <Table.Th>{t("Auftrag")}</Table.Th>
+              <Table.Th>{t("Dokument")}</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -242,7 +250,7 @@ function Failures({ items }: { items: Schemas["FailedJob"][] }) {
                 <Table.Td>
                   {f.document_id ? (
                     <Anchor component={Link} to={`/dokumente/${f.document_id}`}>
-                      {f.document_title || "Dokument"}
+                      {f.document_title || t("Dokument")}
                     </Anchor>
                   ) : (
                     "–"

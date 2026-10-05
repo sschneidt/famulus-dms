@@ -3,6 +3,8 @@ import { DateInput } from "@mantine/dates";
 import { IconCash } from "@tabler/icons-react";
 import dayjs from "dayjs";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { dateInputFormat } from "../i18n";
 
 interface Props extends Omit<ButtonProps, "onClick"> {
   label?: string;
@@ -13,7 +15,8 @@ interface Props extends Omit<ButtonProps, "onClick"> {
 }
 
 /** "Als bezahlt markieren" mit Zahlungsdatum (vorbelegt mit heute). */
-export function PaidButton({ label = "Als bezahlt markieren", initial, loading, onConfirm, ...buttonProps }: Props) {
+export function PaidButton({ label, initial, loading, onConfirm, ...buttonProps }: Props) {
+  const { t } = useTranslation();
   const [opened, setOpened] = useState(false);
   const [date, setDate] = useState<string | null>(initial ?? dayjs().format("YYYY-MM-DD"));
 
@@ -31,25 +34,25 @@ export function PaidButton({ label = "Als bezahlt markieren", initial, loading, 
             setOpened((o) => !o);
           }}
         >
-          {label}
+          {label ?? t("Als bezahlt markieren")}
         </Button>
       </Popover.Target>
       <Popover.Dropdown>
         <Stack gap="xs">
           <Text size="sm" fw={500}>
-            Bezahlt am
+            {t("Bezahlt am")}
           </Text>
           <DateInput
             value={date}
             onChange={setDate}
-            valueFormat="DD.MM.YYYY"
+            valueFormat={dateInputFormat()}
             maxDate={dayjs().format("YYYY-MM-DD")}
-            aria-label="Zahlungsdatum"
+            aria-label={t("Zahlungsdatum")}
             popoverProps={{ withinPortal: false }}
           />
           <Group justify="flex-end" gap="xs">
             <Button size="xs" variant="default" onClick={() => setOpened(false)}>
-              Abbrechen
+              {t("Abbrechen")}
             </Button>
             <Button
               size="xs"
@@ -62,7 +65,7 @@ export function PaidButton({ label = "Als bezahlt markieren", initial, loading, 
                 setOpened(false);
               }}
             >
-              Speichern
+              {t("Speichern")}
             </Button>
           </Group>
         </Stack>

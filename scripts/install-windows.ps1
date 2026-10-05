@@ -116,7 +116,7 @@ if (-not $tesseract) {
     if (-not $tesseract) { Fail "Tesseract wurde nicht gefunden." }
 }
 $tessdata = Join-Path (Split-Path $tesseract) "tessdata"
-foreach ($lang in "deu", "eng", "osd") {
+foreach ($lang in "deu", "eng", "rus", "osd") {
     $file = Join-Path $tessdata "$lang.traineddata"
     if (-not (Test-Path $file)) {
         Write-Host "   Sprachpaket $lang laden"
@@ -218,6 +218,7 @@ if (-not (Test-Path $EnvFile)) {
         "PORT"             = "$Port"
         "HTTPS_PORT"       = "$HttpsPort"
         "TLS_DIR"          = Slash (Join-Path $DatenOrdner "tls")
+        "TESSDATA_DIR"     = Slash (Join-Path $DatenOrdner "tessdata")
         "SETUP_CODE"       = ((New-Secret 12) -replace '(.{4})(?!$)', '$1-').ToUpper()
     }
     foreach ($key in $values.Keys) { $text = [regex]::Replace($text, "(?m)^$key=.*$", "$key=$($values[$key])") }

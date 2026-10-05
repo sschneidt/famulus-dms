@@ -20,6 +20,7 @@ import {
 import { useDebouncedValue, useMediaQuery } from "@mantine/hooks";
 import { IconCamera, IconFiles, IconSearch, IconUpload } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import type { DocumentItem } from "../api/client";
 import { useDocuments, type DocumentFilters } from "../api/queries";
@@ -27,30 +28,31 @@ import { SearchSnippet } from "../components/SearchSnippet";
 import { DocumentStatusBadge } from "../components/StatusBadge";
 import { useOpenUpload } from "../components/upload-context";
 import { useCategoryNames, useCategoryOptions } from "../lib/categories";
-import { formatAmount, formatDate } from "../lib/format";
+import { formatAmount, formatDate, tk } from "../lib/format";
 
 const PAGE_SIZE = 25;
 const STATUS_OPTIONS = [
   {
-    group: "Einordnung",
+    group: tk("Einordnung"),
     items: [
-      { value: "needs_review", label: "zu prüfen" },
-      { value: "auto_assigned", label: "automatisch eingeordnet" },
-      { value: "confirmed", label: "bestätigt" },
-      { value: "pending", label: "wird verarbeitet" },
+      { value: "needs_review", label: tk("zu prüfen") },
+      { value: "auto_assigned", label: tk("automatisch eingeordnet") },
+      { value: "confirmed", label: tk("bestätigt") },
+      { value: "pending", label: tk("wird verarbeitet") },
     ],
   },
   {
-    group: "Zahlung",
+    group: tk("Zahlung"),
     items: [
-      { value: "zahlung:offen", label: "unbezahlt" },
-      { value: "zahlung:bezahlt", label: "bezahlt" },
+      { value: "zahlung:offen", label: tk("unbezahlt") },
+      { value: "zahlung:bezahlt", label: tk("bezahlt") },
     ],
   },
 ];
 
 export function DocumentsPage() {
   const isMobile = useMediaQuery("(max-width: 48em)") ?? false;
+  const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
   const openUpload = useOpenUpload();
   const categoryOptions = useCategoryOptions();
@@ -96,46 +98,49 @@ export function DocumentsPage() {
     <Stack>
       <Group justify="space-between" align="flex-end">
         <div>
-          <Title order={2}>Dokumente</Title>
+          <Title order={2}>{t("Dokumente")}</Title>
           {documents.data && (
             <Text c="dimmed" size="sm">
-              {documents.data.total} {documents.data.total === 1 ? "Dokument" : "Dokumente"}
+              {t("{{count}} Dokumente", { count: documents.data.total })}
             </Text>
           )}
         </div>
         <Group gap="xs" grow={isMobile} w={isMobile ? "100%" : undefined} wrap={isMobile ? "wrap" : "nowrap"}>
           <TextInput
-            placeholder="Suchen in Titel, Absender, Text …"
+            placeholder={t("Suchen in Titel, Absender, Text …")}
             leftSection={<IconSearch size={16} />}
             value={searchInput}
             onChange={(e) => setSearchInput(e.currentTarget.value)}
             rightSection={
               searchInput ? (
-                <CloseButton size="sm" onClick={() => setSearchInput("")} aria-label="Suche löschen" />
+                <CloseButton size="sm" onClick={() => setSearchInput("")} aria-label={t("Suche löschen")} />
               ) : undefined
             }
-            aria-label="Suche"
+            aria-label={t("Suche")}
             type="search"
             w={isMobile ? "100%" : 280}
             style={isMobile ? { flexBasis: "100%" } : undefined}
           />
           <Select
-            placeholder="Alle Kategorien"
+            placeholder={t("Alle Kategorien")}
             data={categoryOptions}
             value={filters.category_id ?? null}
             onChange={(v) => setFilter("kategorie", v)}
             clearable
             searchable
-            aria-label="Kategorie"
+            aria-label={t("Kategorie")}
             w={isMobile ? undefined : 220}
           />
           <Select
-            placeholder="Jeder Status"
-            data={STATUS_OPTIONS}
+            placeholder={t("Jeder Status")}
+            data={STATUS_OPTIONS.map((g) => ({
+              group: t(g.group),
+              items: g.items.map((i) => ({ ...i, label: t(i.label) })),
+            }))}
             value={statusParam}
             onChange={(v) => setFilter("status", v)}
             clearable
-            aria-label="Status"
+            aria-label={t("Status")}
             w={isMobile ? undefined : 200}
           />
         </Group>
@@ -146,13 +151,15 @@ export function DocumentsPage() {
           <Loader />
         </Center>
       ) : documents.isError ? (
-        <Alert color="red" title="Dokumente konnten nicht geladen werden">
+        <Alert color="red" title={t("Dokumente konnten nicht geladen werden")}>
           {documents.error.message}
         </Alert>
       ) : documents.data.items.length === 0 ? (
         hasFilter ? (
           <Text c="dimmed" ta="center" py="xl">
-            {filters.q ? `Nichts gefunden für „${filters.q}“.` : "Keine Dokumente für diesen Filter."}
+            {filters.q
+              ? t("Nichts gefunden für „{{query}}“.", { query: filters.q })
+              : t("Keine Dokumente für diesen Filter.")}
           </Text>
         ) : (
           <EmptyState onUpload={() => openUpload("files")} onCamera={() => openUpload("camera")} />
@@ -179,18 +186,19 @@ export function DocumentsPage() {
 
 function DocumentTable({ items }: { items: DocumentItem[] }) {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const categoryName = useCategoryNames();
   return (
     <Table.ScrollContainer minWidth={760}>
       <Table highlightOnHover verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Titel</Table.Th>
-            <Table.Th>Kategorie</Table.Th>
-            <Table.Th>Datum</Table.Th>
-            <Table.Th>Aussteller</Table.Th>
-            <Table.Th ta="right">Betrag</Table.Th>
-            <Table.Th>Status</Table.Th>
+            <Table.Th>{t("Titel")}</Table.Th>
+            <Table.Th>{t("Kategorie")}</Table.Th>
+            <Table.Th>{t("Datum")}</Table.Th>
+            <Table.Th>{t("Aussteller")}</Table.Th>
+            <Table.Th ta="right">{t("Betrag")}</Table.Th>
+            <Table.Th>{t("Status")}</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -207,13 +215,13 @@ function DocumentTable({ items }: { items: DocumentItem[] }) {
                   display="block"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {doc.title || "Ohne Titel"}
+                  {doc.title || t("Ohne Titel")}
                 </Anchor>
                 {doc.search_snippet ? (
                   <SearchSnippet segments={doc.search_snippet} />
                 ) : (
                   <Text size="xs" c="dimmed">
-                    hochgeladen {formatDate(doc.created_at)}
+                    {t("hochgeladen {{date}}", { date: formatDate(doc.created_at) })}
                   </Text>
                 )}
               </Table.Td>
@@ -244,6 +252,7 @@ function DocumentTable({ items }: { items: DocumentItem[] }) {
 }
 
 function DocumentCards({ items }: { items: DocumentItem[] }) {
+  const { t } = useTranslation();
   const categoryName = useCategoryNames();
   return (
     <Stack gap="xs">
@@ -251,7 +260,7 @@ function DocumentCards({ items }: { items: DocumentItem[] }) {
         <UnstyledButton key={doc.id} component={Link} to={`/dokumente/${doc.id}`}>
           <Card withBorder padding="sm" radius="md">
             <Text fw={500} lineClamp={2} style={{ overflowWrap: "anywhere" }}>
-              {doc.title || "Ohne Titel"}
+              {doc.title || t("Ohne Titel")}
             </Text>
             <Text size="sm" c="dimmed" mt={2}>
               {[categoryName(doc.category_id), doc.issuer].filter(Boolean).join(" · ")}
@@ -279,21 +288,23 @@ function DocumentCards({ items }: { items: DocumentItem[] }) {
 }
 
 function EmptyState({ onUpload, onCamera }: { onUpload(): void; onCamera(): void }) {
+  const { t } = useTranslation();
   return (
     <Card withBorder padding="xl" radius="md">
       <Stack align="center" gap="sm">
         <IconFiles size={48} color="var(--mantine-color-dimmed)" />
-        <Title order={3}>Noch keine Dokumente</Title>
+        <Title order={3}>{t("Noch keine Dokumente")}</Title>
         <Text c="dimmed" ta="center" maw={420}>
-          Laden Sie ein PDF oder einen Scan hoch oder fotografieren Sie einen Brief mit dem Handy. Texterkennung und
-          Einordnung laufen danach automatisch.
+          {t(
+            "Laden Sie ein PDF oder einen Scan hoch oder fotografieren Sie einen Brief mit dem Handy. Texterkennung und Einordnung laufen danach automatisch.",
+          )}
         </Text>
         <Group>
           <Button leftSection={<IconUpload size={16} />} onClick={onUpload}>
-            Hochladen
+            {t("Hochladen")}
           </Button>
           <Button variant="light" leftSection={<IconCamera size={16} />} onClick={onCamera}>
-            Foto aufnehmen
+            {t("Foto aufnehmen")}
           </Button>
         </Group>
       </Stack>
@@ -302,17 +313,18 @@ function EmptyState({ onUpload, onCamera }: { onUpload(): void; onCamera(): void
 }
 
 function PaymentBadge({ doc }: { doc: DocumentItem }) {
+  const { t } = useTranslation();
   if (doc.payment_status === "offen") {
     return (
       <Badge size="xs" color="orange" variant="light" display="block" ml="auto" w="fit-content" mt={2}>
-        unbezahlt
+        {t("unbezahlt")}
       </Badge>
     );
   }
   if (doc.payment_status === "bezahlt") {
     return (
       <Badge size="xs" color="green" variant="light" display="block" ml="auto" w="fit-content" mt={2}>
-        bezahlt
+        {t("bezahlt")}
       </Badge>
     );
   }

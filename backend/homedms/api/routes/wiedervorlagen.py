@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from homedms.i18n import _
 from homedms.api.deps import get_current_user
 from homedms.core.visibility import is_document_editable, is_document_visible, visible_documents_expr
 from homedms.db import get_db
@@ -48,7 +49,7 @@ async def list_wiedervorlagen(
     """Haushaltsweite Termin-Uebersicht, frueheste zuerst - nur fuer sichtbare Dokumente, die
     nicht im Papierkorb liegen."""
     if status_filter is not None and status_filter not in STATUSES:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"status muss einer von {', '.join(STATUSES)} sein")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("status muss einer von {values} sein", values=", ".join(STATUSES)))
     conditions = [
         Wiedervorlage.tenant_id == user.tenant_id,
         Document.deleted_at.is_(None),
@@ -79,9 +80,9 @@ async def list_document_wiedervorlagen(
 ) -> list[Wiedervorlage]:
     visible = await is_document_visible(db, user, document_id)
     if visible is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Dokument nicht gefunden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Dokument nicht gefunden"))
     if not visible:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Kein Zugriff auf dieses Dokument")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, _("Kein Zugriff auf dieses Dokument"))
     result = await db.execute(
         select(Wiedervorlage).where(Wiedervorlage.document_id == document_id)
         .order_by(Wiedervorlage.due_date, Wiedervorlage.id)
@@ -96,16 +97,16 @@ async def list_document_wiedervorlagen(
 async def _get_editable(db: AsyncSession, user: User, wiedervorlage_id: uuid.UUID) -> Wiedervorlage:
     wv = await db.get(Wiedervorlage, wiedervorlage_id)
     if wv is None or wv.tenant_id != user.tenant_id:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Wiedervorlage nicht gefunden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Wiedervorlage nicht gefunden"))
     if not await is_document_editable(db, user, wv.document_id):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Kein Schreibzugriff auf das zugehoerige Dokument")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, _("Kein Schreibzugriff auf das zugehoerige Dokument"))
     return wv
 
 
 async def _decide_proposal(db: AsyncSession, user: User, wiedervorlage_id: uuid.UUID, new_status: str) -> Wiedervorlage:
     wv = await _get_editable(db, user, wiedervorlage_id)
     if wv.status != "vorgeschlagen":
-        raise HTTPException(status.HTTP_409_CONFLICT, f"Nur Vorschlaege koennen bestaetigt oder verworfen werden (Status: {wv.status})")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Nur Vorschlaege koennen bestaetigt oder verworfen werden (Status: {status})", status=wv.status))
     wv.status = new_status
     await db.commit()
     return wv
@@ -137,7 +138,7 @@ async def _check_assignee(db: AsyncSession, user: User, assigned_user_id: uuid.U
         return
     assignee = await db.get(User, assigned_user_id)
     if assignee is None or assignee.tenant_id != user.tenant_id:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "assigned_user_id ist kein Mitglied dieses Haushalts")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("assigned_user_id ist kein Mitglied dieses Haushalts"))
 
 
 @router.post("/documents/{document_id}/wiedervorlagen", response_model=WiedervorlageResponse,
@@ -148,12 +149,12 @@ async def create_wiedervorlage(
 ) -> Wiedervorlage:
     editable = await is_document_editable(db, user, document_id)
     if editable is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Dokument nicht gefunden")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Dokument nicht gefunden"))
     if not editable:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Kein Schreibzugriff auf dieses Dokument")
+        raise HTTPException(status.HTTP_403_FORBIDDEN, _("Kein Schreibzugriff auf dieses Dokument"))
     document = await db.get(Document, document_id)
     if document.deleted_at is not None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Dokument liegt im Papierkorb - erst wiederherstellen")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Dokument liegt im Papierkorb - erst wiederherstellen"))
     await _check_assignee(db, user, payload.assigned_user_id)
 
     wv = Wiedervorlage(
@@ -175,14 +176,14 @@ async def update_wiedervorlage(
 ) -> Wiedervorlage:
     wv = await _get_editable(db, user, wiedervorlage_id)
     if wv.status not in EDITABLE_STATUSES:
-        raise HTTPException(status.HTTP_409_CONFLICT, f"Wiedervorlage ist {wv.status} und kann nicht mehr geaendert werden")
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Wiedervorlage ist {status} und kann nicht mehr geaendert werden", status=wv.status))
     updates = payload.model_dump(exclude_unset=True)
     for field in ("due_date", "note", "recurrence", "reminder_lead_days"):
         if field in updates and updates[field] is None:
-            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"{field} darf nicht leer sein")
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("{field} darf nicht leer sein", field=field))
     if wv.source == "retention_rule" and "due_date" in updates and updates["due_date"] != wv.due_date:
         raise HTTPException(status.HTTP_409_CONFLICT,
-                            "Der Termin ergibt sich aus der Aufbewahrungsregel - bitte dort bzw. am Dokumentdatum aendern")
+                            _("Der Termin ergibt sich aus der Aufbewahrungsregel - bitte dort bzw. am Dokumentdatum aendern"))
     if "assigned_user_id" in updates:
         await _check_assignee(db, user, updates["assigned_user_id"])
 
@@ -190,7 +191,7 @@ async def update_wiedervorlage(
     interval = updates.get("recurrence_interval_months", wv.recurrence_interval_months)
     if recurrence == "custom_months" and not interval:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            "Bei recurrence=custom_months ist recurrence_interval_months (1-120) noetig")
+                            _("Bei recurrence=custom_months ist recurrence_interval_months (1-120) noetig"))
     if recurrence != "custom_months":
         updates["recurrence_interval_months"] = None
 
@@ -213,8 +214,9 @@ async def complete_wiedervorlage(
     Zahlungsfrist erledigt = Rechnung bezahlt (paid_on, Standard heute)."""
     wv = await _get_editable(db, user, wiedervorlage_id)
     if wv.status != "offen":
-        hint = " - Vorschlaege zuerst bestaetigen" if wv.status == "vorgeschlagen" else ""
-        raise HTTPException(status.HTTP_409_CONFLICT, f"Nur offene Wiedervorlagen koennen erledigt werden (Status: {wv.status}){hint}")
+        hint = _(" - Vorschlaege zuerst bestaetigen") if wv.status == "vorgeschlagen" else ""
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            _("Nur offene Wiedervorlagen koennen erledigt werden (Status: {status})", status=wv.status) + hint)
 
     follow_up = complete(wv, user.id, today())
     if follow_up is not None:

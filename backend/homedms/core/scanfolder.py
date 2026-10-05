@@ -14,6 +14,8 @@ Reine Hilfsfunktionen hier (getestet in tests/test_scanfolder.py).
 import time
 from pathlib import Path
 
+from homedms.i18n import N_
+
 SUPPORTED = {".pdf", ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp", ".eml"}
 DONE_DIR = "_importiert"
 ERROR_DIR = "_fehler"
@@ -74,13 +76,13 @@ def is_settled(path: Path, now: float | None = None, min_age: float = MIN_AGE_SE
 def looks_complete(path: Path, content: bytes) -> str | None:
     """None = in Ordnung, sonst Grund. Faengt abgebrochene Uebertragungen ab."""
     if not content:
-        return "Datei ist leer"
+        return N_("Datei ist leer")
     suffix = path.suffix.lower()
     if suffix == ".pdf":
         if not content.startswith(b"%PDF"):
-            return "keine gueltige PDF-Datei"
+            return N_("keine gueltige PDF-Datei")
         if b"%%EOF" not in content[-2048:]:
-            return "PDF unvollstaendig (wird evtl. noch geschrieben)"
+            return N_("PDF unvollstaendig (wird evtl. noch geschrieben)")
     elif suffix in {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".heic", ".heif"}:
         try:
             from io import BytesIO
@@ -95,8 +97,8 @@ def looks_complete(path: Path, content: bytes) -> str | None:
                 pass
             with Image.open(BytesIO(content)) as img:
                 img.load()  # liest die ganzen Bilddaten - abgeschnittene Dateien scheitern hier
-        except Exception as exc:  # noqa: BLE001 - jede Art von defektem Bild
-            return f"Bild nicht lesbar ({exc.__class__.__name__})"
+        except Exception:  # noqa: BLE001 - jede Art von defektem Bild
+            return N_("Bild nicht lesbar")
     return None
 
 

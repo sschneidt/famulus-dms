@@ -27,9 +27,9 @@ REST-API auf Basis von FastAPI, Base-Path `/api/v1`. Alle Endpunkte sind implizi
 | GET/POST | `/auth/2fa`, `/auth/2fa/setup` (Passwort → QR-Code), `/auth/2fa/enable` (erster Code → 10 Wiederherstellungscodes), `/auth/2fa/disable`, `/auth/2fa/recovery-codes` | Zwei-Faktor-Anmeldung (TOTP) verwalten – umgesetzt 03.10.2026 | angemeldet |
 | GET | `/auth/me` | Eigenes Nutzerprofil + Rolle + Tenant-Info (`household_name`) | angemeldet |
 | PUT | `/auth/password` | Eigenes Passwort ändern (`current_password`, `new_password`); alle ANDEREN Geräte werden abgemeldet, dieses bleibt angemeldet | angemeldet |
-| PATCH | `/auth/me` | Eigenen Anzeigenamen ändern (`{"display_name": "..."}`) – Seite „Konto & Sicherheit“ | angemeldet |
-| POST | `/setup/bootstrap` | Einmaliger Ersteinrichtungs-Schritt: legt Tenant + ersten Admin-User an – nur mit `setup_code` (Einmal-Code aus dem Server-Protokoll bzw. `.einrichtungscode`) | öffentlich, nur wenn noch kein Tenant existiert |
-| GET | `/setup/status` | `bootstrapped`, dazu `tls`/`http_port`/`https_port` für die Zertifikat-Hilfe neuer Geräte | öffentlich |
+| PATCH | `/auth/me` | Eigenen Anzeigenamen und/oder die Sprache der Oberfläche ändern (`{"display_name": "...", "locale": "de"\|"en"\|"ru"}`) – Seite „Konto & Sicherheit“; eine neue Sprache stößt ggf. den Download des passenden OCR-Sprachpakets an | angemeldet |
+| POST | `/setup/bootstrap` | Einmaliger Ersteinrichtungs-Schritt: legt Tenant + ersten Admin-User an – nur mit `setup_code` (Einmal-Code aus dem Server-Protokoll bzw. `.einrichtungscode`); `default_language` (de/en/ru) wird Sprache des Admin-Kontos, `ocr_languages` (z. B. `["rus","deu","eng"]`) die Sprachen der Texterkennung – fehlende Pakete werden danach im Hintergrund geladen | öffentlich, nur wenn noch kein Tenant existiert |
+| GET | `/setup/status` | `bootstrapped`, dazu `tls`/`http_port`/`https_port` für die Zertifikat-Hilfe neuer Geräte; vor der Einrichtung zusätzlich `ocr_languages` (Katalog der Sprachpakete mit `installed`) | öffentlich |
 
 HTTP-Seite (Port 8000, nicht unter `/api`): `/zertifikat` (Anleitung + QR-Code), `/homedms-ca.crt` (CA-Zertifikat), `/health`, alles andere 308 → HTTPS. Die API-Dokumentation (`/docs`, `/openapi.json`) ist nur mit `API_DOCS=true` erreichbar.
 
@@ -164,6 +164,18 @@ Umsetzung 04.10.2026: Die Erinnerungen entstehen als tägliche Zusammenfassung i
 | GET | `/version` | Backend-/Schema-Version (u. a. für Update-Diagnose, Anforderungsdokument 4.7) | angemeldet |
 | GET | `/system/diagnostics` | Seite „Diagnose“ (umgesetzt 03.10.2026): Ampel je Baustein – HomeDMS (Version, Docker/ohne Docker), Datenbank (Antwortzeit, Größe, Schema-Stand), Worker (aktive Arbeitsstränge per Heartbeat, Warteschlangen, fehlgeschlagene/hängende Aufträge), KI/Ollama (erreichbar, Modelle vorhanden/geladen), Suche/Meilisearch (erreichbar, Index vollständig), Texterkennung (Version, Sprachpakete), Speicher (frei, beschreibbar, Scan-Ordner) – plus Hinweise, passende Aktionen und fehlgeschlagene Aufträge der letzten 7 Tage (`core/diagnostics.py`) | Admin |
 | POST | `/system/actions/{action}` | `restart-worker` (Worker beendet sich, Docker bzw. der Starter startet ihn neu), `retry-stalled` (hängende Aufträge neu einreihen), `pull-models` (fehlende KI-Modelle im Hintergrund laden), `unload-models` (KI-Arbeitsspeicher freigeben), `reindex-search` (Suchindex neu aufbauen). Container oder Datenbank neu starten geht bewusst nicht – das bräuchte Zugriff auf den Docker-Dienst des NAS | Admin |
+
+## 12a. Sprachen (umgesetzt 05.10.2026)
+
+Alle Antworten mit Meldungstext (z. B. `detail` bei Fehlern) kommen in der Sprache der Kopfzeile `Accept-Language` (de, en, ru; Standard Deutsch). Die Weboberfläche schickt die Sprache der Person mit; E-Mails und Push nutzen die im Konto gespeicherte Sprache.
+
+| Methode | Pfad | Zweck | Rolle |
+|---|---|---|---|
+| GET | `/ocr-languages` | Katalog der Sprachpakete mit `installed`, `selected` (Admin-Auswahl), `required_by` (Personen, deren Oberflächensprache das Paket braucht), `status` (installed/installing/failed/missing/available), `error`; dazu `effective` (z. B. `deu+eng+rus`, was Tesseract tatsächlich nutzt) | Admin |
+| PUT | `/ocr-languages` | Auswahl speichern (`{"languages": ["deu", "ukr"]}`), fehlende Pakete im Hintergrund laden; unbekannte Codes → 422 | Admin |
+| POST | `/ocr-languages/install` | fehlende bzw. fehlgeschlagene Pakete erneut laden | Admin |
+
+Außerdem: `POST /system/actions/install-ocr-languages` (Diagnose-Seite) lädt fehlende Pakete aller Haushalte.
 
 ## 13. Offene Punkte für die nächste Iteration
 

@@ -25,6 +25,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from homedms.i18n import _
 from homedms.models.ops import AppSetting
 
 VAPID_KEY = "vapid"
@@ -87,7 +88,7 @@ def encrypt(payload: bytes, p256dh: str, auth: str, *, salt: bytes | None = None
     ua_public = b64url_decode(p256dh)
     auth_secret = b64url_decode(auth)
     if len(ua_public) != 65 or len(auth_secret) < 16:
-        raise ValueError("ungültige Push-Schlüssel des Geräts")
+        raise ValueError(_("ungültige Push-Schlüssel des Geräts"))
     server_key = server_key or ec.generate_private_key(ec.SECP256R1())
     as_public = _public_bytes(server_key.public_key())
     ua_key = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), ua_public)
@@ -134,11 +135,11 @@ async def send(vapid: Vapid, subscription_endpoint: str, keys: dict, message: di
     try:
         response = await client.post(subscription_endpoint, content=body, headers=headers)
     except httpx.HTTPError as exc:
-        raise PushError(f"Push-Dienst nicht erreichbar ({exc.__class__.__name__}) - hat der Server Internetzugang?") from exc
+        raise PushError(_("Push-Dienst nicht erreichbar ({error}) - hat der Server Internetzugang?", error=exc.__class__.__name__)) from exc
     finally:
         if own:
             await client.aclose()
     if response.status_code in (404, 410):
         raise PushGone()
     if response.status_code >= 400:
-        raise PushError(f"Push-Dienst meldet {response.status_code}: {response.text[:200]}")
+        raise PushError(_("Push-Dienst meldet {status}: {text}", status=response.status_code, text=response.text[:200]))

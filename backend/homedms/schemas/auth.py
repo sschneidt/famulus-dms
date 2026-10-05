@@ -1,6 +1,7 @@
 """Schemas fuer /auth/* - siehe docs/API-Design.md Abschnitt 2."""
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -84,7 +85,8 @@ class PasswordChange(BaseModel):
 
 
 class ProfileUpdate(BaseModel):
-    display_name: str = Field(min_length=1, max_length=200, examples=["Max Mustermann"])
+    display_name: str | None = Field(default=None, min_length=1, max_length=200, examples=["Max Mustermann"])
+    locale: Literal["de", "en", "ru"] | None = None  # Sprache der Oberflaeche, E-Mails und Push
 
 
 class HouseholdResponse(BaseModel):

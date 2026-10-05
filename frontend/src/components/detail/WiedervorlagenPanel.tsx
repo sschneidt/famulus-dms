@@ -1,6 +1,7 @@
 import { Button, Group, Loader, Paper, Stack, Text, Title } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { DocumentDetail, Wiedervorlage } from "../../api/client";
 import { useDocumentWiedervorlagen } from "../../api/queries";
 import { isProcessing } from "../../lib/format";
@@ -10,6 +11,7 @@ import { WiedervorlageForm } from "../WiedervorlageForm";
 const ORDER: Record<string, number> = { vorgeschlagen: 0, offen: 1, erledigt: 2, verworfen: 3 };
 
 export function WiedervorlagenPanel({ doc, readOnly = false }: { doc: DocumentDetail; readOnly?: boolean }) {
+  const { t } = useTranslation();
   const list = useDocumentWiedervorlagen(doc.id, isProcessing(doc));
   const [editing, setEditing] = useState<{ open: boolean; wv: Wiedervorlage | null }>({ open: false, wv: null });
   const [showDone, setShowDone] = useState(false);
@@ -24,7 +26,7 @@ export function WiedervorlagenPanel({ doc, readOnly = false }: { doc: DocumentDe
     <Paper withBorder p="md" radius="md">
       <Stack gap="sm">
         <Group justify="space-between">
-          <Title order={4}>Termine & Fristen</Title>
+          <Title order={4}>{t("Termine & Fristen")}</Title>
           {!readOnly && (
             <Button
               size="xs"
@@ -32,7 +34,7 @@ export function WiedervorlagenPanel({ doc, readOnly = false }: { doc: DocumentDe
               leftSection={<IconPlus size={14} />}
               onClick={() => setEditing({ open: true, wv: null })}
             >
-              Termin
+              {t("Termin")}
             </Button>
           )}
         </Group>
@@ -40,7 +42,7 @@ export function WiedervorlagenPanel({ doc, readOnly = false }: { doc: DocumentDe
           <Loader size="sm" />
         ) : active.length === 0 ? (
           <Text size="sm" c="dimmed">
-            {doc.extraction_status === "pending" ? "Fristen werden gesucht …" : "Keine offenen Termine."}
+            {doc.extraction_status === "pending" ? t("Fristen werden gesucht …") : t("Keine offenen Termine.")}
           </Text>
         ) : (
           active.map((wv) => (
@@ -60,7 +62,9 @@ export function WiedervorlagenPanel({ doc, readOnly = false }: { doc: DocumentDe
               onClick={() => setShowDone((s) => !s)}
               style={{ alignSelf: "flex-start" }}
             >
-              {showDone ? "Erledigte ausblenden" : `${done.length} erledigte/verworfene anzeigen`}
+              {showDone
+                ? t("Erledigte ausblenden")
+                : t("{{count}} erledigte/verworfene anzeigen", { count: done.length })}
             </Button>
             {showDone && done.map((wv) => <WiedervorlageCard key={wv.id} wv={wv} />)}
           </>

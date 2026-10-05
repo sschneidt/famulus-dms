@@ -14,6 +14,7 @@ from procrastinate.exceptions import AlreadyEnqueued
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from homedms.i18n import N_
 from homedms.config import get_settings
 from homedms.core.scanfolder import (
     DONE_DIR,
@@ -83,12 +84,17 @@ async def ensure_default_source(db: AsyncSession) -> None:
     await db.commit()
 
 
-def _log(entries: list[dict], file: Path, root: Path, status: str, message: str = "", document_id=None) -> None:
+def _log(entries: list[dict], file: Path, root: Path, status: str, message: str = "", document_id=None,
+         **params) -> None:
+    """message: deutscher Text mit {Platzhaltern} - gespeichert wird er fertig (Deutsch) plus Vorlage und
+    Werte, damit die App ihn in der Sprache der Person anzeigen kann (api/routes/import_sources.py)."""
     entries.append({
         "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "file": file.relative_to(root).as_posix() if file.is_relative_to(root) else file.name,
         "status": status,  # importiert | duplikat | fehler
-        "message": message,
+        "message": message.format(**params) if params else message,
+        "key": message,
+        "params": {k: str(v) for k, v in params.items()},
         "document_id": str(document_id) if document_id else None,
     })
 
@@ -107,7 +113,7 @@ async def scan_source(db: AsyncSession, source: ImportSource) -> None:
     status: dict = {"waiting": 0, "error": None}
 
     if not root.is_dir():
-        status["error"] = "Scan-Ordner nicht gefunden - ist SCAN_FOLDER_PATH in der .env richtig gesetzt?"
+        status["error"] = N_("Scan-Ordner nicht gefunden - ist SCAN_FOLDER_PATH in der .env richtig gesetzt?")
     else:
         files = candidates(root)
         imported = 0
@@ -120,7 +126,8 @@ async def scan_source(db: AsyncSession, source: ImportSource) -> None:
             except Exception as exc:  # noqa: BLE001 - eine kaputte Datei darf den Lauf nicht stoppen
                 await db.rollback()
                 logger.exception("Scan-Ordner: %s konnte nicht importiert werden", file)
-                _log(entries, file, root, "fehler", f"wird erneut versucht: {exc.__class__.__name__}: {exc}"[:300])
+                _log(entries, file, root, "fehler", N_("wird erneut versucht: {error}"),
+                     error=f"{exc.__class__.__name__}: {exc}"[:280])
                 result = "skip"
             if result == "imported":
                 imported += 1
@@ -137,14 +144,14 @@ async def scan_source(db: AsyncSession, source: ImportSource) -> None:
 async def _handle_file(db: AsyncSession, source: ImportSource, root: Path, file: Path, entries: list[dict]) -> str:
     if not is_supported(file):
         _move(file, root, ERROR_DIR)
-        _log(entries, file, root, "fehler", f"Dateityp {file.suffix or '(ohne Endung)'} wird nicht unterstuetzt")
+        _log(entries, file, root, "fehler", N_("Dateityp {suffix} wird nicht unterstuetzt"), suffix=file.suffix or "–")
         return "error"
     if not is_settled(file):
         return "waiting"  # Scanner schreibt evtl. noch - naechster Durchlauf
     size = file.stat().st_size
     if size > MAX_FILE_BYTES:
         _move(file, root, ERROR_DIR)
-        _log(entries, file, root, "fehler", f"Datei zu gross ({size // (1024 * 1024)} MB)")
+        _log(entries, file, root, "fehler", N_("Datei zu gross ({size} MB)"), size=size // (1024 * 1024))
         return "error"
 
     content = file.read_bytes()
@@ -165,7 +172,7 @@ async def _handle_file(db: AsyncSession, source: ImportSource, root: Path, file:
     )).first()
     if duplicate:
         _move(file, root, DONE_DIR)
-        _log(entries, file, root, "duplikat", f"schon vorhanden als „{duplicate.title}“", duplicate.id)
+        _log(entries, file, root, "duplikat", N_("schon vorhanden als „{title}“"), duplicate.id, title=duplicate.title)
         return "duplicate"
 
     document = Document(

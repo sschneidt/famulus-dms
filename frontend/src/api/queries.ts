@@ -25,6 +25,7 @@ export const keys = {
   notifications: ["notifications"] as const,
   notificationSettings: ["notifications", "settings"] as const,
   mailSettings: ["tenant", "mail"] as const,
+  ocrLanguages: ["ocr-languages"] as const,
 };
 
 export interface DocumentFilters {
@@ -558,5 +559,33 @@ export function useDeleteMailSettings() {
       qc.setQueryData(keys.mailSettings, data);
       void qc.invalidateQueries({ queryKey: keys.notificationSettings });
     },
+  });
+}
+
+// --- Sprachen der Texterkennung (nur Admin) ---------------------------------------------------------
+
+export function useOcrLanguages(enabled = true) {
+  return useQuery({
+    queryKey: keys.ocrLanguages,
+    queryFn: () => call(api.GET("/api/v1/ocr-languages")),
+    enabled,
+    // waehrend ein Paket laedt, regelmaessig nachsehen
+    refetchInterval: (q) => (q.state.data?.languages.some((l) => l.status === "installing") ? 3000 : false),
+  });
+}
+
+export function useSaveOcrLanguages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (languages: string[]) => call(api.PUT("/api/v1/ocr-languages", { body: { languages } })),
+    onSuccess: (data) => qc.setQueryData(keys.ocrLanguages, data),
+  });
+}
+
+export function useInstallOcrLanguages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => call(api.POST("/api/v1/ocr-languages/install")),
+    onSuccess: (data) => qc.setQueryData(keys.ocrLanguages, data),
   });
 }

@@ -13,6 +13,7 @@ import {
   Loader,
   Modal,
   PasswordInput,
+  Select,
   SimpleGrid,
   Stack,
   Text,
@@ -32,8 +33,10 @@ import {
 } from "@tabler/icons-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { api, call, type Schemas } from "../api/client";
 import { useAuth, useUser } from "../auth/AuthContext";
+import { LANGUAGES, isLanguage, setLanguage } from "../i18n";
 import { certificatePageUrl, useSetupStatus } from "../lib/connection";
 import { formatDateTime } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
@@ -44,24 +47,25 @@ import { NotificationSettingsSection } from "../components/NotificationSettingsS
  * angemeldete Geraete und wie ein neues Geraet der Verschluesselung vertraut.
  */
 export function AccountPage() {
+  const { t } = useTranslation();
   return (
     <Stack maw={900}>
-      <Title order={2}>Konto & Sicherheit</Title>
+      <Title order={2}>{t("Konto & Sicherheit")}</Title>
       <SimpleGrid cols={{ base: 1, md: 2 }}>
-        <Section title="Profil">
+        <Section title={t("Profil")}>
           <ProfileForm />
         </Section>
-        <Section title="Passwort">
+        <Section title={t("Passwort")}>
           <PasswordForm />
         </Section>
       </SimpleGrid>
-      <Section title="Benachrichtigungen">
+      <Section title={t("Benachrichtigungen")}>
         <NotificationSettingsSection />
       </Section>
-      <Section title="Zwei-Faktor-Anmeldung">
+      <Section title={t("Zwei-Faktor-Anmeldung")}>
         <TwoFactorSection />
       </Section>
-      <Section title="Angemeldete Geräte">
+      <Section title={t("Angemeldete Geräte")}>
         <SessionsSection />
       </Section>
       <NewDeviceHint />
@@ -83,6 +87,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function ProfileForm() {
   const user = useUser();
   const { refresh } = useAuth();
+  const { t } = useTranslation();
   const isAdmin = user.role === "admin";
   const [displayName, setDisplayName] = useState(user.display_name);
   const [household, setHousehold] = useState(user.household_name ?? "");
@@ -101,39 +106,62 @@ function ProfileForm() {
       if (householdChanged) {
         const result = await call(api.PATCH("/api/v1/tenant", { body: { name: household.trim() } }));
         if (result.documents_refiled) {
-          notifySuccess(`Haushalt umbenannt – ${result.documents_refiled} Dokument(e) ziehen in den neuen Ordner um.`);
+          notifySuccess(
+            t("Haushalt umbenannt – {{count}} Dokument(e) ziehen in den neuen Ordner um.", {
+              count: result.documents_refiled,
+            }),
+          );
         }
       }
       await refresh();
-      if (nameChanged && !householdChanged) notifySuccess("Name gespeichert");
+      if (nameChanged && !householdChanged) notifySuccess(t("Name gespeichert"));
     } catch (e) {
-      notifyError(e, "Speichern fehlgeschlagen");
+      notifyError(e, t("Speichern fehlgeschlagen"));
     } finally {
       setSaving(false);
     }
   }
 
+  async function changeLanguage(value: string | null) {
+    if (!isLanguage(value) || value === user.locale) return;
+    try {
+      await call(api.PATCH("/api/v1/auth/me", { body: { locale: value } }));
+      await setLanguage(value);
+      await refresh();
+    } catch (e) {
+      notifyError(e, t("Speichern fehlgeschlagen"));
+    }
+  }
+
   return (
     <Stack>
+      <Select
+        label={t("Sprache")}
+        description={t("Gilt für Oberfläche, E-Mails und Push-Nachrichten")}
+        data={LANGUAGES.map((l) => ({ value: l.code, label: l.label }))}
+        value={isLanguage(user.locale) ? user.locale : "de"}
+        onChange={(v) => void changeLanguage(v)}
+        allowDeselect={false}
+      />
       <TextInput
-        label="Dein Name"
+        label={t("Dein Name")}
         value={displayName}
         onChange={(e) => setDisplayName(e.currentTarget.value)}
-        error={displayName.trim() === "" ? "Bitte einen Namen angeben" : undefined}
+        error={displayName.trim() === "" ? t("Bitte einen Namen angeben") : undefined}
       />
-      <TextInput label="E-Mail" value={user.email} disabled />
+      <TextInput label={t("E-Mail")} value={user.email} disabled />
       {isAdmin && (
         <TextInput
-          label="Name des Haushalts"
-          description="Zugleich der oberste Ordner in der Ablage – beim Ändern werden die Dateien verschoben"
+          label={t("Name des Haushalts")}
+          description={t("Zugleich der oberste Ordner in der Ablage – beim Ändern werden die Dateien verschoben")}
           value={household}
           onChange={(e) => setHousehold(e.currentTarget.value)}
-          error={household.trim() === "" ? "Bitte einen Namen angeben" : undefined}
+          error={household.trim() === "" ? t("Bitte einen Namen angeben") : undefined}
         />
       )}
       <Group justify="flex-end">
         <Button onClick={() => void save()} loading={saving} disabled={!valid || (!nameChanged && !householdChanged)}>
-          Speichern
+          {t("Speichern")}
         </Button>
       </Group>
     </Stack>
@@ -143,6 +171,7 @@ function ProfileForm() {
 /** Eigenes Passwort aendern - dieses Geraet bleibt angemeldet, alle anderen werden abgemeldet. */
 function PasswordForm() {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [repeat, setRepeat] = useState("");
@@ -154,13 +183,13 @@ function PasswordForm() {
     setSaving(true);
     try {
       await call(api.PUT("/api/v1/auth/password", { body: { current_password: current, new_password: next } }));
-      notifySuccess("Passwort geändert – alle anderen Geräte sind abgemeldet");
+      notifySuccess(t("Passwort geändert – alle anderen Geräte sind abgemeldet"));
       setCurrent("");
       setNext("");
       setRepeat("");
       void queryClient.invalidateQueries({ queryKey: ["sessions"] });
     } catch (e) {
-      notifyError(e, "Passwort nicht geändert");
+      notifyError(e, t("Passwort nicht geändert"));
     } finally {
       setSaving(false);
     }
@@ -168,23 +197,27 @@ function PasswordForm() {
 
   return (
     <Stack gap="xs">
-      <PasswordInput label="Bisheriges Passwort" value={current} onChange={(e) => setCurrent(e.currentTarget.value)} />
       <PasswordInput
-        label="Neues Passwort"
-        description="Mindestens 8 Zeichen – besser ein ganzer Satz"
-        value={next}
-        onChange={(e) => setNext(e.currentTarget.value)}
-        error={next.length > 0 && next.length < 8 ? "Mindestens 8 Zeichen" : undefined}
+        label={t("Bisheriges Passwort")}
+        value={current}
+        onChange={(e) => setCurrent(e.currentTarget.value)}
       />
       <PasswordInput
-        label="Neues Passwort wiederholen"
+        label={t("Neues Passwort")}
+        description={t("Mindestens 8 Zeichen – besser ein ganzer Satz")}
+        value={next}
+        onChange={(e) => setNext(e.currentTarget.value)}
+        error={next.length > 0 && next.length < 8 ? t("Mindestens 8 Zeichen") : undefined}
+      />
+      <PasswordInput
+        label={t("Neues Passwort wiederholen")}
         value={repeat}
         onChange={(e) => setRepeat(e.currentTarget.value)}
-        error={mismatch ? "Stimmt nicht überein" : undefined}
+        error={mismatch ? t("Stimmt nicht überein") : undefined}
       />
       <Group justify="flex-end">
         <Button onClick={() => void change()} loading={saving} disabled={!valid}>
-          Passwort ändern
+          {t("Passwort ändern")}
         </Button>
       </Group>
     </Stack>
@@ -196,6 +229,7 @@ function PasswordForm() {
 function TwoFactorSection() {
   const { refresh } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const status = useQuery({ queryKey: ["two-factor"], queryFn: () => call(api.GET("/api/v1/auth/2fa")) });
   const [dialog, setDialog] = useState<"setup" | "disable" | "codes" | null>(null);
   const reload = () => {
@@ -215,38 +249,39 @@ function TwoFactorSection() {
           variant="light"
           leftSection={enabled ? <IconShieldCheck size={14} /> : <IconShieldOff size={14} />}
         >
-          {enabled ? "Eingeschaltet" : "Ausgeschaltet"}
+          {enabled ? t("Eingeschaltet") : t("Ausgeschaltet")}
         </Badge>
         {enabled && (
           <Text size="sm" c={status.data.recovery_codes_left <= 2 ? "orange" : "dimmed"}>
-            noch {status.data.recovery_codes_left} Wiederherstellungscodes
+            {t("noch {{count}} Wiederherstellungscodes", { count: status.data.recovery_codes_left })}
           </Text>
         )}
       </Group>
       <Text size="sm" c="dimmed">
-        Nach dem Passwort fragt HomeDMS zusätzlich nach einem Code aus einer Authenticator-App (z. B. Google oder
-        Microsoft Authenticator, Aegis, 2FAS). Wer nur dein Passwort kennt, kommt so nicht hinein.
+        {t(
+          "Nach dem Passwort fragt HomeDMS zusätzlich nach einem Code aus einer Authenticator-App (z. B. Google oder Microsoft Authenticator, Aegis, 2FAS). Wer nur dein Passwort kennt, kommt so nicht hinein.",
+        )}
       </Text>
       <Group>
         {enabled ? (
           <>
             <Button variant="light" onClick={() => setDialog("codes")}>
-              Neue Wiederherstellungscodes
+              {t("Neue Wiederherstellungscodes")}
             </Button>
             <Button variant="subtle" color="red" onClick={() => setDialog("disable")}>
-              Ausschalten
+              {t("Ausschalten")}
             </Button>
           </>
         ) : (
           <Button leftSection={<IconShieldCheck size={16} />} onClick={() => setDialog("setup")}>
-            Einrichten
+            {t("Einrichten")}
           </Button>
         )}
       </Group>
       <Modal
         opened={dialog === "setup"}
         onClose={() => setDialog(null)}
-        title="Zwei-Faktor-Anmeldung einrichten"
+        title={t("Zwei-Faktor-Anmeldung einrichten")}
         size="lg"
       >
         {dialog === "setup" && (
@@ -258,22 +293,31 @@ function TwoFactorSection() {
           />
         )}
       </Modal>
-      <Modal opened={dialog === "disable"} onClose={() => setDialog(null)} title="Zwei-Faktor-Anmeldung ausschalten">
+      <Modal
+        opened={dialog === "disable"}
+        onClose={() => setDialog(null)}
+        title={t("Zwei-Faktor-Anmeldung ausschalten")}
+      >
         {dialog === "disable" && (
           <PasswordStep
-            action="Ausschalten"
+            action={t("Ausschalten")}
             color="red"
-            text="Danach genügt wieder das Passwort allein."
+            text={t("Danach genügt wieder das Passwort allein.")}
             run={(password) => call(api.POST("/api/v1/auth/2fa/disable", { body: { password } }))}
             onDone={() => {
-              notifySuccess("Zwei-Faktor-Anmeldung ausgeschaltet");
+              notifySuccess(t("Zwei-Faktor-Anmeldung ausgeschaltet"));
               setDialog(null);
               reload();
             }}
           />
         )}
       </Modal>
-      <Modal opened={dialog === "codes"} onClose={() => setDialog(null)} title="Neue Wiederherstellungscodes" size="lg">
+      <Modal
+        opened={dialog === "codes"}
+        onClose={() => setDialog(null)}
+        title={t("Neue Wiederherstellungscodes")}
+        size="lg"
+      >
         {dialog === "codes" && <NewRecoveryCodes onDone={() => setDialog(null)} reload={reload} />}
       </Modal>
     </Stack>
@@ -293,6 +337,7 @@ function PasswordStep({
   run(password: string): Promise<unknown>;
   onDone(result: unknown): void;
 }) {
+  const { t } = useTranslation();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   return (
@@ -301,14 +346,14 @@ function PasswordStep({
         e.preventDefault();
         setBusy(true);
         run(password)
-          .then(onDone, (err) => notifyError(err, `${action} nicht möglich`))
+          .then(onDone, (err) => notifyError(err, t("{{action}} nicht möglich", { action })))
           .finally(() => setBusy(false));
       }}
     >
       <Stack>
         <Text size="sm">{text}</Text>
         <PasswordInput
-          label="Zur Sicherheit: dein Passwort"
+          label={t("Zur Sicherheit: dein Passwort")}
           value={password}
           onChange={(e) => setPassword(e.currentTarget.value)}
           data-autofocus
@@ -324,20 +369,23 @@ function PasswordStep({
 }
 
 function SetupTwoFactor({ onDone }: { onDone(): void }) {
+  const { t } = useTranslation();
   const [setup, setSetup] = useState<Schemas["TwoFactorSetup"] | null>(null);
   const [codes, setCodes] = useState<string[] | null>(null);
   const [code, setCode] = useState("");
   const enable = useMutation({
     mutationFn: () => call(api.POST("/api/v1/auth/2fa/enable", { body: { code: code.trim() } })),
     onSuccess: (r) => setCodes(r.recovery_codes),
-    onError: (e) => notifyError(e, "Code nicht akzeptiert"),
+    onError: (e) => notifyError(e, t("Code nicht akzeptiert")),
   });
 
   if (!setup) {
     return (
       <PasswordStep
-        action="Weiter"
-        text="Du brauchst eine Authenticator-App auf dem Handy. Im nächsten Schritt scannst du damit einen QR-Code."
+        action={t("Weiter")}
+        text={t(
+          "Du brauchst eine Authenticator-App auf dem Handy. Im nächsten Schritt scannst du damit einen QR-Code.",
+        )}
         run={(password) => call(api.POST("/api/v1/auth/2fa/setup", { body: { password } }))}
         onDone={(r) => setSetup(r as Schemas["TwoFactorSetup"])}
       />
@@ -346,20 +394,21 @@ function SetupTwoFactor({ onDone }: { onDone(): void }) {
   if (codes) {
     return (
       <Stack>
-        <Alert color="green" icon={<IconCheck />} title="Zwei-Faktor-Anmeldung ist eingeschaltet">
-          Bewahre diese Wiederherstellungscodes sicher auf (ausdrucken oder im Passwort-Manager). Jeder Code
-          funktioniert einmal, falls das Handy verloren geht. Sie werden nur jetzt angezeigt.
+        <Alert color="green" icon={<IconCheck />} title={t("Zwei-Faktor-Anmeldung ist eingeschaltet")}>
+          {t(
+            "Bewahre diese Wiederherstellungscodes sicher auf (ausdrucken oder im Passwort-Manager). Jeder Code funktioniert einmal, falls das Handy verloren geht. Sie werden nur jetzt angezeigt.",
+          )}
         </Alert>
         <RecoveryCodeList codes={codes} />
         <Group justify="flex-end">
-          <Button onClick={onDone}>Ich habe die Codes gesichert</Button>
+          <Button onClick={onDone}>{t("Ich habe die Codes gesichert")}</Button>
         </Group>
       </Stack>
     );
   }
   return (
     <Stack>
-      <Text size="sm">1. QR-Code mit der Authenticator-App scannen:</Text>
+      <Text size="sm">{t("1. QR-Code mit der Authenticator-App scannen:")}</Text>
       <Center>
         {/* SVG kommt vom eigenen Server (segno), enthaelt keine Skripte */}
         <Box
@@ -372,10 +421,10 @@ function SetupTwoFactor({ onDone }: { onDone(): void }) {
         />
       </Center>
       <Text size="xs" c="dimmed" ta="center">
-        Kein Scannen möglich? Schlüssel von Hand eingeben: <Code>{setup.secret}</Code>
+        {t("Kein Scannen möglich? Schlüssel von Hand eingeben:")} <Code>{setup.secret}</Code>
       </Text>
       <TextInput
-        label="2. Den 6-stelligen Code aus der App eingeben"
+        label={t("2. Den 6-stelligen Code aus der App eingeben")}
         value={code}
         onChange={(e) => setCode(e.currentTarget.value)}
         autoComplete="one-time-code"
@@ -388,7 +437,7 @@ function SetupTwoFactor({ onDone }: { onDone(): void }) {
           loading={enable.isPending}
           disabled={code.replace(/\D/g, "").length !== 6}
         >
-          Bestätigen
+          {t("Bestätigen")}
         </Button>
       </Group>
     </Stack>
@@ -396,12 +445,13 @@ function SetupTwoFactor({ onDone }: { onDone(): void }) {
 }
 
 function NewRecoveryCodes({ onDone, reload }: { onDone(): void; reload(): void }) {
+  const { t } = useTranslation();
   const [codes, setCodes] = useState<string[] | null>(null);
   if (!codes) {
     return (
       <PasswordStep
-        action="Neue Codes erzeugen"
-        text="Die bisherigen Wiederherstellungscodes werden dabei ungültig."
+        action={t("Neue Codes erzeugen")}
+        text={t("Die bisherigen Wiederherstellungscodes werden dabei ungültig.")}
         run={(password) => call(api.POST("/api/v1/auth/2fa/recovery-codes", { body: { password } }))}
         onDone={(r) => {
           setCodes((r as Schemas["RecoveryCodes"]).recovery_codes);
@@ -414,13 +464,14 @@ function NewRecoveryCodes({ onDone, reload }: { onDone(): void; reload(): void }
     <Stack>
       <RecoveryCodeList codes={codes} />
       <Group justify="flex-end">
-        <Button onClick={onDone}>Ich habe die Codes gesichert</Button>
+        <Button onClick={onDone}>{t("Ich habe die Codes gesichert")}</Button>
       </Group>
     </Stack>
   );
 }
 
 function RecoveryCodeList({ codes }: { codes: string[] }) {
+  const { t } = useTranslation();
   return (
     <Stack gap="xs">
       <SimpleGrid cols={2} spacing="xs" data-testid="recovery-codes">
@@ -439,7 +490,7 @@ function RecoveryCodeList({ codes }: { codes: string[] }) {
               leftSection={copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
               onClick={copy}
             >
-              {copied ? "Kopiert" : "Alle kopieren"}
+              {copied ? t("Kopiert") : t("Alle kopieren")}
             </Button>
           )}
         </CopyButton>
@@ -452,6 +503,7 @@ function RecoveryCodeList({ codes }: { codes: string[] }) {
 
 function SessionsSection() {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const sessions = useQuery({ queryKey: ["sessions"], queryFn: () => call(api.GET("/api/v1/auth/sessions")) });
   const end = useMutation({
     mutationFn: (id: string | null) =>
@@ -459,10 +511,10 @@ function SessionsSection() {
         ? call(api.DELETE("/api/v1/auth/sessions/{session_id}", { params: { path: { session_id: id } } }))
         : call(api.DELETE("/api/v1/auth/sessions")),
     onSuccess: (_r, id) => {
-      notifySuccess(id ? "Gerät abgemeldet" : "Alle anderen Geräte abgemeldet");
+      notifySuccess(id ? t("Gerät abgemeldet") : t("Alle anderen Geräte abgemeldet"));
       void queryClient.invalidateQueries({ queryKey: ["sessions"] });
     },
-    onError: (e) => notifyError(e, "Abmelden nicht möglich"),
+    onError: (e) => notifyError(e, t("Abmelden nicht möglich")),
   });
 
   if (sessions.isPending) return <Loader size="sm" />;
@@ -472,7 +524,7 @@ function SessionsSection() {
   return (
     <Stack gap="xs">
       <Text size="sm" c="dimmed">
-        Unbekanntes Gerät? Abmelden und das Passwort ändern.
+        {t("Unbekanntes Gerät? Abmelden und das Passwort ändern.")}
       </Text>
       {sessions.data.map((s) => (
         <Group key={s.id} justify="space-between" wrap="nowrap" data-testid="session">
@@ -485,24 +537,24 @@ function SessionsSection() {
                 </Text>
                 {s.current && (
                   <Badge size="xs" variant="light">
-                    dieses Gerät
+                    {t("dieses Gerät")}
                   </Badge>
                 )}
               </Group>
               <Text size="xs" c="dimmed">
-                {[s.ip, s.last_used_at ? `zuletzt ${formatDateTime(s.last_used_at)}` : null]
+                {[s.ip, s.last_used_at ? t("zuletzt {{date}}", { date: formatDateTime(s.last_used_at) }) : null]
                   .filter(Boolean)
                   .join(" · ")}
               </Text>
             </div>
           </Group>
           {!s.current && (
-            <Tooltip label="Abmelden">
+            <Tooltip label={t("Abmelden")}>
               <ActionIcon
                 variant="subtle"
                 color="red"
                 onClick={() => end.mutate(s.id)}
-                aria-label={`${s.device} abmelden`}
+                aria-label={t("{{device}} abmelden", { device: s.device })}
               >
                 <IconLogout size={18} />
               </ActionIcon>
@@ -518,15 +570,15 @@ function SessionsSection() {
             size="xs"
             onClick={() =>
               modals.openConfirmModal({
-                title: "Überall sonst abmelden?",
-                children: <Text size="sm">Alle anderen Geräte müssen sich danach neu anmelden.</Text>,
-                labels: { confirm: "Abmelden", cancel: "Abbrechen" },
+                title: t("Überall sonst abmelden?"),
+                children: <Text size="sm">{t("Alle anderen Geräte müssen sich danach neu anmelden.")}</Text>,
+                labels: { confirm: t("Abmelden"), cancel: t("Abbrechen") },
                 confirmProps: { color: "red" },
                 onConfirm: () => end.mutate(null),
               })
             }
           >
-            Überall sonst abmelden ({others})
+            {t("Überall sonst abmelden ({{count}})", { count: others })}
           </Button>
         </Group>
       )}
@@ -536,13 +588,16 @@ function SessionsSection() {
 
 function NewDeviceHint() {
   const status = useSetupStatus();
+  const { t } = useTranslation();
   const url = certificatePageUrl(status.data);
   if (!url) return null;
   return (
-    <Alert color="blue" variant="light" title="Neues Gerät verbinden">
-      Die Verbindung ist mit dem eigenen Zertifikat dieser HomeDMS-Installation verschlüsselt. Damit ein neues Handy
-      oder ein neuer PC ihr ohne Warnung vertraut, dort einmal <Anchor href={url}>{url}</Anchor> öffnen und der
-      Anleitung folgen.
+    <Alert color="blue" variant="light" title={t("Neues Gerät verbinden")}>
+      <Trans
+        i18nKey="Die Verbindung ist mit dem eigenen Zertifikat dieser HomeDMS-Installation verschlüsselt. Damit ein neues Handy oder ein neuer PC ihr ohne Warnung vertraut, dort einmal <anchor>{{url}}</anchor> öffnen und der Anleitung folgen."
+        values={{ url }}
+        components={{ anchor: <Anchor href={url} /> }}
+      />
     </Alert>
   );
 }
