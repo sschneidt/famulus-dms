@@ -4,7 +4,7 @@ import { api, call } from "../api/client";
 /** GET /setup/status (oeffentlich): eingerichtet? und wie Geraete der Verschluesselung vertrauen. */
 export interface SetupStatus {
   bootstrapped: boolean;
-  /** true = HomeDMS nutzt eine eigene Zertifizierungsstelle -> neue Geraete einmal einrichten */
+  /** true = Famulus DMS nutzt eine eigene Zertifizierungsstelle -> neue Geraete einmal einrichten */
   tls?: boolean;
   http_port?: number;
   https_port?: number;
@@ -20,7 +20,7 @@ export function useSetupStatus() {
   });
 }
 
-/** Hilfeseite, ueber die ein neues Geraet dem HomeDMS-Zertifikat vertraut (cert_page.py). */
+/** Hilfeseite, ueber die ein neues Geraet dem Famulus-DMS-Zertifikat vertraut (cert_page.py). */
 export function certificatePageUrl(status: SetupStatus | undefined): string | null {
   if (!status?.tls) return null;
   const port = status.http_port ?? 8000;

@@ -1,0 +1,58 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:   # wird vom Release-Ablauf (release.yml) wiederverwendet
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Unit- und Integrationstests)
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: homedms
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: homedms_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U homedms" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Die Integrationstests laufen nur gegen eine Datenbank, deren Name auf _test endet
+      HOMEDMS_INTEGRATION_TESTS: "1"
+      DATABASE_URL: postgresql://homedms:test@localhost:5432/homedms_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tesseract (fuer die Texterkennungs-Tests)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng tesseract-ocr-rus tesseract-ocr-osd postgresql-client
+      - name: Erweiterungen der Datenbank anlegen
+        run: PGPASSWORD=test psql -h localhost -U homedms -d homedms_test -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;'
+      - uses: astral-sh/setup-uv@v5
+      - name: Tests
+        working-directory: backend
+        run: uv run --extra dev pytest -q
+
+  frontend:
+    name: Weboberflaeche (Typpruefung, Tests, Build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

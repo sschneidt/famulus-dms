@@ -82,7 +82,7 @@ export function RetentionPage() {
           <Title order={2}>{t("Aufbewahrung")}</Title>
           <Text c="dimmed" size="sm" maw={640}>
             {t(
-              "Wie lange Dokumente einer Kategorie aufbewahrt werden müssen. HomeDMS legt daraus automatisch einen Termin an, ab dem ein Dokument entsorgt werden darf.",
+              "Wie lange Dokumente einer Kategorie aufbewahrt werden müssen. Famulus DMS legt daraus automatisch einen Termin an, ab dem ein Dokument entsorgt werden darf.",
             )}
           </Text>
         </div>

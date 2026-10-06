@@ -1,4 +1,4 @@
-# Datenmodell: HomeDMS
+# Datenmodell: Famulus DMS
 
 Stand: 09.09.2026 · Version 0.1 · Basis: Anforderungsdokument v0.1 (siehe `Anforderungsdokument.md`)
 
@@ -240,7 +240,7 @@ Wird eine wiederkehrende Wiedervorlage als `erledigt` markiert, erzeugt das Back
 
 **PushSubscription**: id, user_id (FK), endpoint (eindeutig), keys (jsonb, Web-Push-Schlüssel p256dh/auth), created_at; seit 0013 user_agent (Gerätename), last_success_at, last_error. Meldet der Push-Dienst 404/410, wird das Abo gelöscht.
 
-**AppSetting** (0013): key (PK), value (jsonb), updated_at – serverweite Werte, die mit der Datenbank gesichert werden. `vapid`: der Schlüssel, mit dem HomeDMS Push-Nachrichten signiert (ginge er verloren, müsste jedes Gerät Push neu einschalten). `ocr_installs` (0014): Stand der Sprachpaket-Downloads je Code (`installing`/`failed` mit Fehlertext).
+**AppSetting** (0013): key (PK), value (jsonb), updated_at – serverweite Werte, die mit der Datenbank gesichert werden. `vapid`: der Schlüssel, mit dem Famulus DMS Push-Nachrichten signiert (ginge er verloren, müsste jedes Gerät Push neu einschalten). `ocr_installs` (0014): Stand der Sprachpaket-Downloads je Code (`installing`/`failed` mit Fehlertext).
 
 ### 3.11 KI-Chat-Assistent
 

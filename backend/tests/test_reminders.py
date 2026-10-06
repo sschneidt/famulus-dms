@@ -55,7 +55,7 @@ def test_empty_digest():
 def test_digest_with_details():
     digest = Digest(items=[_item(7), _item(-2, "Zahlungsfrist", "Stromrechnung <Stadtwerke>"), _item(0)],
                     new_proposals=2, open_proposals=3, new_review=1, open_review=4)
-    assert digest.subject() == "HomeDMS: 1 überfällig, 1 heute fällig, 1 demnächst"
+    assert digest.subject() == "Famulus DMS: 1 überfällig, 1 heute fällig, 1 demnächst"
     text = digest.text("https://nas:8443")
     assert text.index("Überfällig:") < text.index("Heute fällig:") < text.index("Demnächst:")
     assert "Zahlungsfrist – Stromrechnung <Stadtwerke>: seit 2 Tagen überfällig" in text
@@ -75,7 +75,7 @@ def test_digest_without_app_url_has_no_links():
 def test_push_summary():
     digest = Digest(items=[_item(d) for d in (1, 2, 3, 4, 5)], new_review=2, open_review=2)
     push = digest.push()
-    assert push["title"] == "HomeDMS: 5 demnächst, 2 zu prüfen"
+    assert push["title"] == "Famulus DMS: 5 demnächst, 2 zu prüfen"
     lines = push["body"].split("\n")
     assert lines[0] == "Kündigungsfrist – Kfz-Versicherung: morgen fällig (Mo, 05.10.2026)"
     assert "und 2 weitere Termine" in lines

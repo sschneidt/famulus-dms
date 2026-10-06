@@ -36,6 +36,7 @@ class FailedJob(BaseModel):
 
 
 class DiagnosticsResponse(BaseModel):
+    version: str  # installierte Famulus-DMS-Version (homedms/__init__.py) - nur fuer Admins sichtbar
     checked_at: datetime
     overall: Literal["ok", "warning", "error"]
     components: list[DiagnosticComponent]

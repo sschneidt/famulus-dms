@@ -4,7 +4,9 @@
 
 # Eigene Dokumente, Scan-Ordner und Geheimnisse - duerfen nie ins Image
 data/
+backups/
 **/data/documents
+backend/data/
 .env
 **/.env
 !**/.env.example

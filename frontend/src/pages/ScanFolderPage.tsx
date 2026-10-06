@@ -55,7 +55,7 @@ export function ScanFolderPage() {
         <Title order={2}>{t("Scan-Ordner")}</Title>
         <Text c="dimmed" size="sm" maw={720}>
           <Trans
-            i18nKey="Was der Scanner (oder Sie) in den Scan-Ordner auf dem NAS legt, holt HomeDMS jede Minute automatisch ab: PDF, JPG, PNG, TIFF, HEIC und E-Mails (.eml). Die Dokumente gehören dem ganzen Haushalt. Das Original wandert danach nach <code>_importiert</code>, Unbrauchbares nach <code>_fehler</code>."
+            i18nKey="Was der Scanner (oder Sie) in den Scan-Ordner auf dem NAS legt, holt Famulus DMS jede Minute automatisch ab: PDF, JPG, PNG, TIFF, HEIC und E-Mails (.eml). Die Dokumente gehören dem ganzen Haushalt. Das Original wandert danach nach <code>_importiert</code>, Unbrauchbares nach <code>_fehler</code>."
             components={{ code: <Code /> }}
           />
         </Text>
@@ -118,12 +118,12 @@ function LocationCard() {
                 values={{ setting }}
                 components={{ code: <Code /> }}
               />
-              {relative && ` ${t("Ein Pfad mit ./ beginnt im HomeDMS-Ordner (dort, wo docker-compose.yml liegt).")}`}
+              {relative && ` ${t("Ein Pfad mit ./ beginnt im Famulus-DMS-Ordner (dort, wo docker-compose.yml liegt).")}`}
             </>
           ) : (
             <>
               <Trans
-                i18nKey="Ändern: Einstellung <code>{{setting}}</code> (Umgebungsvariable bzw. <code>.env</code>) anpassen und HomeDMS neu starten."
+                i18nKey="Ändern: Einstellung <code>{{setting}}</code> (Umgebungsvariable bzw. <code>.env</code>) anpassen und Famulus DMS neu starten."
                 values={{ setting }}
                 components={{ code: <Code /> }}
               />

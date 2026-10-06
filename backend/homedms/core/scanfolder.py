@@ -1,5 +1,5 @@
 """Scan-Ordner-Import (Anforderungsdokument 4.1): Scanner/Multifunktionsgeraet legt Dateien per
-SMB/FTP in einen NAS-Ordner, HomeDMS holt sie automatisch ab.
+SMB/FTP in einen NAS-Ordner, Famulus DMS holt sie automatisch ab.
 
 Ablauf je Datei (Job tasks/scanfolder.py, jede Minute):
 1. Nur "fertige" Dateien: seit mind. MIN_AGE_SECONDS unveraendert und - bei PDF/Bild - vollstaendig

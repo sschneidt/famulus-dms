@@ -1,7 +1,7 @@
 [project]
 name = "homedms"
 version = "0.1.0"
-description = "HomeDMS Backend (API + Worker) - siehe /docs im Repo-Root fuer die Architektur-Dokumente"
+description = "Famulus DMS Backend (API + Worker) - siehe /docs im Repo-Root fuer die Architektur-Dokumente"
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115",

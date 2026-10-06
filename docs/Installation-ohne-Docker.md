@@ -1,6 +1,6 @@
-# HomeDMS ohne Docker – Windows-PC oder Linux-Server
+# Famulus DMS ohne Docker – Windows-PC oder Linux-Server
 
-HomeDMS läuft auf drei Wegen:
+Famulus DMS läuft auf drei Wegen:
 
 | Weg | Für wen | Aufwand |
 |---|---|---|
@@ -17,15 +17,15 @@ Alle drei Wege nutzen denselben Programmcode und dieselbe Datenbankstruktur. Ein
 | PostgreSQL 14+ (mit `pg_trgm`, ist dabei) | Datenbank, Job-Warteschlange | winget `PostgreSQL.PostgreSQL.16` | `apt install postgresql` |
 | Tesseract + Deutsch | Texterkennung | winget `UB-Mannheim.TesseractOCR` + Sprachdatei | `apt install tesseract-ocr-deu` |
 | Ollama | lokale KI (Einordnung, Betreff, Fristen) | winget `Ollama.Ollama` | Installationsskript von ollama.com |
-| Python 3.12 | HomeDMS selbst | von `uv` in `.tools\python` | von `uv` in `.tools/python` |
+| Python 3.12 | Famulus DMS selbst | von `uv` in `.tools\python` | von `uv` in `.tools/python` |
 | Node.js 22 | nur zum **Bauen** der Weboberfläche | in `.tools\node` | in `.tools/node` |
 | Meilisearch (optional) | tippfehlertolerante Suche | `-MitSuche` | Standard (aus mit `--ohne-suche`) |
 
-Bewusst **nicht** mehr nötig: die PostgreSQL-Erweiterung `pgvector`. Sie gibt es für Windows nicht als fertiges Paket; die Ähnlichkeit der Kategorie-Beispiele rechnet HomeDMS seit Migration 0010 selbst (bei einem Haushalt Bruchteile einer Sekunde). Ohne Meilisearch sucht HomeDMS direkt in der Datenbank (Teilwörter, ohne Tippfehler-Toleranz).
+Bewusst **nicht** mehr nötig: die PostgreSQL-Erweiterung `pgvector`. Sie gibt es für Windows nicht als fertiges Paket; die Ähnlichkeit der Kategorie-Beispiele rechnet Famulus DMS seit Migration 0010 selbst (bei einem Haushalt Bruchteile einer Sekunde). Ohne Meilisearch sucht Famulus DMS direkt in der Datenbank (Teilwörter, ohne Tippfehler-Toleranz).
 
 ## Windows
 
-1. HomeDMS-Ordner auf den PC kopieren, z. B. nach `C:\HomeDMS`.
+1. Famulus-DMS-Ordner auf den PC kopieren, z. B. nach `C:\HomeDMS`.
 2. PowerShell **als Administrator** öffnen:
    ```powershell
    cd C:\HomeDMS
@@ -33,11 +33,11 @@ Bewusst **nicht** mehr nötig: die PostgreSQL-Erweiterung `pgvector`. Sie gibt e
    ```
    Optionen: `-DatenOrdner D:\HomeDMS-Daten` (Standard `C:\HomeDMS-Daten`), `-Port 8000`, `-HttpsPort 8443`, `-OhneKI`, `-MitSuche`.
 3. Am Ende öffnet sich der Browser mit `https://localhost:8443`. Der Einrichtungsassistent legt Haushalt und Admin-Konto an; den nötigen **Einrichtungscode** zeigt das Skript am Ende an.
-4. Handy und andere PCs: einmal `http://<PC>:8000/zertifikat` öffnen und dem HomeDMS-Zertifikat vertrauen (Anleitung auf der Seite). Danach `https://<PC>:8443`.
+4. Handy und andere PCs: einmal `http://<PC>:8000/zertifikat` öffnen und dem Famulus-DMS-Zertifikat vertrauen (Anleitung auf der Seite). Danach `https://<PC>:8443`.
 
 Was das Skript einrichtet:
-- **Autostart:** geplante Aufgabe „HomeDMS“ (Aufgabenplanung). Sie startet beim Hochfahren, auch ohne Anmeldung, als Konto SYSTEM, und startet nach einem Absturz neu.
-- **Firewall:** Ports 8000 (Umleitung + Zertifikat-Hilfe) und 8443 (HomeDMS per HTTPS) für das private Netzwerk.
+- **Autostart:** geplante Aufgabe „Famulus DMS“ (Aufgabenplanung). Sie startet beim Hochfahren, auch ohne Anmeldung, als Konto SYSTEM, und startet nach einem Absturz neu.
+- **Firewall:** Ports 8000 (Umleitung + Zertifikat-Hilfe) und 8443 (Famulus DMS per HTTPS) für das private Netzwerk.
 - **Verschlüsselung:** eigene Zertifizierungsstelle in `C:\HomeDMS-Daten\tls` (nur Admins + SYSTEM); auf dem Server-PC selbst trägt das Skript sie als vertrauenswürdig ein. Details: `Sicherheitskonzept.md`.
 - **Einstellungen:** `C:\HomeDMS\homedms.env`, nur für Administratoren lesbar.
 - **Daten:** `C:\HomeDMS-Daten\documents` (Ablage), `scan` (Scan-Ordner) und `logs` (Protokolle).
@@ -47,12 +47,12 @@ Hinweise:
 - **Ollama:** Unter Windows läuft Ollama im angemeldeten Benutzer (Symbol im Infobereich). Nach einem Neustart rechnet die KI deshalb erst nach der Anmeldung. Bis dahin hochgeladene Dokumente landen unter „Prüfen“ und lassen sich mit „Erneut analysieren“ nachholen.
 - **Scanner:** Der Scan-Ordner `C:\HomeDMS-Daten\scan` lässt sich im Explorer freigeben (Rechtsklick > Eigenschaften > Freigabe). Das Multifunktionsgerät legt dann per „Scan to Folder“ direkt dort ab.
 - **Energiesparen:** Der PC sollte nicht in den Ruhezustand gehen, wenn das Handy jederzeit zugreifen soll.
-- **Handy-App (PWA):** Sobald das Handy dem HomeDMS-Zertifikat vertraut, lässt sich HomeDMS über „Zum Startbildschirm hinzufügen“ wie eine App installieren.
+- **Handy-App (PWA):** Sobald das Handy dem Famulus-DMS-Zertifikat vertraut, lässt sich Famulus DMS über „Zum Startbildschirm hinzufügen“ wie eine App installieren.
 
 ## Linux (Debian 12+, Ubuntu 22.04+)
 
 ```bash
-sudo mv HomeDMS /opt/homedms        # Ordner muss für den Dienst-Benutzer lesbar sein
+sudo mv Famulus DMS /opt/homedms        # Ordner muss für den Dienst-Benutzer lesbar sein
 cd /opt/homedms
 sudo bash scripts/install-linux.sh  # Optionen: --ohne-ki, --ohne-suche, --ohne-dienst
 ```
@@ -66,8 +66,8 @@ Was das Skript einrichtet:
 
 ## Update
 
-1. Neuen Stand des HomeDMS-Ordners einspielen (z. B. `git pull` oder Ordner ersetzen; `homedms.env` bleibt).
-2. Das Installationsskript erneut starten. Es aktualisiert die Python-Pakete, baut die Oberfläche neu und startet HomeDMS neu.
+1. Neuen Stand des Famulus-DMS-Ordners einspielen (z. B. `git pull` oder Ordner ersetzen; `homedms.env` bleibt).
+2. Das Installationsskript erneut starten. Es aktualisiert die Python-Pakete, baut die Oberfläche neu und startet Famulus DMS neu.
 3. Datenbank-Änderungen laufen beim Start automatisch (`alembic upgrade head`).
 
 ## Von Hand starten (ohne Skript, z. B. zur Fehlersuche)
@@ -98,7 +98,7 @@ Unter Windows eignen sich der Dateiversionsverlauf oder eine Aufgabe mit `pg_dum
 
 ## Sprachen der Texterkennung
 
-HomeDMS legt einen eigenen Ordner für Tesseract-Sprachpakete an (`TESSDATA_DIR` in `homedms.env`; die Skripte setzen ihn auf `<Datenordner>/tessdata`). Beim Start werden die Pakete der Tesseract-Installation dorthin verlinkt (unter Windows ohne Symlink-Recht kopiert). Weitere Sprachen wählt der Admin auf der Seite „Sprachen“ oder bei der Ersteinrichtung; der Worker lädt sie dann aus dem offiziellen Tesseract-Repository (`tessdata_fast` auf GitHub) – dafür braucht der Server ausgehenden Internetzugang. Ohne Internet: die Datei `<code>.traineddata` von Hand in diesen Ordner legen.
+Famulus DMS legt einen eigenen Ordner für Tesseract-Sprachpakete an (`TESSDATA_DIR` in `homedms.env`; die Skripte setzen ihn auf `<Datenordner>/tessdata`). Beim Start werden die Pakete der Tesseract-Installation dorthin verlinkt (unter Windows ohne Symlink-Recht kopiert). Weitere Sprachen wählt der Admin auf der Seite „Sprachen“ oder bei der Ersteinrichtung; der Worker lädt sie dann aus dem offiziellen Tesseract-Repository (`tessdata_fast` auf GitHub) – dafür braucht der Server ausgehenden Internetzugang. Ohne Internet: die Datei `<code>.traineddata` von Hand in diesen Ordner legen.
 
 ## Erinnerungen (E-Mail/Push)
 

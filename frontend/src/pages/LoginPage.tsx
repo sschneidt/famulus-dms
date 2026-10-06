@@ -57,7 +57,7 @@ export function LoginPage() {
           {insecureConnection() && (
             <Alert color="orange" icon={<IconLockOpen />} title={t("Verbindung nicht verschlüsselt")}>
               {t(
-                "Passwort und Dokumente gehen im Klartext durchs Netz. HomeDMS über https:// aufrufen – oder den Reverse Proxy mit HTTPS verwenden.",
+                "Passwort und Dokumente gehen im Klartext durchs Netz. Famulus DMS über https:// aufrufen – oder den Reverse Proxy mit HTTPS verwenden.",
               )}
             </Alert>
           )}
@@ -303,7 +303,7 @@ function SetupForm({ onDone }: { onDone: () => void }) {
           <MultiSelect
             label={t("Sprachen Ihrer Dokumente")}
             description={t(
-              "Für die Texterkennung. Fehlende Sprachpakete lädt HomeDMS nach der Einrichtung selbst herunter; ändern lässt sich das später unter „Sprachen“.",
+              "Für die Texterkennung. Fehlende Sprachpakete lädt Famulus DMS nach der Einrichtung selbst herunter; ändern lässt sich das später unter „Sprachen“.",
             )}
             data={catalog.map((c) => ({ value: c.code, label: c.name }))}
             value={ocrSelection}

@@ -52,7 +52,7 @@ def is_configured(settings: dict | None) -> bool:
 def build_message(settings: dict, to: str, subject: str, text: str, html: str | None = None) -> EmailMessage:
     msg = EmailMessage()
     msg["Subject"] = subject
-    msg["From"] = formataddr(("HomeDMS", settings["sender"]))
+    msg["From"] = formataddr(("Famulus DMS", settings["sender"]))
     msg["To"] = to
     msg["Message-ID"] = make_msgid(domain=settings["sender"].rpartition("@")[2] or "homedms")
     msg["Auto-Submitted"] = "auto-generated"  # keine Abwesenheitsnotizen zurueck

@@ -92,7 +92,7 @@ function OcrLanguageForm({ data }: { data: Schemas["OcrLanguagesResponse"] }) {
       </Group>
       <Text size="sm" c="dimmed" mb="md">
         {t(
-          "Wählen Sie die Sprachen, in denen Ihre Briefe und Verträge geschrieben sind. Jede zusätzliche Sprache macht die Erkennung etwas langsamer. Fehlende Sprachpakete lädt HomeDMS automatisch herunter (einige MB, Internetzugang nötig).",
+          "Wählen Sie die Sprachen, in denen Ihre Briefe und Verträge geschrieben sind. Jede zusätzliche Sprache macht die Erkennung etwas langsamer. Fehlende Sprachpakete lädt Famulus DMS automatisch herunter (einige MB, Internetzugang nötig).",
         )}
       </Text>
       <Text size="sm" mb="sm">

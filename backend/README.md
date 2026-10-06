@@ -1,6 +1,6 @@
-# HomeDMS Backend
+# Famulus DMS Backend
 
-FastAPI-Backend (Rolle `api`) und Hintergrund-Worker (Rolle `worker`) für HomeDMS -
+FastAPI-Backend (Rolle `api`) und Hintergrund-Worker (Rolle `worker`) für Famulus DMS -
 siehe `/docs` im Repo-Root für die Architektur- und Anforderungsdokumente
 (`Anforderungsdokument.md`, `Datenmodell.md`, `API-Design.md`, `Docker-Compose-Entwurf.md`).
 
@@ -40,13 +40,13 @@ Familie Muster/
   (in der App über den Zauberstab wieder auf automatisch umstellbar).
 - **Dateiname:** „JJJJ-MM-TT Absender – Betreff“, bei Namensgleichheit „ (2)“.
 - **Objekt-Ordner** für „Haus & Reparaturen“, „Wohnen & Nebenkosten“ und Gebäude-/Hausrat-
-  Versicherungen (`categories.property_mode`). Objekte legt HomeDMS aus erkannten Adressen selbst an
+  Versicherungen (`categories.property_mode`). Objekte legt Famulus DMS aus erkannten Adressen selbst an
   (Absenderadressen aus Briefkopf/Fußzeile werden verworfen); umbenennen/zusammenführen unter
   „Objekte“ in der App.
 - Die Datenbank bleibt führend; die Ordner werden bei jeder Änderung vom Worker nachgezogen
   (`homedms/core/filing.py`). Beim Start des API-Containers wird die Ablage für alle Dokumente
   einmal eingereiht, manuell: `docker compose exec app-api python -m homedms.cli refile`.
-- **Bitte Dateien nicht direkt in File Station umbenennen oder verschieben** – HomeDMS findet sie
+- **Bitte Dateien nicht direkt in File Station umbenennen oder verschieben** – Famulus DMS findet sie
   sonst nicht mehr. Änderungen immer über die App.
 
 ## Scan-Ordner
@@ -236,6 +236,9 @@ ergänzen). `0003` stellt alle Zeitstempel auf "mit Zeitzone" um.
   15 Minuten) in der Glocke, per E-Mail (`core/mailer.py`, SMTP des Haushalts) und per Web-Push
   (`core/webpush.py`, RFC 8291/8292 ohne Zusatzbibliothek); Endpunkte unter `/notifications`
   und `/tenant/mail`.
+- **Papierkorb leeren (05.10.2026):** Der Job `purge_trash` (nachts 03:30, `tasks/trash.py`,
+  Logik `core/trash.py`) löscht Dokumente endgültig, die länger als `TRASH_RETENTION_DAYS`
+  (Standard 30) im Papierkorb liegen - inkl. Dateien und Suchindex-Eintrag.
 - **Tests:** siehe oben.
 
 ## Was noch fehlt (nächste Schritte)

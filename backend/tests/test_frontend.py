@@ -12,7 +12,7 @@ from homedms.frontend import mount_frontend
 def dist(tmp_path: Path) -> Path:
     root = tmp_path / "dist"
     (root / "assets").mkdir(parents=True)
-    (root / "index.html").write_text("<!doctype html><title>HomeDMS</title>")
+    (root / "index.html").write_text("<!doctype html><title>Famulus DMS</title>")
     (root / "assets" / "index-abc123.js").write_text("console.log(1)")
     (root / "sw.js").write_text("// sw")
     (tmp_path / "geheim.txt").write_text("nicht ausliefern")
@@ -37,7 +37,7 @@ def test_index_und_spa_routen(dist: Path) -> None:
     for path in ("/", "/dokumente/123", "/termine?ansicht=erledigt"):
         resp = client.get(path)
         assert resp.status_code == 200, path
-        assert "<title>HomeDMS</title>" in resp.text
+        assert "<title>Famulus DMS</title>" in resp.text
         assert resp.headers["cache-control"] == "no-cache"
 
 
@@ -57,7 +57,7 @@ def test_api_bleibt_api(dist: Path) -> None:
     for path in ("/api/v1/gibtsnicht", "/api", "/health/x", "/docs/x"):
         resp = client.get(path)
         assert resp.status_code == 404, path
-        assert "HomeDMS" not in resp.text
+        assert "Famulus DMS" not in resp.text
 
 
 def test_kein_zugriff_ausserhalb_des_build_ordners(dist: Path) -> None:

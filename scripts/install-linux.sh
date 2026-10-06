@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# HomeDMS auf einem Linux-Server installieren - OHNE Docker (Debian 12+, Ubuntu 22.04+).
+# Famulus DMS auf einem Linux-Server installieren - OHNE Docker (Debian 12+, Ubuntu 22.04+).
 #
 #   sudo bash scripts/install-linux.sh                 Installation bzw. Aktualisierung
 #   sudo bash scripts/install-linux.sh --ohne-ki       ohne Ollama (KI-Einordnung bleibt aus)
@@ -7,13 +7,13 @@
 #   sudo bash scripts/install-linux.sh --ohne-dienst   keinen systemd-Dienst einrichten (z. B. WSL/Container);
 #                                                   Start dann von Hand, siehe Ausgabe am Ende
 #
-# Der HomeDMS-Ordner (dieses Repository) bleibt, wo er ist - empfohlen /opt/homedms. Das Skript
+# Der Famulus-DMS-Ordner (dieses Repository) bleibt, wo er ist - empfohlen /opt/homedms. Das Skript
 # kann jederzeit erneut laufen (z. B. nach einem Update): Vorhandene Einstellungen, Datenbank und
 # Dokumente bleiben unberuehrt.
 #
 # Was passiert:
 #  1. Pakete: PostgreSQL, Tesseract (Deutsch/Englisch), curl
-#  2. Werkzeuge in <HomeDMS>/.tools: uv + Python 3.12, Node.js (nur zum Bauen der Oberflaeche),
+#  2. Werkzeuge in <Famulus DMS>/.tools: uv + Python 3.12, Node.js (nur zum Bauen der Oberflaeche),
 #     Meilisearch
 #  3. Ollama + Sprachmodelle (offizielles Installationsskript von ollama.com)
 #  4. Datenbank "homedms" mit eigenem Benutzer und Zufallspasswort
@@ -51,7 +51,7 @@ secret() { head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c "${1:
 
 [ "$(id -u)" -eq 0 ] || die "Bitte mit sudo starten: sudo bash $0"
 command -v apt-get >/dev/null || die "Dieses Skript unterstuetzt Debian/Ubuntu (apt). Andere Systeme: docs/Installation-ohne-Docker.md"
-[ -f "$APP_DIR/backend/pyproject.toml" ] || die "$APP_DIR sieht nicht wie der HomeDMS-Ordner aus"
+[ -f "$APP_DIR/backend/pyproject.toml" ] || die "$APP_DIR sieht nicht wie der Famulus-DMS-Ordner aus"
 
 case "$(uname -m)" in
   x86_64) ARCH_NODE=x64; ARCH_MEILI=amd64 ;;
@@ -167,7 +167,7 @@ fi
 step "Dienst einrichten (systemd: homedms)"
 cat > /etc/systemd/system/homedms.service <<UNIT
 [Unit]
-Description=HomeDMS - Dokumentenverwaltung
+Description=Famulus DMS - Dokumentenverwaltung
 After=network-online.target postgresql.service ollama.service
 Wants=network-online.target
 
@@ -194,9 +194,9 @@ HTTPS_PORT=$(sed -n 's/^HTTPS_PORT=//p' "$ENV_FILE"); HTTPS_PORT=${HTTPS_PORT:-8
 for _ in $(seq 1 60); do curl -fs "http://localhost:$PORT/health" >/dev/null && break; sleep 1; done
 if curl -fs "http://localhost:$PORT/health" >/dev/null; then
   IP=$(hostname -I 2>/dev/null | awk '{print $1}')
-  step "Fertig! HomeDMS laeuft: https://${IP:-localhost}:$HTTPS_PORT"
+  step "Fertig! Famulus DMS laeuft: https://${IP:-localhost}:$HTTPS_PORT"
   echo "   1. Auf jedem Geraet (Handy, PC) einmal http://${IP:-localhost}:$PORT/zertifikat oeffnen und"
-  echo "      der HomeDMS-Zertifizierungsstelle vertrauen (Anleitung auf der Seite)."
+  echo "      der Famulus-DMS-Zertifizierungsstelle vertrauen (Anleitung auf der Seite)."
   echo "   2. Dann https://${IP:-localhost}:$HTTPS_PORT - der Assistent legt Haushalt und Admin-Konto an."
   SETUP_CODE=$(sed -n 's/^SETUP_CODE=//p' "$ENV_FILE")
   if [ -n "$SETUP_CODE" ] && ! runuser -u postgres -- psql -d homedms -tAc "SELECT 1 FROM tenants LIMIT 1" 2>/dev/null | grep -q 1; then
@@ -205,6 +205,6 @@ if curl -fs "http://localhost:$PORT/health" >/dev/null; then
   echo "   Dokumente: $DATA_DIR/documents   Scan-Ordner: $DATA_DIR/scan   Protokoll: $DATA_DIR/logs"
   echo "   Dienst: systemctl status homedms   |   Update: Ordner aktualisieren, dieses Skript erneut starten"
 else
-  warn "HomeDMS antwortet nicht - Protokoll: journalctl -u homedms -n 50  bzw.  $DATA_DIR/logs/homedms.log"
+  warn "Famulus DMS antwortet nicht - Protokoll: journalctl -u homedms -n 50  bzw.  $DATA_DIR/logs/homedms.log"
   exit 1
 fi

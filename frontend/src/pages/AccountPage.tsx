@@ -259,7 +259,7 @@ function TwoFactorSection() {
       </Group>
       <Text size="sm" c="dimmed">
         {t(
-          "Nach dem Passwort fragt HomeDMS zusätzlich nach einem Code aus einer Authenticator-App (z. B. Google oder Microsoft Authenticator, Aegis, 2FAS). Wer nur dein Passwort kennt, kommt so nicht hinein.",
+          "Nach dem Passwort fragt Famulus DMS zusätzlich nach einem Code aus einer Authenticator-App (z. B. Google oder Microsoft Authenticator, Aegis, 2FAS). Wer nur dein Passwort kennt, kommt so nicht hinein.",
         )}
       </Text>
       <Group>
@@ -594,7 +594,7 @@ function NewDeviceHint() {
   return (
     <Alert color="blue" variant="light" title={t("Neues Gerät verbinden")}>
       <Trans
-        i18nKey="Die Verbindung ist mit dem eigenen Zertifikat dieser HomeDMS-Installation verschlüsselt. Damit ein neues Handy oder ein neuer PC ihr ohne Warnung vertraut, dort einmal <anchor>{{url}}</anchor> öffnen und der Anleitung folgen."
+        i18nKey="Die Verbindung ist mit dem eigenen Zertifikat dieser Famulus-DMS-Installation verschlüsselt. Damit ein neues Handy oder ein neuer PC ihr ohne Warnung vertraut, dort einmal <anchor>{{url}}</anchor> öffnen und der Anleitung folgen."
         values={{ url }}
         components={{ anchor: <Anchor href={url} /> }}
       />

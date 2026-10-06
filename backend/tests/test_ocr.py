@@ -39,8 +39,8 @@ def _make_scanned_pdf(path: Path, text: str) -> None:
 
 def test_digital_pdf_uses_embedded_text_not_ocr(tmp_path):
     path = tmp_path / "digital.pdf"
-    _make_digital_pdf(path, "Hello HomeDMS Invoice 42 EUR")
-    assert extract_text(path, lang="eng").strip() == "Hello HomeDMS Invoice 42 EUR"
+    _make_digital_pdf(path, "Hello Famulus DMS Invoice 42 EUR")
+    assert extract_text(path, lang="eng").strip() == "Hello Famulus DMS Invoice 42 EUR"
 
 
 def test_scanned_pdf_falls_back_to_ocr(tmp_path):

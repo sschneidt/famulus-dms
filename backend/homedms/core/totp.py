@@ -13,7 +13,7 @@ import time
 import pyotp
 import segno
 
-ISSUER = "HomeDMS"
+ISSUER = "Famulus DMS"
 RECOVERY_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
 RECOVERY_COUNT = 10
 INTERVAL = 30

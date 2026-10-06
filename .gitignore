@@ -11,6 +11,9 @@ __pycache__/
 .venv/
 .pytest_cache/
 
+# Datenbank-Sicherungen vor Updates (scripts/update.*)
+backups/
+
 # Lokale Docker-Compose-Datenordner (siehe DOCUMENTS_PATH/SCAN_FOLDER_PATH in .env.example)
 data/
 

@@ -8,7 +8,7 @@ export function Logo({ size = "lg" }: { size?: "md" | "lg" | "xl" }) {
         <IconFileText size={18} />
       </ThemeIcon>
       <Text fw={700} size={size}>
-        HomeDMS
+        Famulus DMS
       </Text>
     </Group>
   );

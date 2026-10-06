@@ -116,7 +116,7 @@ async def test_zwei_faktor(clean_database, monkeypatch):
         assert (await c.get(f"{API}/auth/2fa", headers=auth)).json() == {"enabled": False, "recovery_codes_left": 0}
         assert (await c.post(f"{API}/auth/2fa/setup", headers=auth, json={"password": "falsch"})).status_code == 400
         setup = (await c.post(f"{API}/auth/2fa/setup", headers=auth, json={"password": "admin-passwort"})).json()
-        assert setup["uri"].startswith("otpauth://totp/HomeDMS:admin%40example.com") and "<svg" in setup["qr_svg"]
+        assert setup["uri"].startswith("otpauth://totp/Famulus%20DMS:admin%40example.com") and "<svg" in setup["qr_svg"]
         app_totp = pyotp.TOTP(setup["secret"])
         assert (await c.post(f"{API}/auth/2fa/enable", headers=auth, json={"code": "000000"})).status_code == 400
         r = await c.post(f"{API}/auth/2fa/enable", headers=auth, json={"code": app_totp.now()})

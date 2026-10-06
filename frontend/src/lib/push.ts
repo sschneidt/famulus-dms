@@ -69,7 +69,7 @@ export async function subscribePush(publicKey: string): Promise<BrowserSubscript
   if (permission !== "granted") {
     throw new Error(
       permission === "denied"
-        ? i18n.t("Benachrichtigungen sind für HomeDMS blockiert – in den Website-Einstellungen des Browsers erlauben.")
+        ? i18n.t("Benachrichtigungen sind für Famulus DMS blockiert – in den Website-Einstellungen des Browsers erlauben.")
         : i18n.t("Benachrichtigungen wurden nicht erlaubt."),
     );
   }

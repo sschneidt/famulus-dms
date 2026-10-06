@@ -1,16 +1,16 @@
-# Sicherheitskonzept HomeDMS
+# Sicherheitskonzept Famulus DMS
 
 Stand: 03.10.2026. Grundlage: Anforderungsdokument Abschnitt 5 („HTTPS zwingend“) und der Nutzerwunsch: „Da es sich um sensible Dokumente handelt, ist die Sicherheit enorm wichtig.“ Fernzugriff ist per VPN geplant, nicht direkt über das Internet.
 
-## 1. Bedrohungen, gegen die HomeDMS schützt
+## 1. Bedrohungen, gegen die Famulus DMS schützt
 
 | Bedrohung | Schutz |
 |---|---|
-| Mitlesen im WLAN (Passwort, Anmeldung, Dokumente) | HTTPS für alles. HomeDMS bringt eine eigene, lokale Zertifizierungsstelle mit (Abschnitt 2). Port 8000 liefert nur eine Umleitung und eine Hilfeseite, nie Daten. |
+| Mitlesen im WLAN (Passwort, Anmeldung, Dokumente) | HTTPS für alles. Famulus DMS bringt eine eigene, lokale Zertifizierungsstelle mit (Abschnitt 2). Port 8000 liefert nur eine Umleitung und eine Hilfeseite, nie Daten. |
 | Passwort-Raten | Nach 5 Fehlversuchen in Folge wird das Konto gesperrt: 1 Minute, danach jeweils doppelt so lange, höchstens 60 Minuten. Während der Sperre wird das Passwort gar nicht geprüft. Zusätzlich gilt je Gerät/IP eine Grenze von 20 Fehlversuchen in 15 Minuten. Unbekannte E-Mail-Adressen sind an der Antwortzeit nicht erkennbar. |
 | Gestohlenes Passwort | Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes, Abschnitt 4. |
 | Gestohlene oder vergessene Sitzung (z. B. altes Handy) | „Angemeldete Geräte“: Jede Sitzung lässt sich einzeln beenden, die Wirkung ist sofort da. Passwortwechsel meldet alle anderen Geräte ab. Ein kopiertes Refresh-Token wird erkannt und beendet die ganze Sitzung. |
-| Eingeschleuste Skripte (XSS) | Content-Security-Policy erlaubt nur Skripte von HomeDMS selbst. Die Anmeldung liegt als HttpOnly-Cookie vor, das kein Skript lesen kann. Das kurzlebige Zugangs-Token liegt nur im Arbeitsspeicher. |
+| Eingeschleuste Skripte (XSS) | Content-Security-Policy erlaubt nur Skripte von Famulus DMS selbst. Die Anmeldung liegt als HttpOnly-Cookie vor, das kein Skript lesen kann. Das kurzlebige Zugangs-Token liegt nur im Arbeitsspeicher. |
 | Einbetten in fremde Seiten (Klick-Fallen) | `frame-ancestors 'self'` und `X-Frame-Options: SAMEORIGIN`. |
 | Übernahme einer frischen Installation | Die Ersteinrichtung braucht einen Einmal-Code, Abschnitt 5. |
 | Ausspähen der Programmschnittstelle | Die API-Dokumentation (`/docs`) ist nur sichtbar, wenn `API_DOCS=true` gesetzt ist. |
@@ -25,7 +25,7 @@ Stand: 03.10.2026. Grundlage: Anforderungsdokument Abschnitt 5 („HTTPS zwingen
 | Modus | Wann | Verhalten |
 |---|---|---|
 | `auto` (Standard) | Heimnetz bzw. VPN | Eigene Zertifizierungsstelle (CA). HTTPS auf `HTTPS_PORT` (8443). Port 8000 leitet um und zeigt unter `/zertifikat` die Hilfeseite für neue Geräte. |
-| `off` | hinter einem Reverse Proxy, der HTTPS macht (z. B. Synology) | HomeDMS spricht nur HTTP. Dann `APP_BIND=127.0.0.1` setzen, damit niemand am Proxy vorbei zugreift. |
+| `off` | hinter einem Reverse Proxy, der HTTPS macht (z. B. Synology) | Famulus DMS spricht nur HTTP. Dann `APP_BIND=127.0.0.1` setzen, damit niemand am Proxy vorbei zugreift. |
 | `custom` | eigenes Zertifikat (z. B. Let's Encrypt über eine eigene Domain) | `TLS_CERT_FILE` und `TLS_KEY_FILE` angeben. |
 
 **Eigene Zertifizierungsstelle** (`core/tls.py`):
@@ -37,7 +37,7 @@ Stand: 03.10.2026. Grundlage: Anforderungsdokument Abschnitt 5 („HTTPS zwingen
 
   Selbst mit gestohlenem CA-Schlüssel lässt sich damit keine fremde Webseite fälschen, etwa die der eigenen Bank. Das ist mit OpenSSL geprüft (`tests/test_security_hardening.py`).
 - **Server-Zertifikat:** 397 Tage gültig, das entspricht der Vorgabe der Browser. Es wird beim Start automatisch erneuert, wenn es in weniger als 30 Tagen abläuft oder ein Name bzw. eine Adresse fehlt. Die CA bleibt dabei gleich, Geräte müssen also nichts neu installieren.
-- **Namen:** Rechnername, `name.local`, die eigenen IP-Adressen und `TLS_HOSTNAMES`. Im Docker-Betrieb kennt der Container den NAS-Namen nicht, deshalb `TLS_HOSTNAMES` in der `.env` setzen. Wird HomeDMS unter einer nicht abgedeckten Adresse aufgerufen, zeigt die Diagnose das an.
+- **Namen:** Rechnername, `name.local`, die eigenen IP-Adressen und `TLS_HOSTNAMES`. Im Docker-Betrieb kennt der Container den NAS-Namen nicht, deshalb `TLS_HOSTNAMES` in der `.env` setzen. Wird Famulus DMS unter einer nicht abgedeckten Adresse aufgerufen, zeigt die Diagnose das an.
 - **Neues Gerät:** einmal `http://<server>:8000/zertifikat` öffnen. Die Seite hat einen QR-Code für das Handy, den Fingerabdruck zum Vergleichen und Anleitungen für iPhone/iPad, Android, Windows, Mac und Linux. Das Windows-Installationsskript trägt die CA auf dem Server-PC selbst automatisch ein.
 - **Kein HSTS:** HSTS würde Port 8000, also den Weg für neue Geräte, im Browser sperren. Die Umleitung von HTTP auf HTTPS übernimmt stattdessen Port 8000.
 
@@ -63,7 +63,7 @@ Stand: 03.10.2026. Grundlage: Anforderungsdokument Abschnitt 5 („HTTPS zwingen
 
 ## 5. Ersteinrichtung
 
-Solange kein Haushalt existiert, erzeugt HomeDMS einen Einmal-Code. Er steht:
+Solange kein Haushalt existiert, erzeugt Famulus DMS einen Einmal-Code. Er steht:
 - im Protokoll (`docker compose logs app-api`),
 - in `<Dokumente-Ordner>/.einrichtungscode`,
 - bei den Installationsskripten in der Ausgabe am Ende (`SETUP_CODE` in `homedms.env`).
@@ -88,7 +88,7 @@ Die gebaute Oberfläche ist gegen diese Richtlinie geprüft: keine Verstöße au
 
 ## 7. Gespeicherte Daten
 
-HomeDMS speichert Dokumente unverschlüsselt im Dateisystem. Das ist nötig, damit Texterkennung, Suche und das Öffnen per Netzwerkfreigabe funktionieren. Den Schutz im Ruhezustand übernimmt die Verschlüsselung des Speichers:
+Famulus DMS speichert Dokumente unverschlüsselt im Dateisystem. Das ist nötig, damit Texterkennung, Suche und das Öffnen per Netzwerkfreigabe funktionieren. Den Schutz im Ruhezustand übernimmt die Verschlüsselung des Speichers:
 
 | Plattform | Empfehlung |
 |---|---|
@@ -111,7 +111,7 @@ Sprachpakete der Texterkennung lädt nur der Worker, nur auf Anweisung eines Adm
 
 ## 8. Zugriff von unterwegs
 
-Empfohlen: **VPN**, also Synology VPN Server, WireGuard (z. B. in der FRITZ!Box) oder Tailscale. HomeDMS bleibt von außen unsichtbar; über das VPN gilt das Heimnetz-Zertifikat. Tailscale-Adressen (100.64/10, `*.ts.net`) sind in der Namensbeschränkung enthalten.
+Empfohlen: **VPN**, also Synology VPN Server, WireGuard (z. B. in der FRITZ!Box) oder Tailscale. Famulus DMS bleibt von außen unsichtbar; über das VPN gilt das Heimnetz-Zertifikat. Tailscale-Adressen (100.64/10, `*.ts.net`) sind in der Namensbeschränkung enthalten.
 
 Eine direkte Freigabe ins Internet ist nicht vorgesehen. Falls doch gewünscht: eigene Domain mit Let's Encrypt über den Synology-Reverse-Proxy (`TLS_MODE=off` + `APP_BIND=127.0.0.1`) und Zwei-Faktor-Anmeldung für alle Konten.
 

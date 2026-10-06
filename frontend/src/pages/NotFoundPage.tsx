@@ -7,7 +7,7 @@ export function NotFoundPage() {
   return (
     <Stack align="center" py="xl">
       <Title order={2}>{t("Seite nicht gefunden")}</Title>
-      <Text c="dimmed">{t("Diese Adresse gibt es in HomeDMS nicht.")}</Text>
+      <Text c="dimmed">{t("Diese Adresse gibt es in Famulus DMS nicht.")}</Text>
       <Button component={Link} to="/">
         {t("Zu den Dokumenten")}
       </Button>

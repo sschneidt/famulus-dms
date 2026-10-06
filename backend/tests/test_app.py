@@ -40,4 +40,4 @@ def test_openapi_schema_builds():
     # Zieht implizit alle Pydantic-Schemas/Response-Models durch - schlaegt fehl,
     # wenn irgendwo ein kaputtes Modell/eine kaputte Typ-Annotation steckt.
     schema = app.openapi()
-    assert schema["info"]["title"] == "HomeDMS API"
+    assert schema["info"]["title"] == "Famulus DMS API"

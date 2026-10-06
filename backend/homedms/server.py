@@ -1,9 +1,9 @@
-"""HomeDMS ohne Docker starten - ein Befehl fuer Windows-PC und Linux-Server.
+"""Famulus DMS ohne Docker starten - ein Befehl fuer Windows-PC und Linux-Server.
 
     python -m homedms.server            (aus dem Ordner backend/, mit dessen .venv)
 
 Was sonst docker-compose erledigt, macht dieser Starter selbst:
-1. Einstellungen aus der Datei homedms.env laden (im HomeDMS-Hauptordner; andere Datei:
+1. Einstellungen aus der Datei homedms.env laden (im Famulus-DMS-Hauptordner; andere Datei:
    Umgebungsvariable HOMEDMS_ENV). Vorlage: homedms.env.example.
 2. Datenbank auf den neuesten Stand bringen (alembic upgrade head) und Dateien aus aelteren
    Versionen zur Ablage einreihen - wie docker-entrypoint.sh.
@@ -121,7 +121,7 @@ def check_environment() -> list[str]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="python -m homedms.server", description="HomeDMS ohne Docker starten")
+    parser = argparse.ArgumentParser(prog="python -m homedms.server", description="Famulus DMS ohne Docker starten")
     parser.add_argument("--host", default=os.environ.get("HOST", "0.0.0.0"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     parser.add_argument("--no-worker", action="store_true", help="nur Weboberflaeche/API (Worker laeuft anderswo)")
@@ -202,8 +202,8 @@ def build_servers(host: str, http_port: int) -> list:
     common = {"host": host, "proxy_headers": True, "log_config": None}
     shown = "localhost" if host in ("0.0.0.0", "::") else host
     if mode == "off":
-        logger.warning("TLS_MODE=off: HomeDMS spricht nur HTTP - nur hinter einem Reverse Proxy mit HTTPS betreiben!")
-        logger.info("HomeDMS laeuft auf http://%s:%s", shown, http_port)
+        logger.warning("TLS_MODE=off: Famulus DMS spricht nur HTTP - nur hinter einem Reverse Proxy mit HTTPS betreiben!")
+        logger.info("Famulus DMS laeuft auf http://%s:%s", shown, http_port)
         return [uvicorn.Server(uvicorn.Config(app, port=http_port, **common))]
 
     if mode == "custom":
@@ -219,7 +219,7 @@ def build_servers(host: str, http_port: int) -> list:
         uvicorn.Server(uvicorn.Config(secured, port=settings.https_port, ssl_certfile=cert, ssl_keyfile=key, **common)),
         uvicorn.Server(uvicorn.Config(build_redirect_app(settings.https_port, files), port=http_port, **common)),
     ]
-    logger.info("HomeDMS laeuft auf https://%s:%s", shown, settings.https_port)
+    logger.info("Famulus DMS laeuft auf https://%s:%s", shown, settings.https_port)
     if files:
         logger.info("Neues Geraet? Zuerst http://%s:%s/zertifikat oeffnen (Fingerabdruck %s...)",
                     shown, http_port, files.fingerprint[:23])

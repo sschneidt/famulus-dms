@@ -194,7 +194,7 @@ function PushSettings({
       {support === "ios-needs-install" && (
         <Alert color="blue" variant="light">
           {t(
-            "Auf dem iPhone/iPad gibt es Push nur für Apps auf dem Home-Bildschirm: in Safari „Teilen“ → „Zum Home-Bildschirm“, HomeDMS von dort öffnen und hier einschalten (ab iOS 16.4).",
+            "Auf dem iPhone/iPad gibt es Push nur für Apps auf dem Home-Bildschirm: in Safari „Teilen“ → „Zum Home-Bildschirm“, Famulus DMS von dort öffnen und hier einschalten (ab iOS 16.4).",
           )}
         </Alert>
       )}

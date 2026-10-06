@@ -1,5 +1,5 @@
 /**
- * API-Client fuer das HomeDMS-Backend.
+ * API-Client fuer das Famulus-DMS-Backend.
  *
  * - Typen kommen aus der OpenAPI-Beschreibung des Backends (schema.d.ts, erzeugt mit
  *   `npm run gen:api`) - aendert sich das Backend, meldet der TypeScript-Compiler die Stellen.

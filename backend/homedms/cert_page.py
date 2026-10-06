@@ -1,6 +1,6 @@
 """HTTP-Seite neben HTTPS (Port 8000): Umleitung, Zertifikat-Hilfe, Healthcheck.
 
-- /zertifikat: Anleitung, wie ein neues Geraet der HomeDMS-Zertifizierungsstelle vertraut
+- /zertifikat: Anleitung, wie ein neues Geraet der Famulus-DMS-Zertifizierungsstelle vertraut
   (iPhone, Android, Windows, Mac, Linux), mit QR-Code fuer das Handy und Fingerabdruck zum
   Vergleichen. Danach laeuft alles ueber https://<server>:8443 ohne Warnung.
 - /homedms-ca.crt: das CA-Zertifikat (oeffentlich - der private Schluessel verlaesst nie den Server).
@@ -44,7 +44,7 @@ def build_redirect_app(https_port: int, files: "tls.TlsFiles | None") -> ASGIApp
 
     async def ca_certificate(_request: Request) -> Response:
         if files is None:
-            return Response(_("Kein eigenes Zertifikat - HomeDMS nutzt ein offizielles."), status_code=404)
+            return Response(_("Kein eigenes Zertifikat - Famulus DMS nutzt ein offizielles."), status_code=404)
         return Response(files.ca_cert.read_bytes(), media_type="application/x-x509-ca-cert", headers={
             "Content-Disposition": 'attachment; filename="homedms-ca.crt"', "Cache-Control": "no-store",
         })
@@ -81,7 +81,7 @@ def build_redirect_app(https_port: int, files: "tls.TlsFiles | None") -> ASGIApp
 
 
 class HostTracker:
-    """Merkt sich Adressen, unter denen HomeDMS aufgerufen wird, die das Zertifikat nicht abdeckt
+    """Merkt sich Adressen, unter denen Famulus DMS aufgerufen wird, die das Zertifikat nicht abdeckt
     (-> Browser-Warnung). Die Diagnose zeigt sie mit dem Hinweis, TLS_HOSTNAMES zu ergaenzen."""
 
     def __init__(self, app: ASGIApp, names: tuple[str, ...]) -> None:

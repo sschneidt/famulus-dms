@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-  HomeDMS-Smoke-Test: startet den Stack und prueft den kompletten Ablauf automatisch.
+  Famulus-DMS-Smoke-Test: startet den Stack und prueft den kompletten Ablauf automatisch.
 
 .DESCRIPTION
   Schritte: Stack bauen/starten -> auf die API warten -> Ersteinrichtung bzw. Anmeldung ->
@@ -31,7 +31,7 @@ param(
     [Alias("Passwort", "Kennwort")]
     [string]$Password,
     [string]$Haushalt = "Mein Haushalt",
-    # Leer = automatisch: https://localhost:8443, wenn HomeDMS HTTPS macht (TLS_MODE=auto), sonst http://localhost:8000
+    # Leer = automatisch: https://localhost:8443, wenn Famulus DMS HTTPS macht (TLS_MODE=auto), sonst http://localhost:8000
     [string]$BaseUrl = "",
     [string]$HttpUrl = "http://localhost:8000",
     # Einmal-Code fuer die Ersteinrichtung; leer = aus dem Container lesen (docker compose exec)
@@ -154,7 +154,7 @@ function Upload-Datei([string]$Datei, [string]$MimeType, [string]$Titel, [string
 }
 
 function Vertraue-HomeDmsZertifikat([string]$Datei) {
-    <# HTTPS mit der eigenen HomeDMS-Zertifizierungsstelle pruefen, ohne sie in Windows zu installieren:
+    <# HTTPS mit der eigenen Famulus-DMS-Zertifizierungsstelle pruefen, ohne sie in Windows zu installieren:
        Kette gegen GENAU diese CA bauen (Fingerabdruck), sonst ablehnen. PowerShell 7 nutzt einen
        anderen HTTP-Stack - dort wird fuer localhost auf die Pruefung verzichtet. #>
     $script:CurlTls = @("--cacert", $Datei, "--ssl-no-revoke")
@@ -176,7 +176,7 @@ public static class HomeDmsTrust {
         own.ChainPolicy.ExtraStore.Add(Ca);
         bool ok = own.Build(new X509Certificate2(cert));
         var root = own.ChainElements[own.ChainElements.Count - 1].Certificate;
-        if (root.Thumbprint != Ca.Thumbprint) { LastError = "Zertifikat stammt nicht von der HomeDMS-CA"; return false; }
+        if (root.Thumbprint != Ca.Thumbprint) { LastError = "Zertifikat stammt nicht von der Famulus-DMS-CA"; return false; }
         if (!ok) {
             var s = new System.Text.StringBuilder();
             foreach (var st in own.ChainStatus) {
@@ -212,7 +212,7 @@ $TlsParams = @{}
 $CurlTls = @()
 
 Write-Host ""
-Write-Host "HomeDMS Smoke-Test" -ForegroundColor Cyan
+Write-Host "Famulus DMS Smoke-Test" -ForegroundColor Cyan
 Write-Host ""
 
 if (-not $Email) { $Email = Read-Host "E-Mail-Adresse des Admin-Kontos" }
@@ -527,7 +527,7 @@ foreach ($t in $testfaelle) {
         Invoke-WebRequest @TlsParams -Uri "$Api/documents/$($t.Id)/download" -Headers @{ Authorization = "Bearer $token" } `
             -OutFile $ziel -UseBasicParsing -TimeoutSec 30
         if ($t.Mime -like "image/*") {
-            # Fotos/Bilder speichert HomeDMS als PDF (aufgerichtet, verkleinert) - Download ist also eine PDF
+            # Fotos/Bilder speichert Famulus DMS als PDF (aufgerichtet, verkleinert) - Download ist also eine PDF
             $kopf = [System.Text.Encoding]::ASCII.GetString([System.IO.File]::ReadAllBytes($ziel), 0, 4)
             $ok = $kopf -eq "%PDF"
             Schreibe-Schritt "Download $($t.Name)" $ok $(if ($ok) { "als PDF gespeichert" } else { "keine PDF" })

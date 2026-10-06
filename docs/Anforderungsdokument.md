@@ -1,4 +1,4 @@
-# Anforderungsdokument: HomeDMS
+# Anforderungsdokument: Famulus DMS
 ### Dokumentenmanagementsystem für Privathaushalte
 
 Stand: 05.10.2026 · Version 0.2 (Anforderungs-Interview 21.09.2026, seitdem fortgeschrieben mit Umsetzungsstand)
@@ -21,7 +21,7 @@ Markierung an den einzelnen Punkten: ✅ erledigt · 🔶 teilweise erledigt (wa
 | Mehrsprachige Oberfläche (Deutsch, Englisch, Russisch) | ✅ |
 | In der Oberfläche noch nicht bedienbar (im Server vorhanden): Rechte je Kategorie/Dokument, Kategorien verwalten, Regler „wie vorsichtig“, Termine an Personen zuweisen | 🔶 |
 | Office-Dateien und Outlook-.msg, PC-Agent für Scan-Ordner | ⬜ |
-| Tags, endgültiges Löschen aus dem Papierkorb nach 30 Tagen | ⬜ |
+| Tags | ⬜ |
 | KI-Chat-Assistent, externe KI-API | ⬜ |
 | Praxistest auf der Synology-NAS | ⬜ |
 
@@ -29,7 +29,7 @@ Markierung an den einzelnen Punkten: ✅ erledigt · 🔶 teilweise erledigt (wa
 
 ## 1. Zielsetzung
 
-HomeDMS reduziert die Anzahl physischer Papierdokumente in Privathaushalten durch automatisierten, KI-gestützten Import, Texterkennung, Klassifizierung und Ablage. Das System läuft selbst-hostet in einem Docker-Container auf einem Synology-NAS – alternativ ohne Docker direkt auf einem Windows-PC oder Linux-Server (Nutzerwunsch 03.10.2026) – und ist über Web-Browser (PWA) sowie später optional über eine native App nutzbar. Mehrere Haushalte (Mandanten) mit jeweils mehreren Nutzern können dieselbe Instanz gemeinsam nutzen, mit strikter Datentrennung zwischen den Haushalten.
+Famulus DMS reduziert die Anzahl physischer Papierdokumente in Privathaushalten durch automatisierten, KI-gestützten Import, Texterkennung, Klassifizierung und Ablage. Das System läuft selbst-hostet in einem Docker-Container auf einem Synology-NAS – alternativ ohne Docker direkt auf einem Windows-PC oder Linux-Server (Nutzerwunsch 03.10.2026) – und ist über Web-Browser (PWA) sowie später optional über eine native App nutzbar. Mehrere Haushalte (Mandanten) mit jeweils mehreren Nutzern können dieselbe Instanz gemeinsam nutzen, mit strikter Datentrennung zwischen den Haushalten.
 
 ## 2. Architekturüberblick
 
@@ -105,7 +105,7 @@ HomeDMS reduziert die Anzahl physischer Papierdokumente in Privathaushalten durc
   - Die Datenbank bleibt führend; die Ablage wird bei jeder Änderung (Kategorie, Datum, Absender, Betreff, Objekt, Papierkorb) automatisch nachgezogen. Dateien sollen daher nicht direkt in File Station umbenannt/verschoben werden.
 - ✅ Volltextsuche über OCR-Text mit **Tippfehler-Toleranz** – empfohlen: Meilisearch als leichtgewichtiger Zusatzdienst (Alternative: PostgreSQL + `pg_trgm`, geringere Fehlertoleranz, kein Zusatzdienst).
 - ✅ Original-Tracking: Metadatenfeld "Original vorhanden: ja/nein/Aufbewahrungsort" pro Dokument (unabhängig von Terminen, siehe 4.4a).
-- 🔶 **Löschen (Soft-Delete):** Gelöschte Dokumente landen zunächst 30 Tage lang in einem wiederherstellbaren Papierkorb (`deleted_at`-Zeitstempel statt sofortigem Hard-Delete), erst danach entfernt ein Hintergrund-Job sie endgültig. Vermeidet versehentlichen, endgültigen Datenverlust bei einem Klick. *(Papierkorb mit Wiederherstellen fertig; offen: automatisches endgültiges Löschen nach 30 Tagen.)*
+- ✅ **Löschen (Soft-Delete):** Gelöschte Dokumente landen zunächst 30 Tage lang in einem wiederherstellbaren Papierkorb (`deleted_at`-Zeitstempel statt sofortigem Hard-Delete), erst danach entfernt ein Hintergrund-Job sie endgültig. Vermeidet versehentlichen, endgültigen Datenverlust bei einem Klick. *(Umgesetzt 05.10.2026: Der Worker-Job `purge_trash` läuft nachts um 03:30 Uhr (`homedms/tasks/trash.py`, Logik `homedms/core/trash.py`) und löscht Dokumente, die länger als `TRASH_RETENTION_DAYS` (Standard 30) im Papierkorb liegen – samt Seiten, Terminen, Lernbeispielen, Dateien und Suchindex-Eintrag. Zuerst die Datenbank, dann die Dateien; Dateien außerhalb des Dokumente-Ordners werden nie angefasst.)*
 
 ### 4.4a Wiedervorlage / Termine (generisches Erinnerungsfeature)
 Verallgemeinerung der ursprünglichen Aufbewahrungsfrist-Erinnerung zu einem frei nutzbaren Termin-Feature, das die Aufbewahrungsfrist als einen Spezialfall miteinschließt.
@@ -161,7 +161,7 @@ Verallgemeinerung der ursprünglichen Aufbewahrungsfrist-Erinnerung zu einem fre
 - 🔶 **KI-Modell-Bereitstellung:** Das Ollama-Modell wird beim ersten Start automatisch im Hintergrund heruntergeladen (kein manueller Schritt). Die Anwendung bleibt währenddessen nutzbar; Klassifikation/Chat werden aktiv, sobald der Download abgeschlossen ist. Der Assistent zeigt den Fortschritt an. *(Docker lädt die Modelle beim ersten Start automatisch (Dienst `ollama-init`), die Diagnose zeigt fehlende Modelle und lädt sie per Knopf nach. Offen: Fortschrittsanzeige im Einrichtungsassistenten.)*
 - ✅ **Ressourcenschema (Grundlage für "einfach & leichtgewichtig" trotz mehrerer Dienste):** Basis-Dienste (PostgreSQL, Meilisearch, Backend, Frontend) laufen dauerhaft, sind aber im Leerlauf zusammen deutlich unter 1 GB RAM und praktisch ohne CPU-Last. Rechenintensive Arbeit (OCR, KI-Klassifikation, Ollama-Inferenz) läuft **on-demand** über eine Job-Queue bzw. Ollamas automatisches Entladen inaktiver Modelle aus dem RAM (`keep_alive`) – Ressourcen werden nur bei tatsächlicher Nutzung beansprucht, dauerhaft hoher Verbrauch entsteht nicht.
 - ✅ **Diagnose (umgesetzt 03.10.2026):** Admin-Seite „Diagnose“ zeigt den Zustand aller Bausteine (Datenbank, Worker, KI, Suche, Texterkennung, Speicher) als Ampel mit Klartext-Hinweisen und bietet einfache Reparaturen: Worker neu starten, hängende Aufträge neu starten, fehlende KI-Modelle laden, KI-Arbeitsspeicher freigeben, Suchindex neu aufbauen. Ganze Container oder die Datenbank lassen sich bewusst nicht aus der Weboberfläche neu starten (bräuchte Vollzugriff auf Docker/das NAS).
-- ✅ **Updates:** Erfolgen über einen einfachen Befehl (`docker compose pull && up`) bzw. optional Ein-Klick-Update über den Synology Container Manager. **Hartes Anforderungskriterium:** Bei Updates dürfen Daten, Archiv und Suchindex niemals verloren gehen. Dazu liegen Dokumente, Datenbank, Suchindex und heruntergeladene KI-Modelle in persistenten, benannten Docker-Volumes, die von Image-Updates unberührt bleiben; notwendige Datenbank-Schema-Migrationen laufen automatisch und verlustfrei beim Start der neuen Version.
+- 🔶 **Updates:** Erfolgen über einen einfachen Befehl (`docker compose pull && up`) bzw. optional Ein-Klick-Update über den Synology Container Manager. **Hartes Anforderungskriterium:** Bei Updates dürfen Daten, Archiv und Suchindex niemals verloren gehen. Dazu liegen Dokumente, Datenbank, Suchindex und heruntergeladene KI-Modelle in persistenten, benannten Docker-Volumes, die von Image-Updates unberührt bleiben; notwendige Datenbank-Schema-Migrationen laufen automatisch und verlustfrei beim Start der neuen Version. *(Umgesetzt 06.10.2026, Details in `Updates.md`: Versionsnummer (Semver) mit Änderungsprotokoll `CHANGELOG.md`; Update-Skripte `scripts/update.cmd` / `update.sh` sichern vor jedem Update die Datenbank, holen die neue Version, starten neu und prüfen den Start; Release-Ablauf über GitHub Actions (Tests → Image in der GitHub Container Registry → GitHub-Release). Offen: erste veröffentlichte Version in der Registry, Hinweis „Neue Version verfügbar“ in der Oberfläche, Anzeige der Version in der Oberfläche, Sicherung der Dokumente-Dateien (liegt weiter bei Hyper Backup).)*
 
 ## 5. Nicht-funktionale Anforderungen
 
@@ -195,7 +195,7 @@ Verallgemeinerung der ursprünglichen Aufbewahrungsfrist-Erinnerung zu einem fre
 - Auswahl und Dimensionierung des lokalen KI-Modells für Ollama (Kompromiss Qualität vs. NAS-Ressourcen) inkl. Fallback-Verhalten bei Überlastung.
 - Detailplanung Function-/Tool-Calling-Schnittstelle für den Chat-Assistenten (welche Aktionen darf er ausführen, Bestätigungs-Workflow vor destruktiven Massenänderungen).
 - ~~Feingranulares Rechte-/ACL-Modell ist im Detail gelöst (Datenmodell 3.6: Owner/Admin/`CategoryAccess`/`DocumentAccessOverride`).~~ – erledigt.
-- ~~Reverse-Proxy-/TLS-Einrichtung~~ – erledigt durch das eingebaute HTTPS mit eigener Zertifizierungsstelle (siehe 5. und `Sicherheitskonzept.md`); ein Reverse Proxy ist nur noch nötig, wenn HomeDMS aus dem Internet erreichbar sein soll.
+- ~~Reverse-Proxy-/TLS-Einrichtung~~ – erledigt durch das eingebaute HTTPS mit eigener Zertifizierungsstelle (siehe 5. und `Sicherheitskonzept.md`); ein Reverse Proxy ist nur noch nötig, wenn Famulus DMS aus dem Internet erreichbar sein soll.
 - ~~Mobiler Foto-Import im Detail: Bibliothek für Kantenerkennung/Perspektivkorrektur, Mehrseiten-Scan-Workflow~~ – erledigt (OpenCV serverseitig, siehe 4.1); offen nur noch manuelles Nachziehen der Ecken.
 - Genaues Design des Einrichtungsassistenten (Schrittfolge, Pflicht- vs. optionale Felder, Validierungen).
 - ~~Job-Queue-Technologie ist entschieden und im Backend-Grundgerüst bereits verdrahtet (Procrastinate/PostgreSQL, kein Redis nötig, siehe `Docker-Compose-Entwurf.md` und `backend/homedms/worker.py`).~~ – erledigt.

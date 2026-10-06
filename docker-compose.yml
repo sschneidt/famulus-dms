@@ -1,3 +1,8 @@
+# Fester Projektname: Die Volumes (Datenbank, Suchindex, KI-Modelle ...) heissen danach "homedms_*" -
+# unabhaengig davon, wie der Ordner heisst, in dem diese Datei liegt. Nicht aendern, sonst sieht
+# Docker Compose leere Volumes und die Daten wirken verschwunden.
+name: homedms
+
 networks:
   homedms:
     # Internes Docker-Netzwerk. Nur app-api veröffentlicht einen Port zum NAS-Host.
@@ -104,7 +109,7 @@ services:
   # aus (ein Container weniger als mit separatem nginx-Frontend-Container).
   # ---------------------------------------------------------------------------
   app-api:
-    image: ${APP_IMAGE:-homedms/backend}:${APP_VERSION:-latest}
+    image: ${APP_IMAGE:-ghcr.io/sschneidt/famulus-dms}:${APP_VERSION:-latest}
     # Baut lokal aus backend/Dockerfile, falls "image" noch nicht existiert/gepullt werden kann -
     # sobald es eine Registry gibt (Docker-Compose-Entwurf.md Abschnitt 6, offener Punkt), reicht
     # "docker compose pull", ohne diese Zeile entfernen zu muessen.
@@ -152,7 +157,7 @@ services:
       - tls:/data/tls
       - tessdata:/data/tessdata
     ports:
-      # 8443: HomeDMS per HTTPS. 8000: nur Umleitung auf HTTPS + Zertifikat-Hilfe fuer neue Geraete
+      # 8443: Famulus DMS per HTTPS. 8000: nur Umleitung auf HTTPS + Zertifikat-Hilfe fuer neue Geraete
       # (http://<nas>:8000/zertifikat). Mit TLS_MODE=off (Synology Reverse Proxy macht HTTPS) besser
       # APP_BIND=127.0.0.1 setzen, damit niemand am Proxy vorbei per HTTP zugreift.
       - "${APP_BIND:-0.0.0.0}:${APP_HTTP_PORT:-8000}:8000"
@@ -173,7 +178,7 @@ services:
   # "Job-Queue-Technologie" aus dem Anforderungsdokument, Abschnitt 7).
   # ---------------------------------------------------------------------------
   app-worker:
-    image: ${APP_IMAGE:-homedms/backend}:${APP_VERSION:-latest}
+    image: ${APP_IMAGE:-ghcr.io/sschneidt/famulus-dms}:${APP_VERSION:-latest}
     build:
       context: .
       dockerfile: backend/Dockerfile

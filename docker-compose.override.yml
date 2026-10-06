@@ -9,7 +9,9 @@
 #
 # Einfach ignorieren/löschen, falls stattdessen der volle Stack (inkl. app-api/app-worker)
 # per docker compose hochgefahren wird - dann läuft alles ohnehin im selben Docker-Netzwerk.
+# Nur vom eigenen Rechner aus erreichbar (127.0.0.1), nie aus dem Netzwerk: Wer das Repository klont und
+# "docker compose up" ausfuehrt, soll seine Datenbank nicht versehentlich im Heimnetz oeffnen.
 services:
   db:
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"

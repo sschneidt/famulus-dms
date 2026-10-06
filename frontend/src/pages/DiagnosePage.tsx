@@ -81,7 +81,7 @@ export function DiagnosePage() {
         <div>
           <Title order={2}>{t("Diagnose")}</Title>
           <Text c="dimmed" size="sm">
-            {t("Zustand aller Bausteine von HomeDMS")}
+            {t("Zustand aller Bausteine von Famulus DMS")}
             {diagnostics.data && ` · ${t("geprüft {{date}}", { date: formatDateTime(diagnostics.data.checked_at) })}`}
           </Text>
         </div>

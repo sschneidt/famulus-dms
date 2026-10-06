@@ -143,7 +143,7 @@ async def test_erinnerungen(clean_database, monkeypatch, tmp_path):
         mails = {m["To"]: m for m in FakeSMTP.sent}
         assert set(mails) == {"admin@example.com", "anna@example.com"}
         admin_mail = mails["admin@example.com"].get_body(("plain",)).get_content()
-        assert mails["admin@example.com"]["Subject"] == "HomeDMS: 1 demnächst"
+        assert mails["admin@example.com"]["Subject"] == "Famulus DMS: 1 demnächst"
         assert "Kündigungsfrist – kfz.pdf: in 7 Tagen fällig" in admin_mail and f"https://nas:8443/dokumente/{kfz}" in admin_mail
         assert "Später" not in admin_mail
         assert "Zahlungsfrist – strom.pdf: seit 2 Tagen überfällig" in mails["anna@example.com"].get_body(("plain",)).get_content()
@@ -192,7 +192,7 @@ async def test_erinnerungen(clean_database, monkeypatch, tmp_path):
 
         FakeSMTP.fail = False  # naechster Lauf: E-Mail geht raus, keine neue Zusammenfassung
         assert await digests() == 0
-        assert [m["Subject"] for m in FakeSMTP.sent] == ["HomeDMS: 1 demnächst"]
+        assert [m["Subject"] for m in FakeSMTP.sent] == ["Famulus DMS: 1 demnächst"]
         check = next(c for c in (await client.get(f"{API}/system/diagnostics", headers=admin)).json()["components"]
                      if c["key"] == "notifications")
         assert check["status"] == "ok"

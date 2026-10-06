@@ -12,6 +12,7 @@ from procrastinate.exceptions import AlreadyEnqueued
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from homedms import __version__
 from homedms.api.deps import require_admin
 from homedms.core import diagnostics
 from homedms.db import get_db
@@ -31,6 +32,7 @@ async def get_diagnostics(user: User = Depends(require_admin), db: AsyncSession 
     states = {c.status for c in components}
     overall = "error" if "error" in states else "warning" if "warning" in states else "ok"
     return DiagnosticsResponse(
+        version=__version__,
         checked_at=datetime.now(timezone.utc),
         overall=overall,
         components=[{

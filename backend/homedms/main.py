@@ -2,7 +2,7 @@
 (homedms/frontend.py, docs/Docker-Compose-Entwurf.md Abschnitt 1).
 
 Sicherheit (docs/Sicherheitskonzept.md): Sicherheits-Kopfzeilen fuer alle Antworten, die
-API-Dokumentation (/docs) nur bei API_DOCS=true, Einrichtungscode im Protokoll solange HomeDMS
+API-Dokumentation (/docs) nur bei API_DOCS=true, Einrichtungscode im Protokoll solange Famulus DMS
 noch nicht eingerichtet ist.
 """
 import logging
@@ -13,6 +13,7 @@ from fastapi.exception_handlers import http_exception_handler
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy import func, select
 
+from homedms import __version__
 from homedms.api.router import api_router
 from homedms.api.routes.health import router as health_router
 from homedms.config import get_settings
@@ -47,7 +48,7 @@ async def lifespan(_app: FastAPI):
 settings = get_settings()
 docs = settings.api_docs
 app = FastAPI(
-    title="HomeDMS API", version="0.1.0", lifespan=lifespan,
+    title="Famulus DMS API", version=__version__, lifespan=lifespan,
     docs_url="/docs" if docs else None, redoc_url="/redoc" if docs else None,
     openapi_url="/openapi.json" if docs else None,
 )

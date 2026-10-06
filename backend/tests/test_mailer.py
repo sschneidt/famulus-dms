@@ -18,8 +18,8 @@ def test_password_is_encrypted():
 
 
 def test_message_has_text_and_html():
-    msg = mailer.build_message(SETTINGS, "du@example.com", "HomeDMS: 1 heute fällig", "Text", "<p>HTML</p>")
-    assert msg["From"] == "HomeDMS <ich@example.com>"
+    msg = mailer.build_message(SETTINGS, "du@example.com", "Famulus DMS: 1 heute fällig", "Text", "<p>HTML</p>")
+    assert msg["From"] == "Famulus DMS <ich@example.com>"
     assert msg["Auto-Submitted"] == "auto-generated"
     assert [p.get_content_type() for p in msg.iter_parts()] == ["text/plain", "text/html"]
 

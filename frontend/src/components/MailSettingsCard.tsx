@@ -87,7 +87,7 @@ function toForm(s: Schemas["MailSettings"] | undefined): Form {
   };
 }
 
-/** Seite "Benutzer" (Admin): Postfach, ueber das HomeDMS die Erinnerungen verschickt. */
+/** Seite "Benutzer" (Admin): Postfach, ueber das Famulus DMS die Erinnerungen verschickt. */
 export function MailSettingsCard() {
   const settings = useMailSettings(true);
   if (settings.isError) return <Alert color="red">{settings.error.message}</Alert>;
@@ -124,7 +124,7 @@ function MailSettingsForm({ s }: { s: Schemas["MailSettings"] }) {
       </Group>
       <Text size="sm" c="dimmed" mb="md">
         {t(
-          "Über dieses Postfach verschickt HomeDMS die tägliche Erinnerung an alle, die E-Mail eingeschaltet haben. Am besten ein eigenes oder ohnehin vorhandenes Postfach mit App-Passwort. Das Passwort wird verschlüsselt gespeichert.",
+          "Über dieses Postfach verschickt Famulus DMS die tägliche Erinnerung an alle, die E-Mail eingeschaltet haben. Am besten ein eigenes oder ohnehin vorhandenes Postfach mit App-Passwort. Das Passwort wird verschlüsselt gespeichert.",
         )}
       </Text>
       {s?.last_error && (
@@ -204,8 +204,8 @@ function MailSettingsForm({ s }: { s: Schemas["MailSettings"] }) {
             required
           />
           <TextInput
-            label={t("Adresse von HomeDMS für Links")}
-            description={t("so, wie ihr HomeDMS im Browser öffnet")}
+            label={t("Adresse von Famulus DMS für Links")}
+            description={t("so, wie ihr Famulus DMS im Browser öffnet")}
             value={form.app_url}
             onChange={(e) => set("app_url", e.currentTarget.value)}
           />

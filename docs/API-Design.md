@@ -1,4 +1,4 @@
-# API-Endpunktliste: HomeDMS
+# API-Endpunktliste: Famulus DMS
 
 Stand: 10.09.2026 · Version 0.1 · Basis: `Anforderungsdokument.md` und `Datenmodell.md`
 
@@ -162,7 +162,7 @@ Umsetzung 04.10.2026: Die Erinnerungen entstehen als tägliche Zusammenfassung i
 |---|---|---|---|
 | GET | `/health` | Liveness/Readiness (für Docker Healthcheck) | öffentlich |
 | GET | `/version` | Backend-/Schema-Version (u. a. für Update-Diagnose, Anforderungsdokument 4.7) | angemeldet |
-| GET | `/system/diagnostics` | Seite „Diagnose“ (umgesetzt 03.10.2026): Ampel je Baustein – HomeDMS (Version, Docker/ohne Docker), Datenbank (Antwortzeit, Größe, Schema-Stand), Worker (aktive Arbeitsstränge per Heartbeat, Warteschlangen, fehlgeschlagene/hängende Aufträge), KI/Ollama (erreichbar, Modelle vorhanden/geladen), Suche/Meilisearch (erreichbar, Index vollständig), Texterkennung (Version, Sprachpakete), Speicher (frei, beschreibbar, Scan-Ordner) – plus Hinweise, passende Aktionen und fehlgeschlagene Aufträge der letzten 7 Tage (`core/diagnostics.py`) | Admin |
+| GET | `/system/diagnostics` | Seite „Diagnose“ (umgesetzt 03.10.2026): Ampel je Baustein – Famulus DMS (Version, Docker/ohne Docker), Datenbank (Antwortzeit, Größe, Schema-Stand), Worker (aktive Arbeitsstränge per Heartbeat, Warteschlangen, fehlgeschlagene/hängende Aufträge), KI/Ollama (erreichbar, Modelle vorhanden/geladen), Suche/Meilisearch (erreichbar, Index vollständig), Texterkennung (Version, Sprachpakete), Speicher (frei, beschreibbar, Scan-Ordner) – plus Hinweise, passende Aktionen und fehlgeschlagene Aufträge der letzten 7 Tage (`core/diagnostics.py`) | Admin |
 | POST | `/system/actions/{action}` | `restart-worker` (Worker beendet sich, Docker bzw. der Starter startet ihn neu), `retry-stalled` (hängende Aufträge neu einreihen), `pull-models` (fehlende KI-Modelle im Hintergrund laden), `unload-models` (KI-Arbeitsspeicher freigeben), `reindex-search` (Suchindex neu aufbauen). Container oder Datenbank neu starten geht bewusst nicht – das bräuchte Zugriff auf den Docker-Dienst des NAS | Admin |
 
 ## 12a. Sprachen (umgesetzt 05.10.2026)

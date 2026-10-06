@@ -14,8 +14,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.svg"],
       manifest: {
-        name: "HomeDMS",
-        short_name: "HomeDMS",
+        name: "Famulus DMS",
+        short_name: "Famulus DMS",
         description: "Dokumentenverwaltung für den Haushalt",
         lang: "de",
         start_url: "/",

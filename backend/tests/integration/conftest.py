@@ -7,7 +7,7 @@ Tabellen der Zieldatenbank:
     DATABASE_URL=postgresql://<user>:<pw>@<host>:<port>/<name>_test
 
 Als zusaetzliche Absicherung muss der Datenbankname auf "_test" enden, damit nie versehentlich
-die echte HomeDMS-Datenbank geleert wird. Das Schema wird vorher per `alembic upgrade head`
+die echte Famulus-DMS-Datenbank geleert wird. Das Schema wird vorher per `alembic upgrade head`
 angelegt/aktualisiert (testet damit auch die Migrationen selbst).
 """
 import os

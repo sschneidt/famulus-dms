@@ -1,4 +1,4 @@
-/* Push-Benachrichtigungen von HomeDMS anzeigen (wird vom Service Worker per importScripts geladen,
+/* Push-Benachrichtigungen von Famulus DMS anzeigen (wird vom Service Worker per importScripts geladen,
    siehe vite.config.ts). Inhalt: {title, body, url, tag} - verschluesselt vom Server
    (backend/homedms/core/webpush.py). */
 self.addEventListener("push", (event) => {
@@ -9,7 +9,7 @@ self.addEventListener("push", (event) => {
     data = { body: event.data ? event.data.text() : "" };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || "HomeDMS", {
+    self.registration.showNotification(data.title || "Famulus DMS", {
       body: data.body || "",
       tag: data.tag || "homedms",
       renotify: true,

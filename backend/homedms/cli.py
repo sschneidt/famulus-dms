@@ -114,7 +114,7 @@ def _ask_password() -> str | None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="python -m homedms.cli", description="HomeDMS-Verwaltung")
+    parser = argparse.ArgumentParser(prog="python -m homedms.cli", description="Famulus-DMS-Verwaltung")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("users", help="Alle Haushalte und Nutzer auflisten")
     reset = sub.add_parser("reset-password", help="Passwort eines Nutzers neu setzen")

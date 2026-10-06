@@ -144,10 +144,10 @@ class Digest:
         return parts
 
     def subject(self) -> str:
-        return "HomeDMS: " + ", ".join(self.counts()[:3])
+        return "Famulus DMS: " + ", ".join(self.counts()[:3])
 
     def text(self, app_url: str) -> str:
-        lines = [_("Hallo,"), "", _("das steht in HomeDMS an:"), ""]
+        lines = [_("Hallo,"), "", _("das steht in Famulus DMS an:"), ""]
         for title, items in self._groups():
             lines.append(f"{title}:")
             for item in items:
@@ -164,7 +164,7 @@ class Digest:
 
     def html(self, app_url: str) -> str:
         parts = ['<div style="font-family:Segoe UI,Arial,sans-serif;font-size:15px;color:#222;max-width:640px">',
-                 f"<p>{escape(_('Hallo,'))}</p><p>{escape(_('das steht in HomeDMS an:'))}</p>"]
+                 f"<p>{escape(_('Hallo,'))}</p><p>{escape(_('das steht in Famulus DMS an:'))}</p>"]
         for key, title, items in self._groups(with_key=True):
             color = {"overdue": "#c92a2a", "today": "#e8590c"}.get(key, "#1c7ed6")
             parts.append(f'<h3 style="margin:18px 0 6px;color:{color};font-size:16px">{escape(title)}</h3>'
@@ -195,7 +195,7 @@ class Digest:
             lines.append(_n("und {count} weiterer Termin", "und {count} weitere Termine", rest))
         lines += [line for line, _path in self._extras()]
         url = "/termine" if self.items or self.new_proposals else ("/pruefen" if self.new_review else "/")
-        title = "HomeDMS: " + ", ".join(self.counts()[:2])
+        title = "Famulus DMS: " + ", ".join(self.counts()[:2])
         return {"title": title, "body": "\n".join(lines), "url": url, "tag": "homedms-digest"}
 
     def _groups(self, with_key: bool = False) -> list[tuple]:
@@ -245,4 +245,4 @@ def item_line(item: ReminderItem) -> str:
 def _footer(app_url: str) -> list[str]:
     where = (_("unter {url}", url=f"{app_url}/konto") if app_url else _("unter „Konto & Sicherheit“"))
     return [_("Diese Zusammenfassung kommt einmal täglich, nur wenn etwas ansteht."),
-            _("Uhrzeit und Wege lassen sich in HomeDMS {where} ändern.", where=where)]
+            _("Uhrzeit und Wege lassen sich in Famulus DMS {where} ändern.", where=where)]

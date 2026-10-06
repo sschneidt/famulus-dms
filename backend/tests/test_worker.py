@@ -17,6 +17,7 @@ def test_worker_uses_the_shared_jobs_app():
 def test_expected_tasks_are_registered():
     assert "ping" in app.tasks
     assert "ocr_document" in app.tasks
+    assert "purge_trash" in app.tasks
 
 
 async def test_ping_task_returns_message():

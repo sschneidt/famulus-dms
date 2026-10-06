@@ -105,7 +105,7 @@ async def check_app() -> Component:
     except PackageNotFoundError:
         app_version = "0.1.0"
     mode = "Docker" if running_in_docker() else _("ohne Docker ({system})", system=platform.system())
-    return Component("app", "HomeDMS", "ok", _("läuft seit {duration}", duration=_duration(time.time() - STARTED_AT)), [
+    return Component("app", "Famulus DMS", "ok", _("läuft seit {duration}", duration=_duration(time.time() - STARTED_AT)), [
         (_("Version"), app_version),
         (_("Betrieb"), mode),
         ("Python", platform.python_version()),
@@ -136,7 +136,7 @@ async def check_database(db: AsyncSession) -> Component:
     ])
     if head and revision != head:
         component.status = "warning"
-        component.hint = _("Schema-Stand {revision}, erwartet {head} - HomeDMS neu starten, dann wird migriert.",
+        component.hint = _("Schema-Stand {revision}, erwartet {head} - Famulus DMS neu starten, dann wird migriert.",
                            revision=revision, head=head)
     return component
 
@@ -352,7 +352,7 @@ async def check_storage() -> Component:
     name = _("Speicher")
     if not writable:
         return Component("storage", name, "error", _("Ablage schreibgeschützt"), details,
-                         _("HomeDMS kann keine Dateien speichern - Berechtigungen des Ordners prüfen."))
+                         _("Famulus DMS kann keine Dateien speichern - Berechtigungen des Ordners prüfen."))
     if total and (free < 2 * 1024**3 or free / total < 0.05):
         return Component("storage", name, "warning", _("wenig Platz"), details, _("Weniger als 2 GB bzw. 5 % frei."))
     return Component("storage", name, "ok", _("{size} frei", size=_size(free)), details)
@@ -365,7 +365,7 @@ async def check_tls() -> Component:
     mode = settings.tls_mode.strip().lower()
     name = _("Verschlüsselung (HTTPS)")
     if mode == "off":
-        return Component("tls", name, "warning", _("HomeDMS selbst verschlüsselt nicht"),
+        return Component("tls", name, "warning", _("Famulus DMS selbst verschlüsselt nicht"),
                          [(_("Modus"), _("hinter Reverse Proxy"))],
                          _("Nur in Ordnung, wenn ein Reverse Proxy (z. B. Synology) HTTPS macht und Port 8000 nicht "
                            "direkt aus dem Netz erreichbar ist."))
@@ -374,7 +374,7 @@ async def check_tls() -> Component:
     info = tls.certificate_info(settings.tls_dir)
     if info is None:
         return Component("tls", name, "error", _("kein Zertifikat"),
-                         hint=_("HomeDMS wurde nicht über den Starter (python -m homedms.server) gestartet."))
+                         hint=_("Famulus DMS wurde nicht über den Starter (python -m homedms.server) gestartet."))
     days = (info["expires"] - datetime.now(timezone.utc)).days
     details = [
         (_("Modus"), _("eigene Zertifizierungsstelle")),
@@ -387,7 +387,7 @@ async def check_tls() -> Component:
     if uncovered:
         return Component("tls", name, "warning", _("Adresse nicht abgedeckt"), details,
                          _("Aufgerufen als {hosts} - dafür warnt der Browser. In den Einstellungen "
-                           "TLS_HOSTNAMES ergänzen und HomeDMS neu starten.", hosts=", ".join(uncovered)))
+                           "TLS_HOSTNAMES ergänzen und Famulus DMS neu starten.", hosts=", ".join(uncovered)))
     return Component("tls", name, "ok", _n("aktiv, noch {count} Tag gültig", "aktiv, noch {count} Tage gültig", days), details)
 
 
@@ -469,7 +469,7 @@ async def collect(tenant_id) -> list[Component]:
             return await fn(session, *args)
 
     return list(await asyncio.gather(
-        _safe(check_app(), "app", "HomeDMS"),
+        _safe(check_app(), "app", "Famulus DMS"),
         _safe(with_db(check_database), "database", _("Datenbank")),
         _safe(with_db(check_worker), "worker", _("Worker (Hintergrundverarbeitung)")),
         _safe(with_db(check_ai, tenant_id), "ai", _("KI (Ollama)")),

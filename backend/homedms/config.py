@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     ollama_timeout_seconds: int = 900
     # Tesseract-Sprachpakete fuer die Texterkennung (Anforderungsdokument 4.2), "+"-getrennt.
     # Standard, solange ein Admin auf der Seite "Sprachen" nichts anderes waehlt; dazu kommen immer
-    # die Oberflaechensprachen der Personen. Fehlende Pakete laedt HomeDMS selbst nach.
+    # die Oberflaechensprachen der Personen. Fehlende Pakete laedt Famulus DMS selbst nach.
     ocr_languages: str = "deu+eng"
     # Eigener Ordner fuer Sprachpakete (mitgelieferte + nachinstallierte, core/ocr_languages.py).
     # Im Container fest "/data/tessdata" (eigenes Volume).
@@ -49,6 +49,8 @@ class Settings(BaseSettings):
     # /data/scan. Leer = ohne Docker, dann ist scan_path selbst der echte Ordner.
     scan_host_path: str = ""
     scan_interval_cron: str = "* * * * *"  # jede Minute nachsehen
+    # So lange bleiben geloeschte Dokumente im Papierkorb, danach loescht der Worker sie endgueltig
+    trash_retention_days: int = 30
 
     # Gebaute Weboberflaeche (frontend/dist). Im Docker-Image fest "/app/frontend"; fehlt der
     # Ordner (z. B. bei reiner Backend-Entwicklung), laeuft nur die API.

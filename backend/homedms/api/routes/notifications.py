@@ -70,7 +70,7 @@ def render(note: Notification) -> NotificationItem:
         body = _n("{count} Dokument ist über den Scan-Ordner eingegangen.",
                   "{count} Dokumente sind über den Scan-Ordner eingegangen.", n)
     else:
-        title, body, url = p.get("title", "HomeDMS"), p.get("body", ""), p.get("url", "/")
+        title, body, url = p.get("title", "Famulus DMS"), p.get("body", ""), p.get("url", "/")
     return NotificationItem(id=note.id, type=note.type, title=title, body=body, url=url,
                             read=note.status == "read", created_at=note.created_at)
 
@@ -153,13 +153,13 @@ async def send_test(payload: TestRequest, user: User = Depends(get_current_user)
     try:
         if payload.channel == "email":
             await notifications.send_email(
-                db, user, _("HomeDMS: Testnachricht"),
-                _("Hallo,") + "\n\n" + _("diese Testnachricht zeigt: Der E-Mail-Versand von HomeDMS funktioniert.") + "\n"
+                db, user, _("Famulus DMS: Testnachricht"),
+                _("Hallo,") + "\n\n" + _("diese Testnachricht zeigt: Der E-Mail-Versand von Famulus DMS funktioniert.") + "\n"
                 + _("Erinnerungen kommen ab jetzt einmal täglich, wenn etwas ansteht.") + "\n", None)
             message = _("Test-E-Mail an {email} verschickt.", email=user.email)
         else:
             count = await notifications.send_push(db, user, {
-                "title": _("HomeDMS: Testnachricht"), "body": _("Push funktioniert auf diesem Gerät."), "url": "/konto",
+                "title": _("Famulus DMS: Testnachricht"), "body": _("Push funktioniert auf diesem Gerät."), "url": "/konto",
                 "tag": "homedms-test"})
             message = _n("Testnachricht an {count} Gerät geschickt.", "Testnachricht an {count} Geräte geschickt.", count)
     except (mailer.MailError, webpush.PushError) as exc:

@@ -50,7 +50,7 @@ def matches(code: str) -> bool:
 def announce() -> None:
     code = get_or_create()
     bar = "=" * 64
-    logger.warning("\n%s\n  HomeDMS ist noch nicht eingerichtet.\n  Einrichtungscode: %s\n"
+    logger.warning("\n%s\n  Famulus DMS ist noch nicht eingerichtet.\n  Einrichtungscode: %s\n"
                    "  (steht auch in %s)\n%s", bar, code, _file(), bar)
 
 

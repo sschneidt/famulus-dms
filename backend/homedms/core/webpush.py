@@ -1,7 +1,7 @@
 """Web-Push aufs Handy/den PC (Anforderungsdokument 4.5) - ohne Zusatzbibliothek.
 
 Ablauf: Der Browser meldet sich bei seinem Push-Dienst an (Google, Apple, Mozilla) und gibt
-HomeDMS eine Adresse (endpoint) plus Schluessel. HomeDMS verschluesselt jede Nachricht fuer genau
+Famulus DMS eine Adresse (endpoint) plus Schluessel. Famulus DMS verschluesselt jede Nachricht fuer genau
 dieses Geraet (RFC 8291, aes128gcm) und schickt sie an den Push-Dienst, signiert mit dem eigenen
 VAPID-Schluessel (RFC 8292). Der Push-Dienst sieht nur verschluesselte Bytes.
 

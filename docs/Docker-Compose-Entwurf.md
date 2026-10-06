@@ -1,4 +1,4 @@
-# Docker-Compose-Entwurf: HomeDMS
+# Docker-Compose-Entwurf: Famulus DMS
 
 > Ohne Docker (Windows-PC, Linux-Server): siehe `Installation-ohne-Docker.md`.
 Stand: 10.09.2026 · Version 0.1 · Basis: `Anforderungsdokument.md`, `Datenmodell.md`, `API-Design.md`
@@ -20,7 +20,7 @@ Das sind 5 dauerhafte Container plus ein einmaliger Init-Job – passend zum in 
 
 **Warum kein separater Frontend-Container?** Die gebaute PWA (React/Vue) wird als statische Dateien direkt vom `app-api`-Container mitausgeliefert (FastAPI `StaticFiles`) – ein Container weniger, ohne Funktionalität zu verlieren.
 
-**Stand 03.10.2026:** HomeDMS macht HTTPS standardmäßig selbst (`TLS_MODE=auto`, eigene Zertifizierungsstelle im Volume `tls`, in der `.env` `TLS_HOSTNAMES` mit Name/IP des NAS setzen). Der Synology-Reverse-Proxy bleibt als Alternative (`TLS_MODE=off`, `APP_BIND=127.0.0.1`) – vor allem, wenn eine eigene Domain mit Let's Encrypt gewünscht ist.
+**Stand 03.10.2026:** Famulus DMS macht HTTPS standardmäßig selbst (`TLS_MODE=auto`, eigene Zertifizierungsstelle im Volume `tls`, in der `.env` `TLS_HOSTNAMES` mit Name/IP des NAS setzen). Der Synology-Reverse-Proxy bleibt als Alternative (`TLS_MODE=off`, `APP_BIND=127.0.0.1`) – vor allem, wenn eine eigene Domain mit Let's Encrypt gewünscht ist.
 
 **Warum kein Reverse-Proxy-Container im Standard-Setup?** Nur `app-api` veröffentlicht einen Port zum NAS-Host. Da auf dem NAS bereits Docker/Container Manager läuft (Anforderungsdokument 2), zeigt Synologys **eigener, bereits vorhandener Reverse Proxy** (DSM-Systemsteuerung → Anmeldeportal → Erweiterter Reverse Proxy) auf diesen Port und übernimmt HTTPS/TLS – kostet keinen zusätzlichen Container und nutzt vorhandene NAS-Bordmittel. Für Nutzer ohne Synology (oder ohne Lust auf DSM-Klicks) ließe sich optional ein Caddy-Container als eigenes Compose-Profil ergänzen; im Basis-Setup bewusst weggelassen.
 

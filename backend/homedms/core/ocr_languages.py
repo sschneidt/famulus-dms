@@ -5,7 +5,7 @@ waehlt, bekommt russische Texterkennung), weitere Pakete lassen sich nachinstall
 
 - Aktiv fuer einen Haushalt: die vom Admin gewaehlten Sprachen (tenants.ocr_languages, sonst
   OCR_LANGUAGES aus der Konfiguration) plus die Oberflaechensprache jeder aktiven Person.
-- HomeDMS nutzt einen eigenen, beschreibbaren tessdata-Ordner (TESSDATA_DIR): Beim Start werden
+- Famulus DMS nutzt einen eigenen, beschreibbaren tessdata-Ordner (TESSDATA_DIR): Beim Start werden
   die mitgelieferten Pakete des Systems dorthin verlinkt/kopiert, nachinstallierte kommen dazu.
   Im Docker-Betrieb liegt er in einem eigenen Volume - Updates loeschen ihn nicht.
 - Nachinstalliert wird aus tessdata_fast (offizielle Tesseract-Modelle, dieselben wie in den

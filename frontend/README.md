@@ -1,4 +1,4 @@
-# HomeDMS – Weboberfläche
+# Famulus DMS – Weboberfläche
 
 React 19 + TypeScript + [Mantine](https://mantine.dev) als installierbare PWA (Desktop und Handy).
 Im Betrieb baut das Docker-Image diese Oberfläche mit und das Backend liefert sie unter `/` aus –

@@ -18,7 +18,7 @@ RUN npm run build
 FROM python:3.12-slim-bookworm
 
 # Tesseract + Sprachpakete fuer die drei Oberflaechensprachen (Deutsch, Englisch, Russisch).
-# Weitere Sprachen laedt HomeDMS bei Bedarf selbst nach (Seite "Sprachen", Volume tessdata). PyMuPDF, Pillow und
+# Weitere Sprachen laedt Famulus DMS bei Bedarf selbst nach (Seite "Sprachen", Volume tessdata). PyMuPDF, Pillow und
 # psycopg[binary] brauchen dagegen KEINE weiteren System-Pakete (reine/vorkompilierte Wheels) -
 # genau deshalb wurden sie so gewaehlt (Anforderungsdokument 4.7: "einfach installierbar").
 RUN apt-get update && apt-get install -y --no-install-recommends \

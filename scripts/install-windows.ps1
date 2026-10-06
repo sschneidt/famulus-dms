@@ -1,9 +1,9 @@
 ﻿<#
 .SYNOPSIS
-  HomeDMS auf einem Windows-PC installieren – ohne Docker und ohne NAS.
+  Famulus DMS auf einem Windows-PC installieren – ohne Docker und ohne NAS.
 
 .DESCRIPTION
-  PowerShell ALS ADMINISTRATOR öffnen, in den HomeDMS-Ordner wechseln und starten:
+  PowerShell ALS ADMINISTRATOR öffnen, in den Famulus-DMS-Ordner wechseln und starten:
 
     powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
 
@@ -16,13 +16,13 @@
 
   Was passiert (alles mit winget bzw. aus den offiziellen Download-Quellen):
     1. PostgreSQL 16, Tesseract (+ Deutsch), Ollama + Sprachmodelle
-    2. In <HomeDMS>\.tools: uv + Python 3.12, Node.js (nur zum Bauen der Oberfläche), ggf. Meilisearch
+    2. In <Famulus DMS>\.tools: uv + Python 3.12, Node.js (nur zum Bauen der Oberfläche), ggf. Meilisearch
     3. Datenbank "homedms" mit eigenem Benutzer und Zufallspasswort
     4. Einstellungen homedms.env (Zufallsschlüssel)
     5. Autostart: geplante Aufgabe "HomeDMS" (startet beim Hochfahren, auch ohne Anmeldung)
     6. Windows-Firewall: Port für das Heimnetz freigeben (Zugriff vom Handy)
 
-  Das Skript kann jederzeit erneut laufen (z. B. nach einem Update des HomeDMS-Ordners):
+  Das Skript kann jederzeit erneut laufen (z. B. nach einem Update des Famulus-DMS-Ordners):
   Vorhandene Einstellungen, Datenbank und Dokumente bleiben unberührt.
 #>
 [CmdletBinding()]
@@ -78,7 +78,7 @@ $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Fail "Bitte PowerShell als Administrator starten (Rechtsklick > Als Administrator ausführen)."
 }
-if (-not (Test-Path (Join-Path $AppDir "backend\pyproject.toml"))) { Fail "$AppDir sieht nicht wie der HomeDMS-Ordner aus." }
+if (-not (Test-Path (Join-Path $AppDir "backend\pyproject.toml"))) { Fail "$AppDir sieht nicht wie der Famulus-DMS-Ordner aus." }
 if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     Fail "winget fehlt - 'App-Installer' aus dem Microsoft Store installieren (ab Windows 10 21H2 meist schon vorhanden)."
 }
@@ -140,7 +140,7 @@ if (-not $OhneKI) {
         & $ollama pull $EmbedModel
         if ($LASTEXITCODE -ne 0) { Warn "Modelle konnten nicht geladen werden - später: ollama pull $ChatModel" }
     } else {
-        Warn "Ollama wurde nicht gefunden - HomeDMS läuft, die KI-Einordnung bleibt aber aus."
+        Warn "Ollama wurde nicht gefunden - Famulus DMS läuft, die KI-Einordnung bleibt aber aus."
     }
 }
 
@@ -264,7 +264,7 @@ $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoi
     -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
 Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principalTask -Settings $settings `
-    -Description "HomeDMS - Dokumentenverwaltung (Weboberfläche, Texterkennung, KI)" -Force | Out-Null
+    -Description "Famulus DMS - Dokumentenverwaltung (Weboberfläche, Texterkennung, KI)" -Force | Out-Null
 # Laufende Reste eines früheren Starts beenden, dann neu starten
 Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.CommandLine -like "*homedms.*" } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
@@ -278,17 +278,17 @@ $ok = $false
 for ($i = 0; $i -lt 90; $i++) {
     try { Invoke-RestMethod -Uri "http://localhost:$Port/health" -TimeoutSec 2 | Out-Null; $ok = $true; break } catch { Start-Sleep -Seconds 1 }
 }
-if (-not $ok) { Fail "HomeDMS antwortet nicht - Protokoll: $(Join-Path $DatenOrdner 'logs\homedms.log')" }
+if (-not $ok) { Fail "Famulus DMS antwortet nicht - Protokoll: $(Join-Path $DatenOrdner 'logs\homedms.log')" }
 
 # Diesem PC gleich vertrauen (die anderen Geraete: Seite /zertifikat)
 $caFile = Join-Path $DatenOrdner "tls\ca.crt"
 if (Test-Path $caFile) {
     Import-Certificate -FilePath $caFile -CertStoreLocation Cert:\LocalMachine\Root | Out-Null
-    Write-Host "   Zertifikat der HomeDMS-Zertifizierungsstelle auf diesem PC als vertrauenswürdig eingetragen."
+    Write-Host "   Zertifikat der Famulus-DMS-Zertifizierungsstelle auf diesem PC als vertrauenswürdig eingetragen."
 }
 $ip = (Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
     Where-Object { $_.PrefixOrigin -in "Dhcp", "Manual" -and $_.IPAddress -notlike "169.*" } | Select-Object -First 1).IPAddress
-Step "Fertig! HomeDMS läuft: https://localhost:$HttpsPort  (im Heimnetz: https://$($ip):$HttpsPort)"
+Step "Fertig! Famulus DMS läuft: https://localhost:$HttpsPort  (im Heimnetz: https://$($ip):$HttpsPort)"
 Write-Host "   Handy und andere PCs: einmal http://$($ip):$Port/zertifikat öffnen und dem Zertifikat vertrauen."
 $setupCode = ([regex]::Match((Get-Content $EnvFile -Raw), "(?m)^SETUP_CODE=(\S+)")).Groups[1].Value
 Write-Host "   Beim ersten Aufruf führt ein Assistent durch die Einrichtung (Haushalt + Admin-Konto)."

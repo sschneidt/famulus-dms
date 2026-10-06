@@ -68,7 +68,7 @@ export function UsersPage() {
           <Title order={2}>{t("Benutzer")}</Title>
           <Text c="dimmed" size="sm" maw={680}>
             {t(
-              "Wer HomeDMS nutzen darf. Mitglieder sehen und bearbeiten alle Dokumente des Haushalts (außer aus geschützten Kategorien) und ihre eigenen. Admins verwalten zusätzlich Benutzer, Aufbewahrung und den Scan-Ordner.",
+              "Wer Famulus DMS nutzen darf. Mitglieder sehen und bearbeiten alle Dokumente des Haushalts (außer aus geschützten Kategorien) und ihre eigenen. Admins verwalten zusätzlich Benutzer, Aufbewahrung und den Scan-Ordner.",
             )}
           </Text>
         </div>
@@ -428,7 +428,7 @@ function Credentials({
   const { t } = useTranslation();
   const certificatePage = certificatePageUrl(useSetupStatus().data);
   const text = [
-    `HomeDMS – ${window.location.origin}`,
+    `Famulus DMS – ${window.location.origin}`,
     `${t("E-Mail:")} ${email}`,
     `${t("Passwort:")} ${password}`,
     certificatePage ? `${t("Neues Gerät zuerst einrichten:")} ${certificatePage}` : null,
