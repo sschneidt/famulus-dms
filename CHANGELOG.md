@@ -8,6 +8,10 @@ Ablauf eines Releases und eines Updates: [docs/Updates.md](docs/Updates.md).
 ## [Unveröffentlicht]
 
 ### Geändert
+- Der Windows-Installer legt die geplante Aufgabe und die Firewall-Regel jetzt als „Famulus DMS“ an (vorher
+  „HomeDMS“); gleichnamige alte Einträge räumt er beim Lauf weg.
+- Doku: Installation ohne Docker in der `README.md`, Hinweis zu Docker und Port-Konflikten,
+  Skriptübersicht in `scripts/README.md`, kaputter `mv`-Befehl der Linux-Anleitung korrigiert.
 - Der Windows-Installer (`scripts/install-windows.ps1`) fragt beim ersten Lauf nach dem Datenordner für
   Dokumente, Scan-Ordner und Protokolle (Vorschlag `C:\Famulus-Daten`, vorher fest `C:\HomeDMS-Daten`).
   Bei einem erneuten Lauf wird der bisherige Ordner aus der `homedms.env` übernommen; mit

@@ -31,16 +31,20 @@ Bewusst **nicht** mehr nötig: die PostgreSQL-Erweiterung `pgvector`. Sie gibt e
    cd C:\Famulus
    powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
    ```
-   Optionen: `-DatenOrdner D:\Famulus-Daten` (ohne Angabe fragt das Skript danach, Vorschlag `C:\Famulus-Daten`; bei einer vorhandenen Installation wird der bisherige Ordner übernommen), `-Port 8000`, `-HttpsPort 8443`, `-OhneKI`, `-MitSuche`.
+   Beim ersten Lauf fragt das Skript, **wo Dokumente, Scan-Ordner und Protokolle liegen sollen** (Vorschlag `C:\Famulus-Daten`, Enter übernimmt ihn). Bei einem erneuten Lauf übernimmt es den bisherigen Ordner.
+
+   Optionen: `-DatenOrdner D:\Famulus-Daten` (ohne Rückfrage), `-Port 8000`, `-HttpsPort 8443`, `-OhneKI`, `-MitSuche`.
 3. Am Ende öffnet sich der Browser mit `https://localhost:8443`. Der Einrichtungsassistent legt Haushalt und Admin-Konto an; den nötigen **Einrichtungscode** zeigt das Skript am Ende an.
 4. Handy und andere PCs: einmal `http://<PC>:8000/zertifikat` öffnen und dem Famulus-DMS-Zertifikat vertrauen (Anleitung auf der Seite). Danach `https://<PC>:8443`.
+
+> **Läuft Famulus DMS auf diesem PC schon in Docker?** Dann zuerst im Projektordner `docker compose stop` ausführen. Das Skript richtet ein eigenes PostgreSQL auf Port 5432 ein, und die Ports 8000 und 8443 kann nur eine der beiden Varianten belegen. Die Windows-Installation ist eine **zweite, getrennte Instanz** mit eigener Datenbank und eigenem Datenordner; Daten aus Docker werden nicht übernommen.
 
 Was das Skript einrichtet:
 - **Autostart:** geplante Aufgabe „Famulus DMS“ (Aufgabenplanung). Sie startet beim Hochfahren, auch ohne Anmeldung, als Konto SYSTEM, und startet nach einem Absturz neu.
 - **Firewall:** Ports 8000 (Umleitung + Zertifikat-Hilfe) und 8443 (Famulus DMS per HTTPS) für das private Netzwerk.
 - **Verschlüsselung:** eigene Zertifizierungsstelle in `C:\Famulus-Daten\tls` (nur Admins + SYSTEM); auf dem Server-PC selbst trägt das Skript sie als vertrauenswürdig ein. Details: `Sicherheitskonzept.md`.
 - **Einstellungen:** `C:\Famulus\homedms.env`, nur für Administratoren lesbar.
-- **Daten:** `C:\Famulus-Daten\documents` (Ablage), `scan` (Scan-Ordner) und `logs` (Protokolle).
+- **Daten:** im gewählten Datenordner (hier der Vorschlag `C:\Famulus-Daten`): `documents` (Ablage), `scan` (Scan-Ordner) und `logs` (Protokolle). Die folgenden Pfade gelten für diesen Vorschlag.
 - **Datenbank-Admin-Passwort:** `C:\Famulus-Daten\postgres-admin-passwort.txt`. Das gilt nur, wenn PostgreSQL neu installiert wurde. Bei einem schon vorhandenen PostgreSQL fragt das Skript nach dem Passwort.
 
 Hinweise:
@@ -52,7 +56,7 @@ Hinweise:
 ## Linux (Debian 12+, Ubuntu 22.04+)
 
 ```bash
-sudo mv Famulus DMS /opt/homedms        # Ordner muss für den Dienst-Benutzer lesbar sein
+sudo mv famulus-dms /opt/homedms        # (Name des geklonten Ordners) muss für den Dienst-Benutzer lesbar sein
 cd /opt/homedms
 sudo bash scripts/install-linux.sh  # Optionen: --ohne-ki, --ohne-suche, --ohne-dienst
 ```

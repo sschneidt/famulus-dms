@@ -21,7 +21,7 @@
     2. In <Famulus DMS>\.tools: uv + Python 3.12, Node.js (nur zum Bauen der Oberfläche), ggf. Meilisearch
     3. Datenbank "homedms" mit eigenem Benutzer und Zufallspasswort
     4. Einstellungen homedms.env (Zufallsschlüssel)
-    5. Autostart: geplante Aufgabe "HomeDMS" (startet beim Hochfahren, auch ohne Anmeldung)
+    5. Autostart: geplante Aufgabe "Famulus DMS" (startet beim Hochfahren, auch ohne Anmeldung)
     6. Windows-Firewall: Port für das Heimnetz freigeben (Zugriff vom Handy)
 
   Das Skript kann jederzeit erneut laufen (z. B. nach einem Update des Famulus-DMS-Ordners):
@@ -47,7 +47,7 @@ $NodeMajor = 22
 $MeiliVersion = "v1.10.3"   # wie im Docker-Betrieb (getmeili/meilisearch:v1.10)
 $ChatModel = "llama3.2:3b"
 $EmbedModel = "nomic-embed-text"
-$TaskName = "HomeDMS"
+$TaskName = "Famulus DMS"
 
 function Step($text) { Write-Host "`n==> $text" -ForegroundColor Cyan }
 function Warn($text) { Write-Host "!! $text" -ForegroundColor Yellow }
@@ -293,6 +293,7 @@ $trigger = New-ScheduledTaskTrigger -AtStartup
 $principalTask = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable `
     -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
+Unregister-ScheduledTask -TaskName "HomeDMS" -Confirm:$false -ErrorAction SilentlyContinue   # früherer Name
 Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principalTask -Settings $settings `
     -Description "Famulus DMS - Dokumentenverwaltung (Weboberfläche, Texterkennung, KI)" -Force | Out-Null
@@ -302,8 +303,10 @@ Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object { $_.Co
 Start-ScheduledTask -TaskName $TaskName
 
 Step "Firewall: Ports $Port und $HttpsPort im Heimnetz freigeben"
-Get-NetFirewallRule -DisplayName "HomeDMS" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
-New-NetFirewallRule -DisplayName "HomeDMS" -Direction Inbound -Protocol TCP -LocalPort $Port, $HttpsPort -Profile Private, Domain -Action Allow | Out-Null
+foreach ($ruleName in "Famulus DMS", "HomeDMS") {   # "HomeDMS" = früherer Name
+    Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+}
+New-NetFirewallRule -DisplayName "Famulus DMS" -Direction Inbound -Protocol TCP -LocalPort $Port, $HttpsPort -Profile Private, Domain -Action Allow | Out-Null
 
 $ok = $false
 for ($i = 0; $i -lt 90; $i++) {

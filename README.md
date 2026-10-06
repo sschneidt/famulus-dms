@@ -70,8 +70,28 @@ mindestens 8 GB Arbeitsspeicher. Eine Grafikkarte ist nicht nötig.
    einmalig. Auf `http://<dein-server>:8000/zertifikat` steht eine Anleitung mit QR-Code für iPhone,
    Android, Windows und Mac.
 
-Ohne Docker läuft Famulus DMS auch direkt auf einem Windows-PC oder Linux-Server:
-[Installation ohne Docker](docs/Installation-ohne-Docker.md).
+## Installation ohne Docker
+
+Famulus DMS läuft auch direkt auf einem Windows-PC oder Linux-Server. Das Skript installiert alles Nötige
+(PostgreSQL, Tesseract, Ollama), richtet den Autostart ein und zeigt am Ende den Einrichtungscode.
+
+**Windows:** PowerShell **als Administrator** im Projektordner öffnen:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
+```
+
+Das Skript fragt, wo Dokumente, Scan-Ordner und Protokolle liegen sollen (Vorschlag `C:\Famulus-Daten`).
+
+**Linux** (Debian 12+, Ubuntu 22.04+):
+
+```bash
+sudo bash scripts/install-linux.sh
+```
+
+Läuft Famulus DMS auf demselben Rechner schon in Docker, vorher mit `docker compose stop` anhalten (gleiche
+Ports). Alle Optionen: [Installation ohne Docker](docs/Installation-ohne-Docker.md). Eine Übersicht aller
+Skripte steht in [scripts/README.md](scripts/README.md).
 
 ## Aktualisieren
 
