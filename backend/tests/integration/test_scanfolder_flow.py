@@ -78,8 +78,8 @@ async def test_scan_ordner(clean_database, monkeypatch, tmp_path):
 
         assert files(scan_root) == sorted([
             ".DS_Store", "@eaDir/Scan_0815.pdf/SYNOFILE_THUMB_M.jpg", "frisch.pdf", "halb.pdf",
-            f"_fehler/{month}/Brief.docx", f"_fehler/{month}/kaputt.pdf",
-            f"_importiert/{month}/Scan_0815.pdf", f"_importiert/{month}/Scan_0815_kopie.pdf",
+            f"_failed/{month}/Brief.docx", f"_failed/{month}/kaputt.pdf",
+            f"_imported/{month}/Scan_0815.pdf", f"_imported/{month}/Scan_0815_kopie.pdf",
         ])
 
         # Das Dokument gehoert dem Haushalt und laeuft durch die gewohnte Kette

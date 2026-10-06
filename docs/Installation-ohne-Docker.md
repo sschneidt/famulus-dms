@@ -25,27 +25,27 @@ Bewusst **nicht** mehr nötig: die PostgreSQL-Erweiterung `pgvector`. Sie gibt e
 
 ## Windows
 
-1. Famulus-DMS-Ordner auf den PC kopieren, z. B. nach `C:\HomeDMS`.
+1. Famulus-DMS-Ordner auf den PC kopieren, z. B. nach `C:\Famulus`.
 2. PowerShell **als Administrator** öffnen:
    ```powershell
-   cd C:\HomeDMS
+   cd C:\Famulus
    powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
    ```
-   Optionen: `-DatenOrdner D:\HomeDMS-Daten` (Standard `C:\HomeDMS-Daten`), `-Port 8000`, `-HttpsPort 8443`, `-OhneKI`, `-MitSuche`.
+   Optionen: `-DatenOrdner D:\Famulus-Daten` (ohne Angabe fragt das Skript danach, Vorschlag `C:\Famulus-Daten`; bei einer vorhandenen Installation wird der bisherige Ordner übernommen), `-Port 8000`, `-HttpsPort 8443`, `-OhneKI`, `-MitSuche`.
 3. Am Ende öffnet sich der Browser mit `https://localhost:8443`. Der Einrichtungsassistent legt Haushalt und Admin-Konto an; den nötigen **Einrichtungscode** zeigt das Skript am Ende an.
 4. Handy und andere PCs: einmal `http://<PC>:8000/zertifikat` öffnen und dem Famulus-DMS-Zertifikat vertrauen (Anleitung auf der Seite). Danach `https://<PC>:8443`.
 
 Was das Skript einrichtet:
 - **Autostart:** geplante Aufgabe „Famulus DMS“ (Aufgabenplanung). Sie startet beim Hochfahren, auch ohne Anmeldung, als Konto SYSTEM, und startet nach einem Absturz neu.
 - **Firewall:** Ports 8000 (Umleitung + Zertifikat-Hilfe) und 8443 (Famulus DMS per HTTPS) für das private Netzwerk.
-- **Verschlüsselung:** eigene Zertifizierungsstelle in `C:\HomeDMS-Daten\tls` (nur Admins + SYSTEM); auf dem Server-PC selbst trägt das Skript sie als vertrauenswürdig ein. Details: `Sicherheitskonzept.md`.
-- **Einstellungen:** `C:\HomeDMS\homedms.env`, nur für Administratoren lesbar.
-- **Daten:** `C:\HomeDMS-Daten\documents` (Ablage), `scan` (Scan-Ordner) und `logs` (Protokolle).
-- **Datenbank-Admin-Passwort:** `C:\HomeDMS-Daten\postgres-admin-passwort.txt`. Das gilt nur, wenn PostgreSQL neu installiert wurde. Bei einem schon vorhandenen PostgreSQL fragt das Skript nach dem Passwort.
+- **Verschlüsselung:** eigene Zertifizierungsstelle in `C:\Famulus-Daten\tls` (nur Admins + SYSTEM); auf dem Server-PC selbst trägt das Skript sie als vertrauenswürdig ein. Details: `Sicherheitskonzept.md`.
+- **Einstellungen:** `C:\Famulus\homedms.env`, nur für Administratoren lesbar.
+- **Daten:** `C:\Famulus-Daten\documents` (Ablage), `scan` (Scan-Ordner) und `logs` (Protokolle).
+- **Datenbank-Admin-Passwort:** `C:\Famulus-Daten\postgres-admin-passwort.txt`. Das gilt nur, wenn PostgreSQL neu installiert wurde. Bei einem schon vorhandenen PostgreSQL fragt das Skript nach dem Passwort.
 
 Hinweise:
 - **Ollama:** Unter Windows läuft Ollama im angemeldeten Benutzer (Symbol im Infobereich). Nach einem Neustart rechnet die KI deshalb erst nach der Anmeldung. Bis dahin hochgeladene Dokumente landen unter „Prüfen“ und lassen sich mit „Erneut analysieren“ nachholen.
-- **Scanner:** Der Scan-Ordner `C:\HomeDMS-Daten\scan` lässt sich im Explorer freigeben (Rechtsklick > Eigenschaften > Freigabe). Das Multifunktionsgerät legt dann per „Scan to Folder“ direkt dort ab.
+- **Scanner:** Der Scan-Ordner `C:\Famulus-Daten\scan` lässt sich im Explorer freigeben (Rechtsklick > Eigenschaften > Freigabe). Das Multifunktionsgerät legt dann per „Scan to Folder“ direkt dort ab.
 - **Energiesparen:** Der PC sollte nicht in den Ruhezustand gehen, wenn das Handy jederzeit zugreifen soll.
 - **Handy-App (PWA):** Sobald das Handy dem Famulus-DMS-Zertifikat vertraut, lässt sich Famulus DMS über „Zum Startbildschirm hinzufügen“ wie eine App installieren.
 

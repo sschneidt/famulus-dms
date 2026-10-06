@@ -465,7 +465,7 @@
   "Vorschläge zum Bestätigen": "Suggestions to confirm",
   "WEB.DE: In den Einstellungen „POP3/IMAP Abruf“ bzw. Versand über externe Programme erlauben.": "WEB.DE: allow “POP3/IMAP access” or sending via external programs in the settings.",
   "Warnung": "Warning",
-  "Was der Scanner (oder Sie) in den Scan-Ordner auf dem NAS legt, holt Famulus DMS jede Minute automatisch ab: PDF, JPG, PNG, TIFF, HEIC und E-Mails (.eml). Die Dokumente gehören dem ganzen Haushalt. Das Original wandert danach nach <code>_importiert</code>, Unbrauchbares nach <code>_fehler</code>.": "Whatever the scanner (or you) puts into the scan folder on the NAS, Famulus DMS picks up automatically every minute: PDF, JPG, PNG, TIFF, HEIC and emails (.eml). The documents belong to the whole household. The original is then moved to <code>_importiert</code>, unusable files to <code>_fehler</code>.",
+  "Was der Scanner (oder Sie) in den Scan-Ordner auf dem NAS legt, holt Famulus DMS jede Minute automatisch ab: PDF, JPG, PNG, TIFF, HEIC und E-Mails (.eml). Die Dokumente gehören dem ganzen Haushalt. Das Original wandert danach nach <code>_imported</code>, Unbrauchbares nach <code>_failed</code>.": "Whatever the scanner (or you) puts into the scan folder on the NAS, Famulus DMS picks up automatically every minute: PDF, JPG, PNG, TIFF, HEIC and emails (.eml). The documents belong to the whole household. The original is then moved to <code>_imported</code>, unusable files to <code>_failed</code>.",
   "Weiter": "Next",
   "Weitere Aktionen": "More actions",
   "Weitere Seite fotografieren": "Photograph another page",
@@ -665,5 +665,6 @@
   "„{{title}}“ bezahlt am {{date}}": "“{{title}}” paid on {{date}}",
   "„{{title}}“ eingeordnet": "“{{title}}” categorised",
   "„{{title}}“ wiederhergestellt": "“{{title}}” restored",
-  "„{{title}}“ wird in den Papierkorb verschoben und kann dort wiederhergestellt werden.": "“{{title}}” will be moved to the bin and can be restored from there."
+  "„{{title}}“ wird in den Papierkorb verschoben und kann dort wiederhergestellt werden.": "“{{title}}” will be moved to the bin and can be restored from there.",
+  "Optional. Ohne Angabe heißt der Haushalt „Home“. Der Name ist der oberste Ordner der Ablage.": "Optional. Without a name the household is called “Home”. The name is the top folder of the file storage."
 }

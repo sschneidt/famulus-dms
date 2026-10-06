@@ -479,7 +479,7 @@
   "Vorschläge zum Bestätigen": "Предложения для подтверждения",
   "WEB.DE: In den Einstellungen „POP3/IMAP Abruf“ bzw. Versand über externe Programme erlauben.": "WEB.DE: в настройках разрешите «POP3/IMAP» или отправку через внешние программы.",
   "Warnung": "Предупреждение",
-  "Was der Scanner (oder Sie) in den Scan-Ordner auf dem NAS legt, holt Famulus DMS jede Minute automatisch ab: PDF, JPG, PNG, TIFF, HEIC und E-Mails (.eml). Die Dokumente gehören dem ganzen Haushalt. Das Original wandert danach nach <code>_importiert</code>, Unbrauchbares nach <code>_fehler</code>.": "Всё, что сканер (или вы) кладёт в папку сканирования на NAS, Famulus DMS забирает автоматически каждую минуту: PDF, JPG, PNG, TIFF, HEIC и письма (.eml). Документы принадлежат всему домохозяйству. Оригинал затем перемещается в <code>_importiert</code>, непригодные файлы – в <code>_fehler</code>.",
+  "Was der Scanner (oder Sie) in den Scan-Ordner auf dem NAS legt, holt Famulus DMS jede Minute automatisch ab: PDF, JPG, PNG, TIFF, HEIC und E-Mails (.eml). Die Dokumente gehören dem ganzen Haushalt. Das Original wandert danach nach <code>_imported</code>, Unbrauchbares nach <code>_failed</code>.": "Всё, что сканер (или вы) кладёт в папку сканирования на NAS, Famulus DMS забирает автоматически каждую минуту: PDF, JPG, PNG, TIFF, HEIC и письма (.eml). Документы принадлежат всему домохозяйству. Оригинал затем перемещается в <code>_imported</code>, непригодные файлы – в <code>_failed</code>.",
   "Weiter": "Далее",
   "Weitere Aktionen": "Другие действия",
   "Weitere Seite fotografieren": "Сфотографировать ещё страницу",
@@ -721,5 +721,6 @@
   "„{{title}}“ bezahlt am {{date}}": "«{{title}}» оплачен {{date}}",
   "„{{title}}“ eingeordnet": "«{{title}}» классифицирован",
   "„{{title}}“ wiederhergestellt": "«{{title}}» восстановлен",
-  "„{{title}}“ wird in den Papierkorb verschoben und kann dort wiederhergestellt werden.": "«{{title}}» будет перемещён в корзину, откуда его можно восстановить."
+  "„{{title}}“ wird in den Papierkorb verschoben und kann dort wiederhergestellt werden.": "«{{title}}» будет перемещён в корзину, откуда его можно восстановить.",
+  "Optional. Ohne Angabe heißt der Haushalt „Home“. Der Name ist der oberste Ordner der Ablage.": "Необязательно. Без названия домохозяйство называется «Home». Название — это папка верхнего уровня в хранилище."
 }

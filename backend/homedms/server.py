@@ -120,15 +120,21 @@ def check_environment() -> list[str]:
     return problems
 
 
-def main(argv: list[str] | None = None) -> int:
+def parse_args(argv: list[str] | None = None) -> tuple[argparse.Namespace, Path | None]:
+    """Einstellungen aus homedms.env laden und DANACH die Vorgaben fuer --host/--port lesen: HOST und
+    PORT stehen in der homedms.env (der Installer schreibt sie dort hinein). Vorher gelesen, wuerde der
+    Starter sie ignorieren und immer Port 8000 belegen."""
+    env_file = load_env_file()
     parser = argparse.ArgumentParser(prog="python -m homedms.server", description="Famulus DMS ohne Docker starten")
     parser.add_argument("--host", default=os.environ.get("HOST", "0.0.0.0"))
     parser.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8000")))
     parser.add_argument("--no-worker", action="store_true", help="nur Weboberflaeche/API (Worker laeuft anderswo)")
     parser.add_argument("--no-migrate", action="store_true", help="Datenbank-Migrationen ueberspringen")
-    args = parser.parse_args(argv)
+    return parser.parse_args(argv), env_file
 
-    env_file = load_env_file()  # zuerst - LOG_DIR kann in homedms.env stehen
+
+def main(argv: list[str] | None = None) -> int:
+    args, env_file = parse_args(argv)  # zuerst - PORT und LOG_DIR koennen in homedms.env stehen
     from homedms.runtime import setup_logging
 
     log_file = setup_logging("homedms")

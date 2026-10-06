@@ -4,6 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import httpx
+import pytest
 from PIL import Image
 
 from homedms.ai import ollama
@@ -21,6 +22,7 @@ def png(color="white") -> bytes:
     return buf.getvalue()
 
 
+@pytest.mark.needs_tesseract
 async def test_mehrseitig(clean_database, monkeypatch, tmp_path):
     monkeypatch.setattr(ollama, "client_for", FakeOllama().client)
     monkeypatch.setattr(extraction, "today", lambda: date(2026, 9, 30))
@@ -131,6 +133,7 @@ def _page_ratio(path: Path, page: int = 0) -> float:
         return rect.height / rect.width
 
 
+@pytest.mark.needs_tesseract
 async def test_foto_zuschnitt(clean_database, monkeypatch, tmp_path):
     """Handy-Foto vom Tisch: Vorschau, Hochladen (mit/ohne Zuschnitt), nachtraeglich gerade richten."""
     from ..test_docscan import SCHRAEG_VON_OBEN, blatt, foto

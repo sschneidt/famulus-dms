@@ -43,6 +43,7 @@ def test_digital_pdf_uses_embedded_text_not_ocr(tmp_path):
     assert extract_text(path, lang="eng").strip() == "Hello Famulus DMS Invoice 42 EUR"
 
 
+@pytest.mark.needs_tesseract
 def test_scanned_pdf_falls_back_to_ocr(tmp_path):
     path = tmp_path / "scanned.pdf"
     _make_scanned_pdf(path, "SCANNED SAMPLE")
@@ -50,6 +51,7 @@ def test_scanned_pdf_falls_back_to_ocr(tmp_path):
     assert "SCANNED SAMPLE" in text
 
 
+@pytest.mark.needs_tesseract
 def test_image_uses_ocr(tmp_path):
     path = tmp_path / "photo.png"
     image = Image.new("RGB", (300, 80), color="white")
@@ -114,6 +116,7 @@ def _handy_foto(tmp_path, *, exif_drehung: bool, schatten: bool, kopfueber: bool
     return path
 
 
+@pytest.mark.needs_tesseract
 @pytest.mark.parametrize(
     ("exif_drehung", "schatten", "kopfueber"),
     [(True, False, False), (False, True, False), (True, True, False), (False, False, True)],

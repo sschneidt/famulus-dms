@@ -209,6 +209,6 @@ services:
     volumes:
       - ${DOCUMENTS_PATH:-./data/documents}:/data/documents
       - tessdata:/data/tessdata
-      # Scan-Ordner: der Worker holt Dateien ab und verschiebt sie danach nach _importiert/ bzw.
-      # _fehler/ - deshalb mit Schreibrecht (nur hier; die API braucht den Ordner nicht).
+      # Scan-Ordner: der Worker holt Dateien ab und verschiebt sie danach nach _imported/ bzw.
+      # _failed/ - deshalb mit Schreibrecht (nur hier; die API braucht den Ordner nicht).
       - ${SCAN_FOLDER_PATH:-./data/scan}:/data/scan

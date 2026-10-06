@@ -54,7 +54,7 @@ Familie Muster/
 Der Worker holt jede Minute neue Dateien aus `SCAN_FOLDER_PATH` ab (PDF, JPG, PNG, TIFF, HEIC,
 .eml; auch aus Unterordnern) und importiert sie als Dokumente des Haushalts. Halb geschriebene
 Dateien werden abgewartet, doppelte Inhalte nicht erneut importiert. Originale landen danach in
-`_importiert/JJJJ-MM/`, Unbrauchbares in `_fehler/JJJJ-MM/`. Logik: `homedms/core/scanfolder.py`,
+`_imported/JJJJ-MM/`, Unbrauchbares in `_failed/JJJJ-MM/`. Logik: `homedms/core/scanfolder.py`,
 Job: `homedms/tasks/scanfolder.py`, Verwaltung: `/api/v1/import-sources` bzw. „Scan-Ordner“ in der App.
 
 ## Lokale Entwicklung
@@ -75,9 +75,13 @@ im Repo-Root - am einfachsten testet man lokal mit `docker compose up -d db`).
 (nur `app-api` ist nach außen sichtbar, siehe `docs/Docker-Compose-Entwurf.md`). Für
 Backend-Entwicklung direkt auf dem Host (Alembic/uvicorn/pytest außerhalb von Docker)
 liegt im Repo-Root zusätzlich eine `docker-compose.override.yml`, die Postgres auf
-`localhost:5432` veröffentlicht - Docker Compose lädt sie automatisch mit, kein
+`127.0.0.1:5432` veröffentlicht - Docker Compose lädt sie automatisch mit, kein
 Extra-Flag nötig. Falls stattdessen der volle Stack per Compose läuft, wird sie nicht
 gebraucht (dann läuft alles im selben Docker-Netzwerk).
+
+Der Port ist bewusst nur auf `127.0.0.1` (nicht im Netzwerk) offen. In `DATABASE_URL` deshalb
+`127.0.0.1` statt `localhost` eintragen: `localhost` kann auf Windows zuerst als IPv6 (`::1`)
+aufgelöst werden, dort lauscht die Datenbank nicht, und die Job-Queue meldet nur „Database error“.
 
 ```bash
 uv run alembic upgrade head        # Schema anlegen
@@ -140,7 +144,7 @@ docker compose exec db createdb -U homedms homedms_test
 
 # PowerShell
 $env:HOMEDMS_INTEGRATION_TESTS="1"
-$env:DATABASE_URL="postgresql://homedms:<POSTGRES_PASSWORD>@localhost:5432/homedms_test"
+$env:DATABASE_URL="postgresql://homedms:<POSTGRES_PASSWORD>@127.0.0.1:5432/homedms_test"
 uv run pytest tests/integration
 ```
 

@@ -1,4 +1,6 @@
 """Sicherheit ohne Datenbank: Zwei-Faktor-Codes, Anmeldeschutz, Zertifikate, HTTP-Seite, Kopfzeilen."""
+import os
+import shutil
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -106,9 +108,10 @@ def test_zertifikat_deckt_heimnetz_ab_und_ca_kann_keine_fremden_seiten(tmp_path)
     files = tls.ensure_certificates(tmp_path / "tls", "nas,192.168.1.10,8.8.8.8,www.bank.de")
     assert {"nas", "192.168.1.10", "localhost", "127.0.0.1"} <= set(files.names)
     assert "8.8.8.8" not in files.names and "www.bank.de" not in files.names
-    assert oct((tmp_path / "tls" / "ca.key").stat().st_mode)[-3:] == "600"
+    if os.name != "nt":  # Windows (NTFS) kennt keine Unix-Rechte; dort schuetzen Ordner-Rechte der Installation
+        assert oct((tmp_path / "tls" / "ca.key").stat().st_mode)[-3:] == "600"
     leaf = files.cert.read_bytes().split(b"-----END CERTIFICATE-----")[0] + b"-----END CERTIFICATE-----\n"
-    if subprocess.run(["which", "openssl"], capture_output=True).returncode == 0:
+    if shutil.which("openssl"):
         assert _openssl_verify(files.ca_cert, leaf, tmp_path)
         # gestohlener CA-Schluessel: Zertifikat fuer eine Bank wird trotzdem abgelehnt
         ca = x509.load_pem_x509_certificate(files.ca_cert.read_bytes())

@@ -558,8 +558,8 @@ if (-not $OhneDocker) {
         $ende = (Get-Date).AddSeconds([Math]::Max($TimeoutSekunden, 180))
         while ((Test-Path $scanDatei) -and (Get-Date) -lt $ende) { Start-Sleep -Seconds 5 }
         $abgeholt = -not (Test-Path $scanDatei)
-        $imArchiv = @(Get-ChildItem (Join-Path $scanPfad "_importiert") -Recurse -Filter $scanName -ErrorAction SilentlyContinue).Count -gt 0
-        Schreibe-Schritt "Scan-Ordner" ($abgeholt -and $imArchiv) $(if ($abgeholt -and $imArchiv) { "abgeholt, Original liegt in _importiert" } elseif ($abgeholt) { "abgeholt, aber nicht in _importiert - siehe _fehler" } else { "Datei wurde nicht abgeholt: $scanDatei" })
+        $imArchiv = @(Get-ChildItem (Join-Path $scanPfad "_imported") -Recurse -Filter $scanName -ErrorAction SilentlyContinue).Count -gt 0
+        Schreibe-Schritt "Scan-Ordner" ($abgeholt -and $imArchiv) $(if ($abgeholt -and $imArchiv) { "abgeholt, Original liegt in _imported" } elseif ($abgeholt) { "abgeholt, aber nicht in _imported - siehe _failed" } else { "Datei wurde nicht abgeholt: $scanDatei" })
         if (-not $abgeholt) { Write-Host "          Hinweis: 'docker compose logs app-worker' pruefen - laeuft der Worker, ist der Ordner beschreibbar gemountet?" -ForegroundColor Yellow }
     } else {
         Schreibe-Schritt "Scan-Ordner" $false "Ordner nicht gefunden: $scanPfad (SCAN_FOLDER_PATH in .env)"

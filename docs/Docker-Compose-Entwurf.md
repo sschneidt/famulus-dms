@@ -41,7 +41,7 @@ Beide Container nutzen **dasselbe Docker-Image**, gesteuert über die Umgebungsv
 | `ollama_models` | benanntes Docker-Volume | heruntergeladene KI-Modelle (Chat + Embedding) |
 | `tessdata` | benanntes Docker-Volume, in `app-api` und `app-worker` unter `/data/tessdata` (`TESSDATA_DIR`) | Sprachpakete der Texterkennung: die im Image enthaltenen (deu, eng, rus, osd) werden beim Start hineinverlinkt, nachgeladene (Seite „Sprachen“) bleiben bei Updates erhalten |
 | `DOCUMENTS_PATH` (`.env`) | Bind-Mount auf NAS-Ordner | die eigentlichen Dokument-Dateien – bewusst ein normaler NAS-Ordner, nicht in einem Docker-Volume versteckt, damit er z. B. über Synology File Station einsehbar bleibt (Anforderungsdokument 4.4) und von Hyper Backup erfasst wird |
-| `SCAN_FOLDER_PATH` (`.env`) | Bind-Mount auf NAS-Ordner, nur im Worker, mit Schreibrecht | der überwachte Scan-Ordner (Anforderungsdokument 4.1); importierte Originale werden nach `_importiert/` verschoben |
+| `SCAN_FOLDER_PATH` (`.env`) | Bind-Mount auf NAS-Ordner, nur im Worker, mit Schreibrecht | der überwachte Scan-Ordner (Anforderungsdokument 4.1); importierte Originale werden nach `_imported/` verschoben |
 
 Für die geforderte Update-Sicherheit (Anforderungsdokument 4.7: "Daten, Archiv und Suchindex dürfen bei Updates nie verloren gehen") reicht es, dass ein `docker compose pull && docker compose up -d` diese Volumes/Bind-Mounts unangetastet lässt – ein Image-Update ersetzt nur die Container, nicht deren Daten. Nötige Datenbank-Schema-Migrationen laufen automatisch beim Start von `app-api` (z. B. per Alembic, siehe Datenmodell Abschnitt 6).
 

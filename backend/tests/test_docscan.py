@@ -144,6 +144,7 @@ def test_hochgeladenes_foto_wird_als_zugeschnittene_seite_gespeichert():
     assert seite.height / seite.width == pytest.approx(4000 / 3000, abs=0.01)
 
 
+@pytest.mark.needs_tesseract
 def test_zugeschnittenes_foto_wird_gelesen(tmp_path):
     img, _ = foto(blatt(), SCHRAEG_VON_OBEN)
     buf = io.BytesIO()

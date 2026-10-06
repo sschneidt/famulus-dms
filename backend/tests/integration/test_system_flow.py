@@ -1,5 +1,6 @@
 """Seite "Diagnose": Zustand aller Bausteine und Reparatur-Aktionen gegen echte DB."""
 import httpx
+import pytest
 from sqlalchemy import text
 
 from homedms.ai import ollama
@@ -18,6 +19,7 @@ async def queued(task: str) -> int:
         ), {"t": task})
 
 
+@pytest.mark.needs_tesseract  # prueft auch, dass die Diagnose die Texterkennung als "ok" meldet
 async def test_diagnose(clean_database, monkeypatch, tmp_path):
     fake = FakeOllama()
     monkeypatch.setattr(ollama, "client_for", fake.client)

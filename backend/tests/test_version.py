@@ -14,9 +14,9 @@ def test_version_ist_semver():
 
 def test_pyproject_hat_dieselbe_version():
     text = (BACKEND / "pyproject.toml").read_text(encoding="utf-8")  # kein tomllib: Python 3.10 hat es nicht
-    assert re.search(rf'^version = "{re.escape(homedms.__version__)}"$', text, re.M)
+    assert re.search(rf'^version = "{re.escape(homedms.__version__)}"$', text, re.MULTILINE)
 
 
 def test_changelog_hat_einen_eintrag_fuer_die_version():
     text = CHANGELOG.read_text(encoding="utf-8")
-    assert re.search(rf"^## \[{re.escape(homedms.__version__)}\] – \d{{4}}-\d{{2}}-\d{{2}}$", text, re.M)
+    assert re.search(rf"^## \[{re.escape(homedms.__version__)}\] – \d{{4}}-\d{{2}}-\d{{2}}$", text, re.MULTILINE)

@@ -1,7 +1,7 @@
 """Schema fuer POST /setup/bootstrap - Anforderungsdokument 4.7 (Einrichtungsassistent, erster Schritt)."""
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from homedms.i18n import N_
 
@@ -31,10 +31,15 @@ DEFAULT_CATEGORIES = [
 PROPERTY_MODES = {"Haus & Reparaturen": "all", "Wohnen & Nebenkosten": "all", "Versicherungen": "buildings"}
 
 
+DEFAULT_HOUSEHOLD_NAME = "Home"
+
+
 class BootstrapRequest(BaseModel):
     # Beispielwerte statt "string" in der API-Doku (/docs) - sonst landet beim Ausprobieren
     # leicht "string" als Haushalts- bzw. Anzeigename in der Datenbank.
-    household_name: str = Field(min_length=1, max_length=200, examples=["Familie Mustermann"])
+    # Ohne Angabe (fehlt, leer oder nur Leerzeichen) heisst der Haushalt "Home": Der Name ist zugleich
+    # der oberste Ablage-Ordner, ein neutraler englischer Standard ist dort besser als ein Platzhalter.
+    household_name: str = Field(default=DEFAULT_HOUSEHOLD_NAME, max_length=200, examples=["Familie Mustermann"])
     default_language: Literal["de", "en", "ru"] = Field(default="de", examples=["de"])
     # Sprachen der Texterkennung (Tesseract-Codes); leer = Sprache der Oberflaeche + OCR_LANGUAGES
     ocr_languages: list[str] = Field(default_factory=list, max_length=20, examples=[["deu", "eng"]])
@@ -43,6 +48,15 @@ class BootstrapRequest(BaseModel):
     admin_display_name: str = Field(min_length=1, max_length=200, examples=["Max Mustermann"])
     # Einmal-Code aus dem Server-Protokoll bzw. <Dokumente-Ordner>/.einrichtungscode (core/setup_code.py)
     setup_code: str = Field(min_length=1, max_length=40)
+
+    @field_validator("household_name", mode="before")
+    @classmethod
+    def _blank_household_name_means_default(cls, value):
+        if value is None:
+            return DEFAULT_HOUSEHOLD_NAME
+        if isinstance(value, str):
+            return value.strip() or DEFAULT_HOUSEHOLD_NAME
+        return value
 
 
 class BootstrapResponse(BaseModel):

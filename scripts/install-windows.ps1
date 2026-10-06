@@ -8,7 +8,9 @@
     powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
 
   Optionen:
-    -DatenOrdner D:\HomeDMS-Daten   wo Dokumente, Scan-Ordner und Protokolle liegen (Standard C:\HomeDMS-Daten)
+    -DatenOrdner D:\Famulus-Daten   wo Dokumente, Scan-Ordner und Protokolle liegen. Ohne Angabe fragt das
+                                    Skript danach (Vorschlag: C:\Famulus-Daten). Bei einer vorhandenen
+                                    Installation wird der bisherige Ordner übernommen.
     -Port 8000                      Adresse im Browser: http://<PC>:8000
     -OhneKI                         ohne Ollama (keine automatische Einordnung)
     -MitSuche                       zusätzlich Meilisearch (tippfehlertolerante Suche; unter Windows
@@ -27,7 +29,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$DatenOrdner = "$env:SystemDrive\HomeDMS-Daten",
+    [string]$DatenOrdner = "",
     [int]$Port = 8000,
     [int]$HttpsPort = 8443,
     [switch]$OhneKI,
@@ -65,6 +67,20 @@ function Invoke-Winget([string]$Id, [string]$Override = "") {
     # -1978335189 = schon installiert - kein Fehler
     if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne -1978335189) { Fail "winget konnte $Id nicht installieren (Code $LASTEXITCODE)" }
 }
+function Read-DataFolder([string]$Default) {
+    while ($true) {
+        $answer = Read-Host "Wo sollen Dokumente, Scan-Ordner und Protokolle liegen? [$Default]"
+        $path = if ([string]::IsNullOrWhiteSpace($answer)) { $Default } else { $answer.Trim().Trim('"') }
+        if ($path.StartsWith("\\") -or -not [IO.Path]::IsPathRooted($path) -or -not [IO.Path]::GetPathRoot($path).Contains(":")) {
+            Warn "Bitte einen vollständigen Pfad mit Laufwerksbuchstaben angeben, z. B. D:\Famulus-Daten (Netzwerkpfade gehen nicht: die Aufgabe läuft als Systemkonto)."
+            continue
+        }
+        if (-not (Test-Path ([IO.Path]::GetPathRoot($path)))) { Warn "Das Laufwerk $([IO.Path]::GetPathRoot($path)) gibt es nicht."; continue }
+        $full = [IO.Path]::GetFullPath($path)
+        if ($full.Length -gt 3) { $full = $full.TrimEnd('\') }   # ohne abschliessenden Schraegstrich (nur Laufwerk "D:\" bleibt)
+        return $full
+    }
+}
 function Find-First([string[]]$patterns) {
     foreach ($p in $patterns) {
         $hit = Get-ChildItem -Path $p -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1
@@ -83,6 +99,21 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     Fail "winget fehlt - 'App-Installer' aus dem Microsoft Store installieren (ab Windows 10 21H2 meist schon vorhanden)."
 }
 if (-not [Environment]::Is64BitOperatingSystem) { Fail "Nur 64-Bit-Windows wird unterstützt." }
+# Datenordner: Angabe per -DatenOrdner > vorhandene Installation (homedms.env) > Rückfrage mit Vorschlag
+if (-not $DatenOrdner -and (Test-Path $EnvFile)) {
+    $docs = [regex]::Match((Get-Content $EnvFile -Raw), "(?m)^DOCUMENTS_PATH=(\S+)").Groups[1].Value
+    if ($docs) { $DatenOrdner = Split-Path ($docs -replace '/', '\') -Parent; Write-Host "   Vorhandene Installation - Datenordner: $DatenOrdner" }
+}
+if (-not $DatenOrdner) {
+    $vorschlag = "$env:SystemDrive\Famulus-Daten"
+    if ([Console]::IsInputRedirected) {
+        $DatenOrdner = $vorschlag
+        Warn "Keine Eingabe möglich - Datenordner: $vorschlag (anderer Ordner: -DatenOrdner angeben)"
+    } else {
+        $DatenOrdner = Read-DataFolder $vorschlag
+    }
+}
+Write-Host "   Datenordner: $DatenOrdner"
 New-Item -ItemType Directory -Force -Path $Tools, $DatenOrdner | Out-Null
 foreach ($sub in "documents", "scan", "logs", "meilisearch", "tls") { New-Item -ItemType Directory -Force -Path (Join-Path $DatenOrdner $sub) | Out-Null }
 

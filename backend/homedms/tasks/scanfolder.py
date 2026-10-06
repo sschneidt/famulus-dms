@@ -26,6 +26,7 @@ from homedms.core.scanfolder import (
     is_settled,
     is_supported,
     looks_complete,
+    migrate_legacy_dirs,
     title_from_filename,
 )
 from homedms.core.storage import document_file_path, save_upload
@@ -38,7 +39,7 @@ logger = logging.getLogger("homedms.tasks.scanfolder")
 
 LOCK = "scan-folders"
 MAX_RECENT = 30
-STILL_WRITING_SECONDS = 600  # unvollstaendige Datei so lange liegen lassen, danach -> _fehler
+STILL_WRITING_SECONDS = 600  # unvollstaendige Datei so lange liegen lassen, danach -> _failed
 
 
 def scan_root() -> Path:
@@ -115,6 +116,8 @@ async def scan_source(db: AsyncSession, source: ImportSource) -> None:
     if not root.is_dir():
         status["error"] = N_("Scan-Ordner nicht gefunden - ist SCAN_FOLDER_PATH in der .env richtig gesetzt?")
     else:
+        for renamed in migrate_legacy_dirs(root):
+            logger.info("Scan-Ordner: Ordner umbenannt (%s)", renamed)
         files = candidates(root)
         imported = 0
         for file in files:

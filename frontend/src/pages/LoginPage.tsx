@@ -230,7 +230,6 @@ function SetupForm({ onDone }: { onDone: () => void }) {
     initialValues: { code: "", household: "", name: "", email: "", password: "", repeat: "" },
     validate: {
       code: (v) => (v.trim() ? null : t("Bitte den Einrichtungscode eingeben")),
-      household: (v) => (v.trim() ? null : t("Bitte einen Namen für den Haushalt angeben")),
       name: (v) => (v.trim() ? null : t("Bitte Ihren Namen angeben")),
       email: (v) => (/^\S+@\S+\.\S+$/.test(v.trim()) ? null : t("Bitte eine gültige E-Mail-Adresse angeben")),
       password: (v) => (v.length >= 8 ? null : t("Mindestens 8 Zeichen")),
@@ -288,6 +287,7 @@ function SetupForm({ onDone }: { onDone: () => void }) {
         />
         <TextInput
           label={t("Name des Haushalts")}
+          description={t("Optional. Ohne Angabe heißt der Haushalt „Home“. Der Name ist der oberste Ordner der Ablage.")}
           placeholder={t("z. B. Familie Muster")}
           {...form.getInputProps("household")}
         />

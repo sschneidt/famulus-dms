@@ -7,7 +7,7 @@ Ablauf je Datei (Job tasks/scanfolder.py, jede Minute):
 2. Gleicher Inhalt schon vorhanden (Pruefsumme)? Dann kein zweites Dokument.
 3. Import als Dokument des Haushalts (kein einzelner Eigentuemer), danach laeuft die gewohnte
    Kette: Texterkennung -> Kategorie, Metadaten, Fristen -> Ablage.
-4. Original nach "_importiert/JJJJ-MM/" verschieben; Unbrauchbares nach "_fehler/".
+4. Original nach "_imported/JJJJ-MM/" verschieben; Unbrauchbares nach "_failed/".
 
 Reine Hilfsfunktionen hier (getestet in tests/test_scanfolder.py).
 """
@@ -17,14 +17,33 @@ from pathlib import Path
 from homedms.i18n import N_
 
 SUPPORTED = {".pdf", ".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp", ".eml"}
-DONE_DIR = "_importiert"
-ERROR_DIR = "_fehler"
+DONE_DIR = "_imported"
+ERROR_DIR = "_failed"
+# Bis Version 0.1.0 hiessen die Ordner deutsch. Sie werden weiter uebersprungen und beim naechsten
+# Lauf umbenannt (migrate_legacy_dirs), damit alte Originale nie noch einmal importiert werden.
+LEGACY_DIRS = {"_importiert": DONE_DIR, "_fehler": ERROR_DIR}
 MIN_AGE_SECONDS = 30
 MAX_FILE_BYTES = 200 * 1024 * 1024
 MAX_FILES_PER_RUN = 50  # grosse Stapel in mehreren Durchgaengen, damit ein Lauf nicht ewig dauert
 
 # Ordner, die nie durchsucht werden: eigene Ablage, Synology-Vorschaubilder/Papierkorb, Systemdateien
-SKIP_DIRS = {DONE_DIR, ERROR_DIR, "@eaDir", "#recycle", "#snapshot", ".AppleDouble", "$RECYCLE.BIN"}
+SKIP_DIRS = {DONE_DIR, ERROR_DIR, *LEGACY_DIRS, "@eaDir", "#recycle", "#snapshot", ".AppleDouble", "$RECYCLE.BIN"}
+
+
+def migrate_legacy_dirs(root: Path) -> list[str]:
+    """Benennt alte deutsche Ordner um ("_importiert" -> "_imported", "_fehler" -> "_failed").
+    Gibt es den neuen Namen schon, bleibt der alte unveraendert liegen (und wird weiter uebersprungen) -
+    es wird nie etwas zusammengefuehrt oder ueberschrieben. Liefert die Beschreibung der Umbenennungen."""
+    done = []
+    for old, new in LEGACY_DIRS.items():
+        source, target = root / old, root / new
+        if source.is_dir() and not source.is_symlink() and not target.exists():
+            try:
+                source.rename(target)
+            except OSError:
+                continue  # z. B. keine Schreibrechte - beim naechsten Lauf noch einmal versuchen
+            done.append(f"{old} -> {new}")
+    return done
 
 
 def is_ignored_name(name: str) -> bool:

@@ -4,6 +4,7 @@ import os
 import time
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from homedms.core.scanfolder import (
@@ -13,8 +14,30 @@ from homedms.core.scanfolder import (
     is_settled,
     is_supported,
     looks_complete,
+    migrate_legacy_dirs,
     title_from_filename,
 )
+
+
+def test_alte_ordner_werden_umbenannt(tmp_path: Path):
+    (tmp_path / "_importiert/2026-09").mkdir(parents=True)
+    (tmp_path / "_importiert/2026-09/alt.pdf").write_bytes(b"x")
+    (tmp_path / "_fehler").mkdir()
+    assert sorted(migrate_legacy_dirs(tmp_path)) == ["_fehler -> _failed", "_importiert -> _imported"]
+    assert (tmp_path / "_imported/2026-09/alt.pdf").read_bytes() == b"x"  # Inhalt unveraendert
+    assert (tmp_path / "_failed").is_dir()
+    assert not (tmp_path / "_importiert").exists() and not (tmp_path / "_fehler").exists()
+    assert migrate_legacy_dirs(tmp_path) == []  # zweiter Lauf: nichts mehr zu tun
+
+
+def test_umbenennung_ueberschreibt_nie_einen_vorhandenen_neuen_ordner(tmp_path: Path):
+    (tmp_path / "_importiert").mkdir()
+    (tmp_path / "_importiert/alt.pdf").write_bytes(b"alt")
+    (tmp_path / "_imported").mkdir()
+    (tmp_path / "_imported/neu.pdf").write_bytes(b"neu")
+    assert migrate_legacy_dirs(tmp_path) == []
+    assert (tmp_path / "_importiert/alt.pdf").read_bytes() == b"alt"
+    assert (tmp_path / "_imported/neu.pdf").read_bytes() == b"neu"
 
 
 def test_ignorierte_namen():
@@ -24,7 +47,8 @@ def test_ignorierte_namen():
 
 
 def test_candidates_ueberspringt_eigene_und_synology_ordner(tmp_path: Path):
-    for rel in ("a.pdf", "sub/b.jpg", "_importiert/2026-10/c.pdf", "_fehler/d.pdf", "@eaDir/a.pdf/thumb.jpg",
+    for rel in ("a.pdf", "sub/b.jpg", "_imported/2026-10/c.pdf", "_failed/d.pdf", "@eaDir/a.pdf/thumb.jpg",
+                "_importiert/2026-09/alt.pdf", "_fehler/alt.pdf",  # alte deutsche Namen (bis 0.1.0)
                 "#recycle/e.pdf", ".hidden/f.pdf", "sub/.DS_Store"):
         p = tmp_path / rel
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -40,8 +64,11 @@ def test_candidates_folgt_keinen_verweisen(tmp_path: Path):
     (outside / "geheim.pdf").write_bytes(b"x")
     scan = tmp_path / "scan"
     scan.mkdir()
-    (scan / "link").symlink_to(outside)
-    (scan / "link.pdf").symlink_to(outside / "geheim.pdf")
+    try:
+        (scan / "link").symlink_to(outside)
+        (scan / "link.pdf").symlink_to(outside / "geheim.pdf")
+    except OSError:  # Windows: Symlinks brauchen Entwicklermodus oder Administratorrechte
+        pytest.skip("Symlinks sind auf diesem Rechner nicht erlaubt (Windows: Entwicklermodus einschalten)")
     assert candidates(scan) == []
 
 
