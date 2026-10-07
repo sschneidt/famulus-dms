@@ -58,6 +58,10 @@ class OcrLanguageError(Exception):
     pass
 
 
+# Wert von TESSDATA_PREFIX, bevor use_own_tessdata() ihn auf den eigenen Ordner setzt
+USER_TESSDATA_PREFIX = os.environ.get("TESSDATA_PREFIX")
+
+
 def tessdata_dir() -> Path:
     return Path(get_settings().tessdata_dir).resolve()
 
@@ -67,8 +71,8 @@ def system_dir() -> Path | None:
     from homedms.runtime import find_tesseract
 
     candidates = []
-    if os.environ.get("TESSDATA_PREFIX"):
-        candidates.append(Path(os.environ["TESSDATA_PREFIX"]))
+    if USER_TESSDATA_PREFIX:  # vom Nutzer gesetzt, nicht von use_own_tessdata() ueberschrieben
+        candidates.append(Path(USER_TESSDATA_PREFIX))
     exe = find_tesseract(get_settings().tesseract_cmd)
     if exe:
         try:  # neuere Versionen nennen den Ordner selbst
@@ -115,10 +119,22 @@ def installed() -> set[str]:
     return {p.name.removesuffix(".traineddata") for p in folder.glob("*.traineddata") if p.exists()} - {"osd", "equ"}
 
 
-def tesseract_config() -> str:
-    """Zusatz fuer pytesseract (config=...): den eigenen tessdata-Ordner verwenden."""
+def use_own_tessdata() -> bool:
+    """Tesseract auf den eigenen tessdata-Ordner (Sprachpakete) zeigen lassen - ueber TESSDATA_PREFIX."""
     folder = tessdata_dir()
-    return f'--tessdata-dir "{folder}"' if folder.is_dir() and any(folder.glob("*.traineddata")) else ""
+    if folder.is_dir() and any(folder.glob("*.traineddata")):
+        os.environ["TESSDATA_PREFIX"] = str(folder)
+        return True
+    return False
+
+
+def tesseract_config() -> str:
+    """Zusatz fuer pytesseract (config=...). Der eigene tessdata-Ordner wird NICHT als `--tessdata-dir "..."`
+    uebergeben: pytesseract entfernt die Anfuehrungszeichen nur unter Linux, unter Windows sucht Tesseract dann
+    unter einem Pfad mit Anfuehrungszeichen mittendrin ("Error opening data file"), und Leerzeichen im Pfad
+    (C:\\Program Files ...) gehen dort gar nicht. TESSDATA_PREFIX funktioniert ueberall, auch mit Leerzeichen."""
+    use_own_tessdata()
+    return ""
 
 
 def configured_default() -> list[str]:
