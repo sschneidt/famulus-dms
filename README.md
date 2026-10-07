@@ -78,16 +78,19 @@ Famulus DMS läuft auch direkt auf einem Windows-PC oder Linux-Server. Das Skrip
 **Windows:** PowerShell **als Administrator** im Projektordner öffnen:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.de.ps1
 ```
 
-Das Skript fragt, wo Dokumente, Scan-Ordner und Protokolle liegen sollen (Vorschlag `C:\Famulus-Daten`).
+Das Skript fragt, wo Dokumente, Scan-Ordner und Protokolle liegen sollen (Vorschlag `C:\Famulus-Data`). Die Installation läuft in der Sprache des Skripts: `install-windows.de.ps1` (Deutsch),
+`install-windows.en.ps1` (English), `install-windows.ru.ps1` (Русский).
 
 **Linux** (Debian 12+, Ubuntu 22.04+):
 
 ```bash
-sudo bash scripts/install-linux.sh
+sudo bash scripts/install-linux.de.sh
 ```
+
+Auch hier gibt es je Sprache ein Skript: `install-linux.de.sh`, `install-linux.en.sh`, `install-linux.ru.sh`.
 
 Läuft Famulus DMS auf demselben Rechner schon in Docker, vorher mit `docker compose stop` anhalten (gleiche
 Ports). Alle Optionen: [Installation ohne Docker](docs/Installation-ohne-Docker.md). Eine Übersicht aller
@@ -96,9 +99,12 @@ Skripte steht in [scripts/README.md](scripts/README.md).
 ## Aktualisieren
 
 ```bash
-./scripts/update.sh          # Linux / NAS
-.\scripts\update.cmd         # Windows
+./scripts/update.de.sh        # Linux / NAS
+.\scripts\update.de.cmd       # Windows
 ```
+
+Je Sprache ein Skript: `update.de.*` (Deutsch), `update.en.*` (English), `update.ru.*` (Русский). `update.sh` und
+`update.cmd` wählen die Sprache automatisch.
 
 Das Skript sichert zuerst die Datenbank, holt die neue Version und prüft, ob alles wieder läuft.
 Was sich geändert hat, steht im [Änderungsprotokoll](CHANGELOG.md). Rückweg und Hintergründe:

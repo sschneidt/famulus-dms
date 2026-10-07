@@ -1,80 +1,113 @@
 #!/usr/bin/env bash
-# Famulus DMS auf einem Linux-Server installieren - OHNE Docker (Debian 12+, Ubuntu 22.04+).
+# Install Famulus DMS on a Linux server WITHOUT Docker (Debian 12+, Ubuntu 22.04+).
 #
-#   sudo bash scripts/install-linux.sh                 Installation bzw. Aktualisierung
-#   sudo bash scripts/install-linux.sh --ohne-ki       ohne Ollama (KI-Einordnung bleibt aus)
-#   sudo bash scripts/install-linux.sh --ohne-suche    ohne Meilisearch (Suche nur ueber die Datenbank)
-#   sudo bash scripts/install-linux.sh --ohne-dienst   keinen systemd-Dienst einrichten (z. B. WSL/Container);
-#                                                   Start dann von Hand, siehe Ausgabe am Ende
+#   sudo bash scripts/install-linux.sh                  installation or update, language from the system locale
+#   sudo bash scripts/install-linux.en.sh               English   (also install-linux.de.sh = Deutsch, install-linux.ru.sh = Russian)
+#   sudo bash scripts/install-linux.sh --no-ai          without Ollama (automatic classification stays off)
+#   sudo bash scripts/install-linux.sh --no-search      without Meilisearch (search only through the database)
+#   sudo bash scripts/install-linux.sh --no-service     do not set up a systemd service (e.g. WSL/container);
+#                                                       start by hand, see the output at the end
+#   sudo bash scripts/install-linux.sh --lang de|en|ru  language of the installation
 #
-# Der Famulus-DMS-Ordner (dieses Repository) bleibt, wo er ist - empfohlen /opt/homedms. Das Skript
-# kann jederzeit erneut laufen (z. B. nach einem Update): Vorhandene Einstellungen, Datenbank und
-# Dokumente bleiben unberuehrt.
+# The German option names --ohne-ki, --ohne-suche and --ohne-dienst still work.
 #
-# Was passiert:
-#  1. Pakete: PostgreSQL, Tesseract (Deutsch/Englisch), curl
-#  2. Werkzeuge in <Famulus DMS>/.tools: uv + Python 3.12, Node.js (nur zum Bauen der Oberflaeche),
-#     Meilisearch
-#  3. Ollama + Sprachmodelle (offizielles Installationsskript von ollama.com)
-#  4. Datenbank "homedms" mit eigenem Benutzer und Zufallspasswort
-#  5. Einstellungen homedms.env (Zufallsschluessel), Daten unter /var/lib/homedms
-#  6. Dienst "homedms" (systemd): startet beim Hochfahren, startet bei Absturz neu
+# The Famulus DMS folder (this repository) stays where it is - /opt/homedms is recommended. The script can be
+# run again at any time (e.g. after an update): existing settings, database and documents stay untouched.
+# All texts shown come from scripts/lang/install-linux.<language>.msg (English is the fallback).
+#
+# What happens:
+#  1. Packages: PostgreSQL, Tesseract (German/English/Russian), curl
+#  2. Tools in <Famulus DMS>/.tools: uv + Python 3.12, Node.js (only to build the web interface), Meilisearch
+#  3. Ollama + language models (official install script from ollama.com)
+#  4. Database "homedms" with its own user and a random password
+#  5. Settings file homedms.env (random keys), data below /var/lib/homedms
+#  6. Service "homedms" (systemd): starts at boot, restarts after a crash
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# The language first, so that every message below is shown in the chosen language
+args=("$@")
+for ((i = 0; i < ${#args[@]}; i++)); do
+  case "${args[$i]}" in
+    --lang=*) FAMULUS_LANG="${args[$i]#--lang=}" ;;
+    --lang) FAMULUS_LANG="${args[$((i + 1))]:-}" ;;
+  esac
+done
+export FAMULUS_LANG="${FAMULUS_LANG:-}"
+# shellcheck source=lib/i18n.sh
+source "$SCRIPT_DIR/lib/i18n.sh"
+i18n_init install-linux
+
+step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
+warn() { printf '\033[1;33m!! %s\033[0m\n' "$*" >&2; }
+die()  { printf '\033[1;31m%s %s\033[0m\n' "$(t label_error)" "$*" >&2; exit 1; }
+usage() { local k; for k in help_1 help_2 help_3 help_4 help_5 help_6; do echo "$(t "$k")"; done; }
 
 WITH_AI=1
 WITH_SEARCH=1
 WITH_SERVICE=1
-for arg in "$@"; do
+skip_next=0
+for arg in "${args[@]}"; do
+  if [ "$skip_next" -eq 1 ]; then skip_next=0; continue; fi
   case "$arg" in
-    --ohne-ki) WITH_AI=0 ;;
-    --ohne-suche) WITH_SEARCH=0 ;;
-    --ohne-dienst) WITH_SERVICE=0 ;;
-    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
-    *) echo "Unbekannte Option: $arg" >&2; exit 1 ;;
+    --no-ai|--ohne-ki) WITH_AI=0 ;;
+    --no-search|--ohne-suche) WITH_SEARCH=0 ;;
+    --no-service|--ohne-dienst) WITH_SERVICE=0 ;;
+    --lang) skip_next=1 ;;
+    --lang=*) ;;
+    -h|--help) usage; exit 0 ;;
+    *) die "$(t fail_unknown_option "$arg")" ;;
   esac
 done
 
-APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+APP_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DATA_DIR="${HOMEDMS_DATA:-/var/lib/homedms}"
 TOOLS="$APP_DIR/.tools"
 ENV_FILE="$APP_DIR/homedms.env"
 SERVICE_USER=homedms
 NODE_MAJOR=22
-MEILI_VERSION="${MEILI_VERSION:-v1.10.3}"   # wie im Docker-Betrieb (getmeili/meilisearch:v1.10)
+MEILI_VERSION="${MEILI_VERSION:-v1.10.3}"   # same as in the Docker setup (getmeili/meilisearch:v1.10)
 CHAT_MODEL="${OLLAMA_CHAT_MODEL:-llama3.2:3b}"
 EMBED_MODEL="${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}"
 
-step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
-warn() { printf '\033[1;33m!! %s\033[0m\n' "$*" >&2; }
-die()  { printf '\033[1;31mFehler: %s\033[0m\n' "$*" >&2; exit 1; }
 secret() { head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c "${1:-40}"; }
 
-[ "$(id -u)" -eq 0 ] || die "Bitte mit sudo starten: sudo bash $0"
-command -v apt-get >/dev/null || die "Dieses Skript unterstuetzt Debian/Ubuntu (apt). Andere Systeme: docs/Installation-ohne-Docker.md"
-[ -f "$APP_DIR/backend/pyproject.toml" ] || die "$APP_DIR sieht nicht wie der Famulus-DMS-Ordner aus"
+# Address of this server in the home network: the source address of the route to the internet (not the
+# first address of "hostname -I", which may belong to docker0 or a bridge)
+lan_address() {
+  local addr
+  addr="$(ip -4 route get 1.1.1.1 2>/dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -n1 || true)"
+  [ -n "$addr" ] || addr="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
+  echo "$addr"
+}
+
+[ "$(id -u)" -eq 0 ] || die "$(t fail_root "$0")"
+command -v apt-get >/dev/null || die "$(t fail_apt)"
+[ -f "$APP_DIR/backend/pyproject.toml" ] || die "$(t fail_appdir "$APP_DIR")"
 
 case "$(uname -m)" in
   x86_64) ARCH_NODE=x64; ARCH_MEILI=amd64 ;;
   aarch64|arm64) ARCH_NODE=arm64; ARCH_MEILI=aarch64 ;;
-  *) die "Prozessor $(uname -m) wird nicht unterstuetzt" ;;
+  *) die "$(t fail_cpu "$(uname -m)")" ;;
 esac
 
-# --- 1. Pakete ------------------------------------------------------------------------------
-step "Pakete installieren (PostgreSQL, Tesseract)"
+# --- 1. Packages ----------------------------------------------------------------------------
+step "$(t step_packages)"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get install -y -qq postgresql postgresql-contrib tesseract-ocr tesseract-ocr-deu tesseract-ocr-eng \
   tesseract-ocr-rus tesseract-ocr-osd curl ca-certificates xz-utils >/dev/null
 systemctl enable --now postgresql >/dev/null
 
-# --- 2. Werkzeuge ---------------------------------------------------------------------------
+# --- 2. Tools -------------------------------------------------------------------------------
 mkdir -p "$TOOLS"
 export UV_PYTHON_INSTALL_DIR="$TOOLS/python" UV_CACHE_DIR="$TOOLS/uv-cache" UV_LINK_MODE=copy
 if [ ! -x "$TOOLS/uv" ]; then
-  step "uv (Python-Paketverwaltung) laden"
+  step "$(t step_uv)"
   curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$TOOLS" UV_NO_MODIFY_PATH=1 INSTALLER_NO_MODIFY_PATH=1 sh >/dev/null
 fi
-step "Python-Umgebung einrichten (backend/.venv)"
+step "$(t step_python)"
 (cd "$APP_DIR/backend" && "$TOOLS/uv" sync --frozen --no-dev --python 3.12 --quiet)
 
 node_ok() { command -v "$1" >/dev/null && [ "$("$1" -p 'process.versions.node.split(".")[0]')" -ge "$NODE_MAJOR" ]; }
@@ -82,20 +115,20 @@ NODE=node
 if ! node_ok node; then
   NODE="$TOOLS/node/bin/node"
   if ! node_ok "$NODE"; then
-    step "Node.js $NODE_MAJOR laden (nur zum Bauen der Weboberflaeche)"
+    step "$(t step_node "$NODE_MAJOR")"
     file=$(curl -fsSL "https://nodejs.org/dist/latest-v$NODE_MAJOR.x/SHASUMS256.txt" | grep -o "node-v[0-9.]*-linux-$ARCH_NODE.tar.xz" | head -1)
     rm -rf "$TOOLS/node" && mkdir -p "$TOOLS/node"
     curl -fsSL "https://nodejs.org/dist/latest-v$NODE_MAJOR.x/$file" | tar -xJ -C "$TOOLS/node" --strip-components=1
   fi
 fi
-step "Weboberflaeche bauen"
+step "$(t step_build)"
 (cd "$APP_DIR/frontend" && PATH="$(dirname "$NODE"):$PATH" npm ci --no-audit --no-fund --silent && PATH="$(dirname "$NODE"):$PATH" npm run build --silent >/dev/null)
 
 MEILI_BIN=""
 if [ "$WITH_SEARCH" -eq 1 ]; then
   MEILI_BIN="$TOOLS/meilisearch-$MEILI_VERSION"
   if [ ! -x "$MEILI_BIN" ]; then
-    step "Meilisearch $MEILI_VERSION laden"
+    step "$(t step_meili "$MEILI_VERSION")"
     curl -fsSL -o "$MEILI_BIN" "https://github.com/meilisearch/meilisearch/releases/download/$MEILI_VERSION/meilisearch-linux-$ARCH_MEILI"
     chmod +x "$MEILI_BIN"
   fi
@@ -104,27 +137,28 @@ fi
 # --- 3. Ollama ------------------------------------------------------------------------------
 if [ "$WITH_AI" -eq 1 ]; then
   if ! command -v ollama >/dev/null; then
-    step "Ollama installieren"
+    step "$(t step_ollama)"
     curl -fsSL https://ollama.com/install.sh | sh
   fi
   [ "$WITH_SERVICE" -eq 1 ] && { systemctl enable --now ollama >/dev/null 2>&1 || true; }
-  step "Sprachmodelle laden ($CHAT_MODEL, $EMBED_MODEL) - beim ersten Mal einige GB"
-  for _ in $(seq 1 30); do curl -fs http://localhost:11434/api/version >/dev/null && break; sleep 1; done
-  ollama pull "$CHAT_MODEL" && ollama pull "$EMBED_MODEL" || warn "Modelle konnten nicht geladen werden - spaeter: ollama pull $CHAT_MODEL"
+  step "$(t step_models "$CHAT_MODEL" "$EMBED_MODEL")"
+  for _ in $(seq 1 30); do curl -fs http://127.0.0.1:11434/api/version >/dev/null && break; sleep 1; done
+  ollama pull "$CHAT_MODEL" && ollama pull "$EMBED_MODEL" || warn "$(t warn_models "$CHAT_MODEL")"
 fi
 
-# --- 4./5. Benutzer, Ordner, Einstellungen, Datenbank ---------------------------------------
+# --- 4./5. User, folders, settings, database ------------------------------------------------
 id "$SERVICE_USER" >/dev/null 2>&1 || useradd --system --home-dir "$DATA_DIR" --shell /usr/sbin/nologin "$SERVICE_USER"
-# Der Dienst laeuft als Benutzer "homedms" und muss den Programmordner lesen koennen
+# The service runs as user "homedms" and must be able to read the program folder
 if ! runuser -u "$SERVICE_USER" -- test -r "$APP_DIR/backend/homedms/server.py"; then
-  die "Benutzer $SERVICE_USER kann $APP_DIR nicht lesen (z. B. weil er in einem Home-Ordner liegt). Ordner nach /opt/homedms verschieben und dort erneut starten."
+  die "$(t fail_unreadable "$SERVICE_USER" "$APP_DIR")"
 fi
 mkdir -p "$DATA_DIR"/{documents,scan,logs,meilisearch,tls}
 
 if [ ! -f "$ENV_FILE" ]; then
-  step "Einstellungen anlegen ($ENV_FILE)"
+  step "$(t step_settings "$ENV_FILE")"
   DB_PASSWORD=$(secret 32)
-  sed -e "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://homedms:$DB_PASSWORD@localhost:5432/homedms|" \
+  sed -e "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://homedms:$DB_PASSWORD@127.0.0.1:5432/homedms|" \
+      -e "s|^OLLAMA_URL=.*|OLLAMA_URL=http://127.0.0.1:11434|" \
       -e "s|^JWT_SECRET=.*|JWT_SECRET=$(secret 64)|" \
       -e "s|^MEILISEARCH_KEY=.*|MEILISEARCH_KEY=$(secret 40)|" \
       -e "s|^DOCUMENTS_PATH=.*|DOCUMENTS_PATH=$DATA_DIR/documents|" \
@@ -138,7 +172,7 @@ if [ ! -f "$ENV_FILE" ]; then
 else
   DB_PASSWORD=$(sed -n 's|^DATABASE_URL=postgresql://[^:]*:\([^@]*\)@.*|\1|p' "$ENV_FILE")
 fi
-# Suche: an-/abschalten je nach Option (vorhandene Datei wird nur an dieser Stelle angepasst)
+# Search: switch on or off according to the option (an existing file is only changed here)
 if [ "$WITH_SEARCH" -eq 1 ]; then
   sed -i -e "s|^MEILISEARCH_BINARY=.*|MEILISEARCH_BINARY=$MEILI_BIN|" -e "s|^MEILISEARCH_URL=$|MEILISEARCH_URL=http://127.0.0.1:7700|" "$ENV_FILE"
 else
@@ -149,25 +183,25 @@ chown root:"$SERVICE_USER" "$ENV_FILE"
 chown -R "$SERVICE_USER":"$SERVICE_USER" "$DATA_DIR"
 chmod 700 "$DATA_DIR/tls"
 
-step "Datenbank einrichten"
+step "$(t step_database)"
 if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='homedms'" | grep -q 1; then
   runuser -u postgres -- psql -qc "CREATE ROLE homedms LOGIN PASSWORD '$DB_PASSWORD'"
 fi
 if ! runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname='homedms'" | grep -q 1; then
   runuser -u postgres -- psql -qc "CREATE DATABASE homedms OWNER homedms ENCODING 'UTF8' TEMPLATE template0"
 fi
-runuser -u postgres -- psql -d homedms -qc "CREATE EXTENSION IF NOT EXISTS pg_trgm"
+runuser -u postgres -- psql -d homedms -qc "SET client_min_messages = warning; CREATE EXTENSION IF NOT EXISTS pg_trgm"
 
-# --- 6. Dienst ------------------------------------------------------------------------------
+# --- 6. Service -----------------------------------------------------------------------------
 if [ "$WITH_SERVICE" -eq 0 ]; then
-  step "Fertig (ohne Dienst). Starten mit:"
+  step "$(t step_done_no_service)"
   echo "   sudo -u $SERVICE_USER env HOMEDMS_ENV=$ENV_FILE $APP_DIR/backend/.venv/bin/python -m homedms.server"
   exit 0
 fi
-step "Dienst einrichten (systemd: homedms)"
+step "$(t step_service)"
 cat > /etc/systemd/system/homedms.service <<UNIT
 [Unit]
-Description=Famulus DMS - Dokumentenverwaltung
+Description=Famulus DMS - document management
 After=network-online.target postgresql.service ollama.service
 Wants=network-online.target
 
@@ -179,7 +213,7 @@ Environment=HOMEDMS_ENV=$ENV_FILE
 ExecStart=$APP_DIR/backend/.venv/bin/python -m homedms.server
 Restart=on-failure
 RestartSec=5
-# Beim Stoppen bekommen Worker und Meilisearch Zeit zum sauberen Beenden
+# On stop, the worker and Meilisearch get time to shut down cleanly
 TimeoutStopSec=30
 
 [Install]
@@ -191,20 +225,22 @@ systemctl restart homedms
 
 PORT=$(sed -n 's/^PORT=//p' "$ENV_FILE"); PORT=${PORT:-8000}
 HTTPS_PORT=$(sed -n 's/^HTTPS_PORT=//p' "$ENV_FILE"); HTTPS_PORT=${HTTPS_PORT:-8443}
-for _ in $(seq 1 60); do curl -fs "http://localhost:$PORT/health" >/dev/null && break; sleep 1; done
-if curl -fs "http://localhost:$PORT/health" >/dev/null; then
-  IP=$(hostname -I 2>/dev/null | awk '{print $1}')
-  step "Fertig! Famulus DMS laeuft: https://${IP:-localhost}:$HTTPS_PORT"
-  echo "   1. Auf jedem Geraet (Handy, PC) einmal http://${IP:-localhost}:$PORT/zertifikat oeffnen und"
-  echo "      der Famulus-DMS-Zertifizierungsstelle vertrauen (Anleitung auf der Seite)."
-  echo "   2. Dann https://${IP:-localhost}:$HTTPS_PORT - der Assistent legt Haushalt und Admin-Konto an."
+# 127.0.0.1 instead of "localhost": the server listens on IPv4, "localhost" may be tried as IPv6 (::1) first
+for _ in $(seq 1 60); do curl -fs "http://127.0.0.1:$PORT/health" >/dev/null && break; sleep 1; done
+if curl -fs "http://127.0.0.1:$PORT/health" >/dev/null; then
+  ADDRESS="$(lan_address)"
+  ADDRESS="${ADDRESS:-localhost}"
+  step "$(t step_done "$ADDRESS" "$HTTPS_PORT")"
+  echo "$(t info_trust_1 "$ADDRESS" "$PORT")"
+  echo "$(t info_trust_2)"
+  echo "$(t info_wizard "$ADDRESS" "$HTTPS_PORT")"
   SETUP_CODE=$(sed -n 's/^SETUP_CODE=//p' "$ENV_FILE")
   if [ -n "$SETUP_CODE" ] && ! runuser -u postgres -- psql -d homedms -tAc "SELECT 1 FROM tenants LIMIT 1" 2>/dev/null | grep -q 1; then
-    echo "      Einrichtungscode: $SETUP_CODE"
+    echo "$(t info_code "$SETUP_CODE")"
   fi
-  echo "   Dokumente: $DATA_DIR/documents   Scan-Ordner: $DATA_DIR/scan   Protokoll: $DATA_DIR/logs"
-  echo "   Dienst: systemctl status homedms   |   Update: Ordner aktualisieren, dieses Skript erneut starten"
+  echo "$(t info_paths "$DATA_DIR/documents" "$DATA_DIR/scan" "$DATA_DIR/logs")"
+  echo "$(t info_service)"
 else
-  warn "Famulus DMS antwortet nicht - Protokoll: journalctl -u homedms -n 50  bzw.  $DATA_DIR/logs/homedms.log"
+  warn "$(t warn_no_response "$DATA_DIR/logs/homedms.log")"
   exit 1
 fi

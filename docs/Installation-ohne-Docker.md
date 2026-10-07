@@ -19,7 +19,7 @@ Alle drei Wege nutzen denselben Programmcode und dieselbe Datenbankstruktur. Ein
 | Ollama | lokale KI (Einordnung, Betreff, Fristen) | winget `Ollama.Ollama` | Installationsskript von ollama.com |
 | Python 3.12 | Famulus DMS selbst | von `uv` in `.tools\python` | von `uv` in `.tools/python` |
 | Node.js 22 | nur zum **Bauen** der Weboberfläche | in `.tools\node` | in `.tools/node` |
-| Meilisearch (optional) | tippfehlertolerante Suche | `-MitSuche` | Standard (aus mit `--ohne-suche`) |
+| Meilisearch (optional) | tippfehlertolerante Suche | `-WithSearch` (deutsch: `-MitSuche`) | Standard (aus mit `--ohne-suche`) |
 
 Bewusst **nicht** mehr nötig: die PostgreSQL-Erweiterung `pgvector`. Sie gibt es für Windows nicht als fertiges Paket; die Ähnlichkeit der Kategorie-Beispiele rechnet Famulus DMS seit Migration 0010 selbst (bei einem Haushalt Bruchteile einer Sekunde). Ohne Meilisearch sucht Famulus DMS direkt in der Datenbank (Teilwörter, ohne Tippfehler-Toleranz).
 
@@ -29,11 +29,12 @@ Bewusst **nicht** mehr nötig: die PostgreSQL-Erweiterung `pgvector`. Sie gibt e
 2. PowerShell **als Administrator** öffnen:
    ```powershell
    cd C:\Famulus
-   powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
+   powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.de.ps1
    ```
-   Beim ersten Lauf fragt das Skript, **wo Dokumente, Scan-Ordner und Protokolle liegen sollen** (Vorschlag `C:\Famulus-Daten`, Enter übernimmt ihn). Bei einem erneuten Lauf übernimmt es den bisherigen Ordner.
+   Die Installation läuft in der Sprache des Skripts: `install-windows.de.ps1` (Deutsch), `install-windows.en.ps1` (English) und `install-windows.ru.ps1` (Русский). `install-windows.ps1` wählt die Sprache nach der Windows-Anzeigesprache (Englisch, wenn es keine Übersetzung gibt); mit `-Language de|en|ru` legst du sie fest. Die Texte stehen in `scripts\lang\install-windows.<Sprache>.msg`.
+   Beim ersten Lauf fragt das Skript, **wo Dokumente, Scan-Ordner und Protokolle liegen sollen** (Vorschlag `C:\Famulus-Data`, Enter übernimmt ihn). Bei einem erneuten Lauf übernimmt es den bisherigen Ordner.
 
-   Optionen: `-DatenOrdner D:\Famulus-Daten` (ohne Rückfrage), `-Port 8000`, `-HttpsPort 8443`, `-OhneKI`, `-MitSuche`.
+   Optionen im deutschen Skript: `-DatenOrdner D:\Famulus-Data` (ohne Rückfrage), `-Port 8000`, `-HttpsPort 8443`, `-OhneKI`, `-MitSuche`. Die Skripte `.en` und `.ru` und `install-windows.ps1` heißen die Optionen `-DataFolder`, `-NoAI`, `-WithSearch` (die deutschen Namen gelten dort als Alias).
 3. Am Ende öffnet sich der Browser mit `https://localhost:8443`. Der Einrichtungsassistent legt Haushalt und Admin-Konto an; den nötigen **Einrichtungscode** zeigt das Skript am Ende an.
 4. Handy und andere PCs: einmal `http://<PC>:8000/zertifikat` öffnen und dem Famulus-DMS-Zertifikat vertrauen (Anleitung auf der Seite). Danach `https://<PC>:8443`.
 
@@ -42,14 +43,14 @@ Bewusst **nicht** mehr nötig: die PostgreSQL-Erweiterung `pgvector`. Sie gibt e
 Was das Skript einrichtet:
 - **Autostart:** geplante Aufgabe „Famulus DMS“ (Aufgabenplanung). Sie startet beim Hochfahren, auch ohne Anmeldung, als Konto SYSTEM, und startet nach einem Absturz neu.
 - **Firewall:** Ports 8000 (Umleitung + Zertifikat-Hilfe) und 8443 (Famulus DMS per HTTPS) für das private Netzwerk.
-- **Verschlüsselung:** eigene Zertifizierungsstelle in `C:\Famulus-Daten\tls` (nur Admins + SYSTEM); auf dem Server-PC selbst trägt das Skript sie als vertrauenswürdig ein. Details: `Sicherheitskonzept.md`.
+- **Verschlüsselung:** eigene Zertifizierungsstelle in `C:\Famulus-Data\tls` (nur Admins + SYSTEM); auf dem Server-PC selbst trägt das Skript sie als vertrauenswürdig ein. Details: `Sicherheitskonzept.md`.
 - **Einstellungen:** `C:\Famulus\homedms.env`, nur für Administratoren lesbar.
-- **Daten:** im gewählten Datenordner (hier der Vorschlag `C:\Famulus-Daten`): `documents` (Ablage), `scan` (Scan-Ordner) und `logs` (Protokolle). Die folgenden Pfade gelten für diesen Vorschlag.
-- **Datenbank-Admin-Passwort:** `C:\Famulus-Daten\postgres-admin-passwort.txt`. Das gilt nur, wenn PostgreSQL neu installiert wurde. Bei einem schon vorhandenen PostgreSQL fragt das Skript nach dem Passwort.
+- **Daten:** im gewählten Datenordner (hier der Vorschlag `C:\Famulus-Data`): `documents` (Ablage), `scan` (Scan-Ordner) und `logs` (Protokolle). Die folgenden Pfade gelten für diesen Vorschlag.
+- **Datenbank-Admin-Passwort:** `C:\Famulus-Data\postgres-admin-password.txt` (frühere Installationen: `…-passwort.txt`, wird weiter gefunden). Das gilt nur, wenn PostgreSQL neu installiert wurde. Bei einem schon vorhandenen PostgreSQL fragt das Skript nach dem Passwort.
 
 Hinweise:
 - **Ollama:** Unter Windows läuft Ollama im angemeldeten Benutzer (Symbol im Infobereich). Nach einem Neustart rechnet die KI deshalb erst nach der Anmeldung. Bis dahin hochgeladene Dokumente landen unter „Prüfen“ und lassen sich mit „Erneut analysieren“ nachholen.
-- **Scanner:** Der Scan-Ordner `C:\Famulus-Daten\scan` lässt sich im Explorer freigeben (Rechtsklick > Eigenschaften > Freigabe). Das Multifunktionsgerät legt dann per „Scan to Folder“ direkt dort ab.
+- **Scanner:** Der Scan-Ordner `C:\Famulus-Data\scan` lässt sich im Explorer freigeben (Rechtsklick > Eigenschaften > Freigabe). Das Multifunktionsgerät legt dann per „Scan to Folder“ direkt dort ab.
 - **Energiesparen:** Der PC sollte nicht in den Ruhezustand gehen, wenn das Handy jederzeit zugreifen soll.
 - **Handy-App (PWA):** Sobald das Handy dem Famulus-DMS-Zertifikat vertraut, lässt sich Famulus DMS über „Zum Startbildschirm hinzufügen“ wie eine App installieren.
 
@@ -58,8 +59,10 @@ Hinweise:
 ```bash
 sudo mv famulus-dms /opt/homedms        # (Name des geklonten Ordners) muss für den Dienst-Benutzer lesbar sein
 cd /opt/homedms
-sudo bash scripts/install-linux.sh  # Optionen: --ohne-ki, --ohne-suche, --ohne-dienst
+sudo bash scripts/install-linux.de.sh  # Optionen: --ohne-ki, --ohne-suche, --ohne-dienst
 ```
+
+Auch die Linux-Installation läuft in der Sprache des Skripts: `install-linux.de.sh` (Deutsch), `install-linux.en.sh` (English) und `install-linux.ru.sh` (Русский). `install-linux.sh` wählt sie nach der Systemsprache (`LANG`); mit `--lang de|en|ru` legst du sie fest. Die englischen Optionen heißen `--no-ai`, `--no-search`, `--no-service` (die deutschen gelten weiter). Die Texte stehen in `scripts/lang/install-linux.<Sprache>.msg`.
 
 Was das Skript einrichtet:
 - **Adresse:** `https://<server>:8443`; neue Geräte vertrauen dem Zertifikat einmal über `http://<server>:8000/zertifikat`. Den Einrichtungscode zeigt das Skript am Ende an.
@@ -118,4 +121,4 @@ Die Uhrzeit der täglichen Zusammenfassung richtet sich nach `TZ` in `homedms.en
   - Job-Objekt, damit Worker und Meilisearch mit dem Starter enden.
 
   Diese Stellen sind eingebaut, auf echtem Windows aber noch nicht gelaufen.
-- **Meilisearch unter Windows:** Der Hersteller unterstützt Windows 10/11 nur eingeschränkt. Deshalb ist die Suche dort optional (`-MitSuche`).
+- **Meilisearch unter Windows:** Der Hersteller unterstützt Windows 10/11 nur eingeschränkt. Deshalb ist die Suche dort optional (`-WithSearch`, deutsch `-MitSuche`).

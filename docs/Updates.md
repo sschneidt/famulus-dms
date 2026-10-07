@@ -21,14 +21,16 @@ Famulus DMS nutzt [Semantic Versioning](https://semver.org/lang/de/) `MAJOR.MINO
 Windows (aus dem Famulus-DMS-Ordner):
 
 ```
-.\scripts\update.cmd
+.\scripts\update.de.cmd
 ```
 
 Linux / NAS:
 
 ```bash
-./scripts/update.sh
+./scripts/update.de.sh
 ```
+
+Je Sprache ein Skript: `update.de.*` (Deutsch), `update.en.*` (English), `update.ru.*` (Русский). `update.cmd` und `update.sh` wählen die Sprache nach der Systemsprache; `-Language de|en|ru` bzw. `--lang de|en|ru` legt sie fest. Die Texte stehen in `scripts/lang/update.<Sprache>.msg`.
 
 Das Skript macht der Reihe nach:
 
@@ -41,7 +43,7 @@ Deine Dokumente, der Scan-Ordner, der Suchindex und die KI-Modelle liegen in Vol
 
 **Eine bestimmte Version festlegen:** `APP_VERSION=1.2` in der `.env` (statt `latest`), danach das Update-Skript starten. Wer lieber nur Fehlerkorrekturen bekommen will, bleibt bei `1.2`, bis er bewusst auf `1.3` wechselt.
 
-Optionen: `-NurSichern` / `--nur-sichern` sichert nur die Datenbank. `-OhneSicherung` / `--ohne-sicherung` überspringt die Sicherung (nicht empfohlen).
+Optionen: `-BackupOnly` / `--backup-only` (deutsch: `-NurSichern` / `--nur-sichern`) sichert nur die Datenbank. `-NoBackup` / `--no-backup` (deutsch: `-OhneSicherung` / `--ohne-sicherung`) überspringt die Sicherung (nicht empfohlen). Wie viele Sicherungen bleiben: `-Keep 5` bzw. `KEEP=5` (früher `-Behalten` / `BEHALTEN`).
 
 ### Wichtig: Sicherung der Dokumente
 

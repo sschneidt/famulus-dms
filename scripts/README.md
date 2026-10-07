@@ -2,33 +2,37 @@
 
 | Skript | Für | Was es tut |
 |---|---|---|
-| [`install-windows.ps1`](install-windows.ps1) | Windows-PC **ohne Docker** | Installiert PostgreSQL, Tesseract, Ollama und die App, richtet Autostart (geplante Aufgabe „Famulus DMS“) und Firewall ein. Fragt beim ersten Lauf nach dem Datenordner (Vorschlag `C:\Famulus-Daten`). Als **Administrator** starten. |
-| [`install-linux.sh`](install-linux.sh) | Linux-Server **ohne Docker** | Dasselbe für Debian/Ubuntu mit systemd-Dienst `homedms`. Datenordner über `HOMEDMS_DATA` (Standard `/var/lib/homedms`). Mit `sudo` starten. |
-| [`update.cmd`](update.cmd) / [`update.ps1`](update.ps1) | Windows mit **Docker** | Sichert die Datenbank, holt die neue Version, startet neu und prüft den Start. |
-| [`update.sh`](update.sh) | Linux/NAS mit **Docker** | Wie oben. |
+| [`install-windows.de.ps1`](install-windows.de.ps1), [`.en.ps1`](install-windows.en.ps1), [`.ru.ps1`](install-windows.ru.ps1) | Windows-PC **ohne Docker** | Installiert PostgreSQL, Tesseract, Ollama und die App, richtet Autostart (geplante Aufgabe „Famulus DMS“) und Firewall ein. **Je Sprache ein Skript** (Deutsch, English, Русский): Die Installation läuft in dieser Sprache. Fragt beim ersten Lauf nach dem Datenordner (Vorschlag `C:\Famulus-Data`). Als **Administrator** starten. |
+| [`install-windows.ps1`](install-windows.ps1) | dasselbe | Die eigentliche Installation. Wählt die Sprache nach der Windows-Anzeigesprache oder per `-Language de\|en\|ru`. Die Texte stehen in [`lang/`](lang/). |
+| [`install-linux.de.sh`](install-linux.de.sh), [`.en.sh`](install-linux.en.sh), [`.ru.sh`](install-linux.ru.sh) | Linux-Server **ohne Docker** | Dasselbe für Debian/Ubuntu mit systemd-Dienst `homedms`, **je Sprache ein Skript**. Datenordner über `HOMEDMS_DATA` (Standard `/var/lib/homedms`). Mit `sudo` starten. |
+| [`install-linux.sh`](install-linux.sh) | dasselbe | Die eigentliche Installation. Sprache nach `LANG` oder per `--lang de\|en\|ru`. |
+| [`update.de.cmd`](update.de.cmd), [`.en.cmd`](update.en.cmd), [`.ru.cmd`](update.ru.cmd) | Windows mit **Docker** | Sichert die Datenbank, holt die neue Version, startet neu und prüft den Start. **Je Sprache ein Skript.** |
+| [`update.cmd`](update.cmd) / [`update.ps1`](update.ps1) | dasselbe | Das eigentliche Update (Sprache nach Windows-Anzeigesprache oder `-Language`). |
+| [`update.de.sh`](update.de.sh), [`.en.sh`](update.en.sh), [`.ru.sh`](update.ru.sh) / [`update.sh`](update.sh) | Linux/NAS mit **Docker** | Wie oben (`update.sh` wählt die Sprache nach `LANG` oder `--lang`). |
 | [`smoke-test.cmd`](smoke-test.cmd) / [`smoke-test.ps1`](smoke-test.ps1) | Entwickler, Docker | Ende-zu-Ende-Test des laufenden Stacks. **Legt Testdokumente an** (nach dem Lauf im Papierkorb) – nicht für einen Stack mit echten Daten gedacht. |
 | [`testdaten/`](testdaten/) | Smoke-Test | Zwei Beispieldateien mit erfundenen Daten. |
 
 ## Aufrufe
 
 ```powershell
-# Windows ohne Docker (PowerShell als Administrator, im Projektordner)
-powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
+# Windows ohne Docker (PowerShell als Administrator, im Projektordner) - hier Deutsch;
+# English: install-windows.en.ps1, Russian: install-windows.ru.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.de.ps1
 ```
 
 ```bash
-# Linux ohne Docker
-sudo bash scripts/install-linux.sh
+# Linux ohne Docker (hier Deutsch; install-linux.en.sh / install-linux.ru.sh)
+sudo bash scripts/install-linux.de.sh
 ```
 
 ```bash
-# Update mit Docker (Linux/NAS)
-./scripts/update.sh
+# Update mit Docker (Linux/NAS) - Deutsch; update.en.sh / update.ru.sh
+./scripts/update.de.sh
 ```
 
 ```powershell
-# Update mit Docker (Windows)
-.\scripts\update.cmd
+# Update mit Docker (Windows) - Deutsch; update.en.cmd / update.ru.cmd
+.\scripts\update.de.cmd
 ```
 
 Die Installationsskripte (ohne Docker) und der Docker-Betrieb sind **getrennte Instanzen** mit eigener Datenbank.
@@ -36,3 +40,7 @@ Auf demselben Rechner nicht gleichzeitig betreiben: Docker vorher mit `docker co
 
 Optionen, Ablauf und Hintergründe: [Installation ohne Docker](../docs/Installation-ohne-Docker.md),
 [Updates](../docs/Updates.md).
+
+## Sprachen und Texte
+
+Alle Meldungen der Installations- und Update-Skripte stehen in [`lang/`](lang/) – eine Datei je Skript und Sprache (`<Skript>.<Sprache>.msg`, ein Text je Zeile: `schluessel = 'Text'`). Die Skripte selbst sind englisch und reines ASCII. Eine neue Sprache braucht eine Katalogdatei je Skript und je ein Startskript. Der Test `backend/tests/test_installer_messages.py` prüft, dass kein Text in einer Sprache fehlt und die Platzhalter `{0}`, `{1}` überall gleich sind.
