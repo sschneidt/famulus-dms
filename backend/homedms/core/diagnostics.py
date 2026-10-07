@@ -98,13 +98,9 @@ def running_in_docker() -> bool:
 
 
 async def check_app() -> Component:
-    from importlib.metadata import PackageNotFoundError, version
+    from homedms import __version__ as app_version  # einzige Quelle; im Docker-Image ist das Projekt nicht als Paket installiert
 
-    try:
-        app_version = version("homedms")
-    except PackageNotFoundError:
-        app_version = "0.1.0"
-    mode = "Docker" if running_in_docker() else _("ohne Docker ({system})", system=platform.system())
+    mode ="Docker" if running_in_docker() else _("ohne Docker ({system})", system=platform.system())
     return Component("app", "Famulus DMS", "ok", _("läuft seit {duration}", duration=_duration(time.time() - STARTED_AT)), [
         (_("Version"), app_version),
         (_("Betrieb"), mode),

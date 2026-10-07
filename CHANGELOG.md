@@ -7,6 +7,10 @@ Ablauf eines Releases und eines Updates: [docs/Updates.md](docs/Updates.md).
 
 ## [Unveröffentlicht]
 
+## [0.2.0] – 2026-10-07
+
+Erste Version unter dem Namen **Famulus DMS** (vorher „HomeDMS“) und die erste zur Veröffentlichung.
+
 ### Geändert
 - Der Linux-Installer und die Update-Skripte laufen jetzt ebenfalls in mehreren Sprachen, je ein Skript für Deutsch, English
   und Русский: `install-linux.de/.en/.ru.sh`, `update.de/.en/.ru.sh` und `update.de/.en/.ru.cmd`. Die Hauptskripte
