@@ -4,6 +4,8 @@
 |---|---|---|
 | [`install-windows.de.ps1`](install-windows.de.ps1), [`.en.ps1`](install-windows.en.ps1), [`.ru.ps1`](install-windows.ru.ps1) | Windows-PC **ohne Docker** | Installiert PostgreSQL, Tesseract, Ollama und die App, richtet Autostart (geplante Aufgabe „Famulus DMS“) und Firewall ein. **Je Sprache ein Skript** (Deutsch, English, Русский): Die Installation läuft in dieser Sprache. Fragt beim ersten Lauf nach dem Datenordner (Vorschlag `C:\Famulus-Data`). Als **Administrator** starten. |
 | [`install-windows.ps1`](install-windows.ps1) | dasselbe | Die eigentliche Installation. Wählt die Sprache nach der Windows-Anzeigesprache oder per `-Language de\|en\|ru`. Die Texte stehen in [`lang/`](lang/). |
+| [`uninstall-windows.de.ps1`](uninstall-windows.de.ps1), [`.en.ps1`](uninstall-windows.en.ps1), [`.ru.ps1`](uninstall-windows.ru.ps1) | Windows-PC (Installation **ohne Docker**) | Entfernt Famulus DMS wieder. Fragt Schritt für Schritt (Autostart/Firewall/Zertifikat, Programmdateien, Datenbank, **Datenordner mit allen Dokumenten**, PostgreSQL/Tesseract/Ollama), zeigt vorher einen Plan, bietet ein Backup an und löscht nichts Endgültiges ohne ausdrückliche Bestätigung. `-Testlauf` listet nur auf und ändert nichts. Als **Administrator** starten. |
+| [`uninstall-windows.ps1`](uninstall-windows.ps1) | dasselbe | Die eigentliche Deinstallation (Sprache nach Windows-Anzeigesprache oder `-Language`). |
 | [`install-linux.de.sh`](install-linux.de.sh), [`.en.sh`](install-linux.en.sh), [`.ru.sh`](install-linux.ru.sh) | Linux-Server **ohne Docker** | Dasselbe für Debian/Ubuntu mit systemd-Dienst `homedms`, **je Sprache ein Skript**. Datenordner über `HOMEDMS_DATA` (Standard `/var/lib/homedms`). Mit `sudo` starten. |
 | [`install-linux.sh`](install-linux.sh) | dasselbe | Die eigentliche Installation. Sprache nach `LANG` oder per `--lang de\|en\|ru`. |
 | [`update.de.cmd`](update.de.cmd), [`.en.cmd`](update.en.cmd), [`.ru.cmd`](update.ru.cmd) | Windows mit **Docker** | Sichert die Datenbank, holt die neue Version, startet neu und prüft den Start. **Je Sprache ein Skript.** |
@@ -18,6 +20,16 @@
 # Windows ohne Docker (PowerShell als Administrator, im Projektordner) - hier Deutsch;
 # English: install-windows.en.ps1, Russian: install-windows.ru.ps1
 powershell -ExecutionPolicy Bypass -File .\scripts\install-windows.de.ps1
+```
+
+```powershell
+# Windows ohne Docker wieder entfernen - zuerst ein Probelauf, der nur auflistet (auch ohne Administrator)
+powershell -ExecutionPolicy Bypass -File .\scripts\uninstall-windows.de.ps1 -Testlauf
+```
+
+```powershell
+# ... dann richtig (PowerShell als Administrator); English: uninstall-windows.en.ps1, Russian: uninstall-windows.ru.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\uninstall-windows.de.ps1
 ```
 
 ```bash

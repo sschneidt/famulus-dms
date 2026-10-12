@@ -71,6 +71,45 @@ Was das Skript einrichtet:
 - **Ollama:** läuft als eigener Dienst und rechnet sofort nach dem Hochfahren.
 - **Scanner:** den Scan-Ordner per Samba freigeben, z. B. `[scan] path = /var/lib/homedms/scan`. Die Schreibrechte für den Freigabe-Benutzer stellt man mit `chgrp`/`chmod g+w` ein.
 
+## Deinstallation
+
+### Windows
+
+PowerShell **als Administrator** im Famulus-DMS-Ordner:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\uninstall-windows.de.ps1
+```
+
+Wie bei der Installation gibt es je Sprache ein Skript (`uninstall-windows.de.ps1`, `.en.ps1`, `.ru.ps1`); `uninstall-windows.ps1` wählt die Sprache nach der Windows-Anzeigesprache.
+
+**Ablauf:** Das Skript schaut zuerst, was installiert ist, und fragt dann nach, was weg soll. Erst danach zeigt es einen Plan und fragt noch einmal. Erst dann ändert es etwas:
+
+1. Famulus DMS stoppen, Autostart-Aufgabe, Firewall-Regel und Zertifikat entfernen (wird immer zuerst gefragt; wer Nein sagt, bricht ab).
+2. Die Programmdateien im Famulus-DMS-Ordner löschen (`homedms.env`, `.tools`, `backend\.venv`, `frontend\node_modules`, `frontend\dist`). Der Quellcode bleibt, alles lässt sich neu erzeugen.
+3. Die Datenbank `homedms` und ihren Benutzer aus PostgreSQL löschen.
+4. Den **Datenordner mit allen Dokumenten** löschen. Dafür musst du ein Bestätigungswort eintippen. Vor Schritt 3 und 4 bietet das Skript ein Backup an: Dokumente, Scan-Ordner, Zertifikate und ein Datenbank-Dump. Schlägt das Backup fehl, wird nichts gelöscht.
+5. PostgreSQL, Tesseract und Ollama per winget deinstallieren (jedes einzeln gefragt, nur mit Ja, wenn du sie nicht anderweitig brauchst) und ihre Reste löschen (Datenbankdateien, Ollama-Modelle).
+
+**Sicherheit:** Schritte 3 bis 5 sind nie voreingestellt und werden auch von `-Ja` nicht automatisch bejaht. Ein Ordner wird nur gelöscht, wenn er wie ein Famulus-DMS-Datenordner aussieht (mit `documents` und `tls`), nie ein ganzes Laufwerk, ein Systemordner oder der Programmordner. Ein Docker-Betrieb von Famulus DMS und der Quellcode werden nie angefasst.
+
+**Probelauf:** Mit `-Testlauf` zeigt das Skript alle Schritte, ohne etwas zu verändern, und braucht keine Administratorrechte. Mit `-Testlauf -Ja` beantwortet es dabei alle Fragen mit Ja, so siehst du den vollständigen Plan. Ist der Datenordner nicht lesbar (ohne Administratorrechte), gibst du ihn mit `-DatenOrdner I:\Famulus-Data` an.
+
+Handys und andere PCs, die dem Zertifikat vertraut haben, behalten es; dort entfernst du es von Hand.
+
+### Linux
+
+Dafür gibt es noch kein Skript. Von Hand (der Datenordner enthält deine Dokumente, vorher sichern):
+
+```bash
+sudo systemctl disable --now homedms
+sudo rm /etc/systemd/system/homedms.service
+sudo systemctl daemon-reload
+sudo -u postgres psql -c "DROP DATABASE homedms" -c "DROP ROLE homedms"
+sudo rm -r /var/lib/homedms
+sudo userdel homedms
+```
+
 ## Update
 
 1. Neuen Stand des Famulus-DMS-Ordners einspielen (z. B. `git pull` oder Ordner ersetzen; `homedms.env` bleibt).

@@ -4,9 +4,10 @@ Wie beim Frontend (src/i18n/i18n.test.ts): Jeder im Skript benutzte Text muss in
 vorhanden sein, mit denselben Platzhaltern - sonst sieht ein Nutzer mitten in der Installation
 einen Schluesselnamen statt eines Satzes.
 
-Familien: Windows-Installer (install-windows.ps1), Linux-Installer (install-linux.sh) und die
-Update-Skripte (update.ps1 + update.sh teilen sich einen Katalog).
+Familien: Windows-Installer (install-windows.ps1), Windows-Deinstallation (uninstall-windows.ps1),
+Linux-Installer (install-linux.sh) und die Update-Skripte (update.ps1 + update.sh teilen sich einen Katalog).
 """
+import os
 import re
 import shutil
 import subprocess
@@ -20,11 +21,17 @@ LINE = re.compile(r"^\s*(\w+)\s*=\s*'((?:[^']|'')*)'\s*$")  # dasselbe Format le
 # Katalog -> Skripte, die ihn benutzen
 FAMILIES = {
     "install-windows": ("install-windows.ps1",),
+    "uninstall-windows": ("uninstall-windows.ps1",),
     "install-linux": ("install-linux.sh",),
     "update": ("update.ps1", "update.sh"),
 }
 # Texte, die in jeder Sprache gleich lauten duerfen (Eigennamen)
-SAME_IN_ALL_LANGUAGES = {"install-windows": {"step_postgres"}, "install-linux": {"help_2"}, "update": set()}  # help_2 = Befehlszeile
+SAME_IN_ALL_LANGUAGES = {  # Eigennamen und Befehlszeilen
+    "install-windows": {"step_postgres"},
+    "uninstall-windows": {"item_program"},
+    "install-linux": {"help_2"},
+    "update": set(),
+}
 
 
 def catalog(family: str, lang: str) -> dict[str, str]:
@@ -93,7 +100,7 @@ def test_texte_sind_wirklich_uebersetzt(family, lang):
 
 
 def all_scripts() -> list[Path]:
-    return sorted([*SCRIPTS.glob("install-*.ps1"), *SCRIPTS.glob("install-*.sh"), *SCRIPTS.glob("update*.ps1"),
+    return sorted([*SCRIPTS.glob("install-*.ps1"), *SCRIPTS.glob("uninstall-*.ps1"), *SCRIPTS.glob("install-*.sh"), *SCRIPTS.glob("update*.ps1"),
                    *SCRIPTS.glob("update*.sh"), *SCRIPTS.glob("update*.cmd"), SCRIPTS / "lib" / "i18n.sh"])
 
 
@@ -118,10 +125,11 @@ def test_kataloge_sind_utf8():
 
 
 @pytest.mark.parametrize("lang", LANGS)
-@pytest.mark.parametrize("name", ["install-windows.{lang}.ps1", "install-linux.{lang}.sh", "update.{lang}.sh", "update.{lang}.cmd"])
+@pytest.mark.parametrize("name", ["install-windows.{lang}.ps1", "uninstall-windows.{lang}.ps1", "install-linux.{lang}.sh",
+                                  "update.{lang}.sh", "update.{lang}.cmd"])
 def test_startskript_je_sprache(name, lang):
     script = (SCRIPTS / name.format(lang=lang)).read_text(encoding="utf-8")
-    if name.startswith("install-windows"):
+    if name.startswith(("install-windows", "uninstall-windows")):
         assert f'Language   = "{lang}"' in script
     elif name.endswith(".cmd"):
         assert f"-Language {lang} %*" in script
@@ -130,7 +138,7 @@ def test_startskript_je_sprache(name, lang):
 
 
 def test_hauptskripte_kennen_alle_sprachen():
-    for script in ("install-windows.ps1", "update.ps1"):
+    for script in ("install-windows.ps1", "uninstall-windows.ps1", "update.ps1"):
         assert 'ValidateSet("auto", "de", "en", "ru")' in (SCRIPTS / script).read_text(encoding="utf-8")
     for family in FAMILIES:
         assert not [lang for lang in LANGS if not (SCRIPTS / "lang" / f"{family}.{lang}.msg").exists()]
@@ -173,3 +181,82 @@ def test_sprache_per_parameter_und_unbekannte_option(script):
     bad = subprocess.run([BASH, script, "--lang=de", "--gibt-es-nicht"], capture_output=True, timeout=30, check=False, cwd=SCRIPTS)
     assert bad.returncode != 0
     assert "Unbekannte Option: --gibt-es-nicht" in bad.stderr.decode("utf-8")
+
+
+# --- Schutz der Deinstallation: Welche Ordner duerfen geloescht werden? ----------------------------------
+
+POWERSHELL = shutil.which("powershell") or shutil.which("pwsh")
+
+
+@pytest.mark.skipif(os.name != "nt" or POWERSHELL is None, reason="Windows-Pfade: nur unter Windows mit PowerShell")
+def test_deinstallation_loescht_nur_datenordner_der_anwendung(tmp_path):
+    """Test-DataFolderSafe aus uninstall-windows.ps1: Laufwerke, Systemordner, der Programmordner und
+    beliebige Ordner ohne documents/tls duerfen nie geloescht werden."""
+    data = tmp_path / "Famulus-Data"
+    (data / "documents").mkdir(parents=True)
+    (data / "tls").mkdir()
+    fremd = tmp_path / "Eigene Dateien"
+    fremd.mkdir()
+    app = tmp_path / "app"
+    (app / "inner").mkdir(parents=True)
+    probe = tmp_path / "probe.ps1"
+    probe.write_text(
+        f"""$ast = [System.Management.Automation.Language.Parser]::ParseFile("{SCRIPTS / 'uninstall-windows.ps1'}", [ref]$null, [ref]$null)
+$fn = $ast.Find({{ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq "Test-DataFolderSafe" }}, $true)
+Invoke-Expression $fn.Extent.Text
+$script:AppDir = "{app}"
+foreach ($p in "{data}", "{data}\", "{fremd}", "{app}", "{app / 'inner'}", "{tmp_path.anchor}", $env:SystemRoot, $env:ProgramFiles, $env:USERPROFILE, "") {{
+    "{{0}}|{{1}}" -f $p, (Test-DataFolderSafe $p)
+}}
+""", encoding="utf-8")
+    out = subprocess.run([POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(probe)],
+                         capture_output=True, text=True, timeout=60, check=False).stdout.strip().splitlines()
+    answers = [line.rsplit("|", 1)[1] for line in out]
+    assert answers[:2] == ["True", "True"], out          # der echte Datenordner (auch mit abschliessendem \)
+    assert set(answers[2:]) == {"False"}, out            # alles andere
+
+
+def _probelauf(tmp_path, *extra: str) -> tuple[str, Path]:
+    data = tmp_path / "Famulus-Data"
+    (data / "documents").mkdir(parents=True)
+    (data / "tls").mkdir()
+    (data / "documents" / "wichtig.pdf").write_bytes(b"%PDF-")
+    result = subprocess.run(
+        [POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(SCRIPTS / "uninstall-windows.ps1"),
+         "-Language", "en", "-DryRun", "-DataFolder", str(data), *extra],
+        capture_output=True, timeout=300, check=False, stdin=subprocess.DEVNULL)
+    return result.stdout.decode("utf-8", "replace") + result.stderr.decode("utf-8", "replace"), data
+
+
+@pytest.mark.skipif(os.name != "nt" or POWERSHELL is None, reason="Windows-Skript: nur unter Windows mit PowerShell")
+def test_probelauf_ohne_eingabe_bricht_ab_und_aendert_nichts(tmp_path):
+    out, data = _probelauf(tmp_path)
+    assert "DRY RUN" in out
+    assert "No input possible" in out and "Cancelled - nothing was changed." in out
+    assert (data / "documents" / "wichtig.pdf").exists()
+
+
+@pytest.mark.skipif(os.name != "nt" or POWERSHELL is None, reason="Windows-Skript: nur unter Windows mit PowerShell")
+def test_probelauf_mit_ja_zeigt_den_ganzen_plan_und_loescht_nichts(tmp_path):
+    """-DryRun -Yes beantwortet ALLE Fragen mit Ja (auch Datenordner und Programme): trotzdem darf nichts passieren."""
+    out, data = _probelauf(tmp_path, "-Yes")
+    assert "Planned steps:" in out and f"delete the data folder {data}" in out
+    assert out.count("(dry run: not executed)") >= 5
+    assert "Done. Famulus DMS was removed as selected." in out
+    assert (data / "documents" / "wichtig.pdf").exists()                      # Datenordner unberuehrt
+    assert (SCRIPTS.parent / "backend" / "pyproject.toml").exists()           # Programmordner unberuehrt
+
+
+@pytest.mark.skipif(os.name != "nt" or POWERSHELL is None, reason="Windows-Skript: nur unter Windows mit PowerShell")
+def test_echter_lauf_ohne_administrator_bricht_ab(tmp_path):
+    if subprocess.run(["net", "session"], capture_output=True, check=False).returncode == 0:
+        pytest.skip("Die Tests laufen mit Administratorrechten - der Abbruch ohne Administrator ist hier nicht pruefbar")
+    data = tmp_path / "Famulus-Data"
+    (data / "documents").mkdir(parents=True)
+    (data / "tls").mkdir()
+    result = subprocess.run(
+        [POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(SCRIPTS / "uninstall-windows.ps1"),
+         "-Language", "en", "-DataFolder", str(data), "-Yes"],
+        capture_output=True, timeout=120, check=False, stdin=subprocess.DEVNULL)
+    assert "Please start PowerShell as administrator" in result.stdout.decode("utf-8", "replace")
+    assert data.exists()

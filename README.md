@@ -96,6 +96,16 @@ Läuft Famulus DMS auf demselben Rechner schon in Docker, vorher mit `docker com
 Ports). Alle Optionen: [Installation ohne Docker](docs/Installation-ohne-Docker.md). Eine Übersicht aller
 Skripte steht in [scripts/README.md](scripts/README.md).
 
+## Deinstallation
+
+Windows (Installation ohne Docker): PowerShell **als Administrator** im Projektordner. Das Skript fragt Schritt für Schritt, was entfernt werden soll, zeigt einen Plan und bietet vor dem Löschen ein Backup an. Mit `-Testlauf` listet es nur auf:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\uninstall-windows.de.ps1
+```
+
+Der Datenordner mit allen Dokumenten wird nur gelöscht, wenn du das ausdrücklich bestätigst. Mit Docker genügt `docker compose down`. Details: [Installation ohne Docker](docs/Installation-ohne-Docker.md).
+
 ## Aktualisieren
 
 ```bash

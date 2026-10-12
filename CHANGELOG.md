@@ -7,6 +7,9 @@ Ablauf eines Releases und eines Updates: [docs/Updates.md](docs/Updates.md).
 
 ## [Unveröffentlicht]
 
+### Neu
+- Deinstallationsskript für Windows (Installation ohne Docker): `uninstall-windows.de/.en/.ru.ps1` bzw. `uninstall-windows.ps1`. Es schaut, was installiert ist, fragt Schritt für Schritt, zeigt einen Plan und bietet vor dem Löschen ein Backup an. Datenbank, Datenordner mit allen Dokumenten und Programme werden nie automatisch entfernt; der Datenordner nur nach Eintippen eines Bestätigungswortes. `-Testlauf` listet alle Schritte auf, ohne etwas zu ändern.
+
 ## [0.2.0] – 2026-10-07
 
 Erste Version unter dem Namen **Famulus DMS** (vorher „HomeDMS“) und die erste zur Veröffentlichung.
