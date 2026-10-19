@@ -29,13 +29,13 @@ Per SSH (das Repository ist öffentlich, es ist keine Anmeldung nötig):
 
 ```bash
 cd /volume1/famulus/app
-sudo curl -L https://github.com/sschneidt/famulus-dms/archive/refs/tags/v0.2.0.tar.gz -o famulus.tar.gz
+sudo curl -L https://github.com/sschneidt/famulus-dms/archive/refs/tags/v0.2.1.tar.gz -o famulus.tar.gz
 sudo tar xzf famulus.tar.gz --strip-components=1
 sudo rm famulus.tar.gz docker-compose.override.yml
 ```
 
 `docker-compose.override.yml` ist nur für die Entwicklung gedacht und wird nicht gebraucht.
-Die Version `v0.2.0` kannst du durch die aktuelle ersetzen (siehe [Releases](https://github.com/sschneidt/famulus-dms/releases)).
+Die Version `v0.2.1` kannst du durch die aktuelle ersetzen (siehe [Releases](https://github.com/sschneidt/famulus-dms/releases)).
 
 ## 3. Einstellungen
 
