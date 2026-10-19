@@ -1,8 +1,12 @@
 import "@testing-library/jest-dom/vitest";
-import { cleanup } from "@testing-library/react";
+import { cleanup, configure } from "@testing-library/react";
 import { afterEach } from "vitest";
 import { tokenStore } from "../api/client";
 import { setLanguage } from "../i18n"; // Tests laufen auf Deutsch
+
+// findBy*/waitFor warten standardmaessig nur 1 s. Auf langsamen Rechnern (GitHub Actions, NAS) reicht das nicht
+// fuer das erste Rendern von Mantine in jsdom - dann waere ein Lauf zufaellig rot. Bestandene Tests warten nicht laenger.
+configure({ asyncUtilTimeout: 5000 });
 
 afterEach(async () => {
   cleanup();

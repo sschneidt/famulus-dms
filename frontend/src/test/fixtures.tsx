@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import type { Category, DocumentItem, Me, Wiedervorlage } from "../api/client";
 
 export const me: Me = {
@@ -75,7 +76,8 @@ export function wv(overrides: Partial<Wiedervorlage> = {}): Wiedervorlage {
   return {
     id: "w1",
     document_id: "d1",
-    due_date: "2026-10-15",
+    // Immer in der Zukunft: ein festes Datum macht die Tests irgendwann rot (Tests erwarten "nicht ueberfaellig").
+    due_date: dayjs().add(30, "day").format("YYYY-MM-DD"),
     note: "Zahlungsfrist Stromrechnung",
     type: "custom",
     source: "ai_suggested",

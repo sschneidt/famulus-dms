@@ -52,5 +52,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    testTimeout: 30000, // Standard 5 s: zu knapp fuer langsame Rechner (siehe src/test/setup.ts)
+    hookTimeout: 30000,
   },
 });
