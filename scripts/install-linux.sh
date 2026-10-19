@@ -157,6 +157,9 @@ mkdir -p "$DATA_DIR"/{documents,scan,logs,meilisearch,tls}
 if [ ! -f "$ENV_FILE" ]; then
   step "$(t step_settings "$ENV_FILE")"
   DB_PASSWORD=$(secret 32)
+  # settings template in the installation language (homedms.env.<language>.example), English as the fallback
+  TEMPLATE="$APP_DIR/homedms.env.$(i18n_language).example"
+  [ -f "$TEMPLATE" ] || TEMPLATE="$APP_DIR/homedms.env.example"
   sed -e "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://homedms:$DB_PASSWORD@127.0.0.1:5432/homedms|" \
       -e "s|^OLLAMA_URL=.*|OLLAMA_URL=http://127.0.0.1:11434|" \
       -e "s|^JWT_SECRET=.*|JWT_SECRET=$(secret 64)|" \
@@ -168,7 +171,7 @@ if [ ! -f "$ENV_FILE" ]; then
       -e "s|^TLS_DIR=.*|TLS_DIR=$DATA_DIR/tls|" \
       -e "s|^TESSDATA_DIR=.*|TESSDATA_DIR=$DATA_DIR/tessdata|" \
       -e "s|^SETUP_CODE=.*|SETUP_CODE=$(secret 12 | sed 's/.\{4\}/&-/g; s/-$//')|" \
-      "$APP_DIR/homedms.env.example" > "$ENV_FILE"
+      "$TEMPLATE" > "$ENV_FILE"
 else
   DB_PASSWORD=$(sed -n 's|^DATABASE_URL=postgresql://[^:]*:\([^@]*\)@.*|\1|p' "$ENV_FILE")
 fi

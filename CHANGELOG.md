@@ -8,6 +8,8 @@ Ablauf eines Releases und eines Updates: [docs/Updates.md](docs/Updates.md).
 ## [Unveröffentlicht]
 
 ### Neu
+- Die Beispiel-Konfigurationen gibt es in drei Sprachen: `.env.example` (English), `.env.de.example`, `.env.ru.example` für Docker und `homedms.env.example`, `homedms.env.de.example`, `homedms.env.ru.example` für die Installation ohne Docker. Die Werte sind identisch, nur die Kommentare unterscheiden sich (ein Test erzwingt das). Die Installationsskripte nehmen die Vorlage passend zur Installationssprache; der Windows-Installer liest sie ausdrücklich als UTF-8. Die Platzhalter heißen jetzt überall `CHANGE_ME…`, die Adressen `127.0.0.1` statt `localhost`.
+- Der Starter ohne Docker warnt jetzt auch, wenn `JWT_SECRET` noch der Platzhalter `CHANGE_ME…` aus der Vorlage ist.
 - Deinstallationsskript für Windows (Installation ohne Docker): `uninstall-windows.de/.en/.ru.ps1` bzw. `uninstall-windows.ps1`. Es schaut, was installiert ist, fragt Schritt für Schritt, zeigt einen Plan und bietet vor dem Löschen ein Backup an. Datenbank, Datenordner mit allen Dokumenten und Programme werden nie automatisch entfernt; der Datenordner nur nach Eintippen eines Bestätigungswortes. `-Testlauf` listet alle Schritte auf, ohne etwas zu ändern.
 
 ## [0.2.0] – 2026-10-07

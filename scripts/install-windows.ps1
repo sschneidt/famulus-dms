@@ -295,7 +295,11 @@ if ($WithSearch) {
 if (-not (Test-Path $EnvFile)) {
     Step (T 'step_settings' $EnvFile)
     $dbPassword = New-Secret 32
-    $text = Get-Content (Join-Path $AppDir "homedms.env.example") -Raw
+    # Settings template in the installation language (homedms.env.<language>.example), English as the fallback.
+    # Read as UTF-8: Get-Content would read it as ANSI in Windows PowerShell 5.1 and spoil umlauts / Cyrillic.
+    $template = Join-Path $AppDir "homedms.env.$(Get-InstallerLanguage $Language).example"
+    if (-not (Test-Path $template)) { $template = Join-Path $AppDir "homedms.env.example" }
+    $text = [IO.File]::ReadAllText($template, [Text.Encoding]::UTF8)
     $values = @{
         "DATABASE_URL"     = "postgresql://homedms:$dbPassword@127.0.0.1:5432/homedms"
         "OLLAMA_URL"       = "http://127.0.0.1:11434"

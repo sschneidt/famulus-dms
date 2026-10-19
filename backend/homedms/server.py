@@ -113,7 +113,7 @@ def check_environment() -> list[str]:
         problems.append("Tesseract nicht gefunden - Texterkennung von Scans/Fotos geht nicht (TESSERACT_CMD setzen)")
     if not Path(settings.frontend_dist).joinpath("index.html").is_file():
         problems.append(f"Weboberflaeche fehlt ({settings.frontend_dist}) - nur die API laeuft")
-    if settings.jwt_secret.startswith("dev-only"):
+    if settings.jwt_secret.startswith("dev-only") or "CHANGE_ME" in settings.jwt_secret:  # Platzhalter aus den Vorlagen
         problems.append("JWT_SECRET ist nicht gesetzt - bitte in homedms.env eintragen")
     for name in ("documents_path", "scan_path"):
         Path(getattr(settings, name)).mkdir(parents=True, exist_ok=True)

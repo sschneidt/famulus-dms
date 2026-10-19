@@ -42,12 +42,13 @@ mindestens 8 GB Arbeitsspeicher. Eine Grafikkarte ist nicht nötig.
    cd famulus-dms
    ```
 
-2. **Einstellungen anlegen:** `.env.example` nach `.env` kopieren und die mit `<-` markierten Werte
+2. **Einstellungen anlegen:** `.env.de.example` nach `.env` kopieren (die Vorlage gibt es auch auf Englisch als `.env.example`
+   und auf Russisch als `.env.ru.example`, mit denselben Werten) und die mit `<-` markierten Werte
    anpassen: Passwörter und Schlüssel (zum Beispiel mit `openssl rand -hex 32` erzeugen) und unter
    `TLS_HOSTNAMES` den Namen und die IP-Adresse deines Servers.
 
    ```bash
-   cp .env.example .env
+   cp .env.de.example .env
    ```
 
 3. **Starten:**

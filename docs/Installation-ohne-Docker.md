@@ -64,6 +64,8 @@ sudo bash scripts/install-linux.de.sh  # Optionen: --ohne-ki, --ohne-suche, --oh
 
 Auch die Linux-Installation läuft in der Sprache des Skripts: `install-linux.de.sh` (Deutsch), `install-linux.en.sh` (English) und `install-linux.ru.sh` (Русский). `install-linux.sh` wählt sie nach der Systemsprache (`LANG`); mit `--lang de|en|ru` legst du sie fest. Die englischen Optionen heißen `--no-ai`, `--no-search`, `--no-service` (die deutschen gelten weiter). Die Texte stehen in `scripts/lang/install-linux.<Sprache>.msg`.
 
+Die erzeugte Einstellungsdatei `homedms.env` entsteht aus der Vorlage in der Sprache der Installation (`homedms.env.de.example`, `homedms.env.ru.example`, sonst `homedms.env.example` auf Englisch). Die Werte sind in allen Vorlagen gleich, nur die Kommentare unterscheiden sich. Wer die Datei von Hand anlegt, kopiert die Vorlage seiner Sprache nach `homedms.env`.
+
 Was das Skript einrichtet:
 - **Adresse:** `https://<server>:8443`; neue Geräte vertrauen dem Zertifikat einmal über `http://<server>:8000/zertifikat`. Den Einrichtungscode zeigt das Skript am Ende an.
 - **Dienst:** `homedms` (systemd) läuft als eigener Benutzer `homedms`. Er startet beim Hochfahren und nach einem Absturz neu: `systemctl status homedms`.

@@ -47,7 +47,7 @@ Für die geforderte Update-Sicherheit (Anforderungsdokument 4.7: "Daten, Archiv 
 
 ## 5. Erststart & Betrieb
 
-1. `.env.example` nach `.env` kopieren, die mit `CHANGE_ME` markierten Werte setzen (Passwörter, Suche-Master-Key, JWT-Secret) sowie `DOCUMENTS_PATH`/`SCAN_FOLDER_PATH` auf echte NAS-Ordner zeigen lassen.
+1. `.env.example` (English; auf Deutsch `.env.de.example`, auf Russisch `.env.ru.example` - gleiche Werte, nur die Kommentare unterscheiden sich) nach `.env` kopieren, die mit `CHANGE_ME` markierten Werte setzen (Passwörter, Suche-Master-Key, JWT-Secret) sowie `DOCUMENTS_PATH`/`SCAN_FOLDER_PATH` auf echte NAS-Ordner zeigen lassen.
 2. `docker compose up -d` – `ollama-init` lädt danach automatisch die konfigurierten Modelle herunter (Fortschritt einsehbar über `GET /ai-config/model-status`, siehe API-Design 10), alles andere ist sofort betriebsbereit.
 3. Web-UI unter dem konfigurierten Port/der Domain öffnen → Einrichtungsassistent (`POST /setup/bootstrap`, siehe API-Design 2) übernimmt den Rest.
 4. **Update:** `docker compose pull && docker compose up -d`. Volumes/Bind-Mounts bleiben unangetastet, Migrationen laufen automatisch.
