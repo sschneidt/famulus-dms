@@ -32,7 +32,7 @@ Den vollständigen Funktionsumfang und den Stand jeder Funktion beschreibt das
 
 ## Installation mit Docker (empfohlen)
 
-Voraussetzung: Docker mit Compose (Synology: *Container Manager*; Windows/Mac: Docker Desktop) und
+Voraussetzung: Docker mit Compose (Synology: *Container Manager*, Anleitung: [docs/Installation-Synology.md](docs/Installation-Synology.md); Windows/Mac: Docker Desktop) und
 mindestens 8 GB Arbeitsspeicher. Eine Grafikkarte ist nicht nötig.
 
 1. **Herunterladen** (oder das Archiv der neuesten [Version](https://github.com/sschneidt/famulus-dms/releases) entpacken):
