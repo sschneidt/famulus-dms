@@ -130,7 +130,8 @@ Was sich geändert hat, steht im [Änderungsprotokoll](CHANGELOG.md). Rückweg u
 | Architektur | [docs/](docs/): Anforderungen, Datenmodell, API, Docker-Compose-Entwurf, Sicherheitskonzept |
 | Tests | `cd backend && uv run --extra dev pytest` |
 
-Fehler und Wünsche gern als [Issue](https://github.com/sschneidt/famulus-dms/issues).
+**Keine Beiträge, nur Fehlermeldungen.** Fehler und Wünsche gern als
+[Issue](https://github.com/sschneidt/famulus-dms/issues). Pull Requests werden nicht angenommen.
 
 ## Lizenz
 
