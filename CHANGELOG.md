@@ -7,6 +7,8 @@ Ablauf eines Releases und eines Updates: [docs/Updates.md](docs/Updates.md).
 
 ## [Unveröffentlicht]
 
+## [0.2.2] – 2026-11-02
+
 ### Neu
 - **Datenbanksicherung aus der Anwendung:** Auf der Seite *Diagnose* legt ein Knopf **„Jetzt sichern“** eine Sicherung der Datenbank an (nur Administratoren). Die Dateien liegen im neuen Ordner `BACKUP_FOLDER_PATH` (Docker; sonst `BACKUP_PATH`), lassen sich herunterladen und löschen, die letzten 5 bleiben liegen (`BACKUP_KEEP`). Gleiches Format wie `scripts/update.sh`. Das Docker-Image enthält dafür `pg_dump` 16; bei Installationen ohne Docker wird es im PostgreSQL-Ordner gesucht (`PG_DUMP_CMD` zum Festlegen).
 - **Installation auf der Synology in einem Schritt:** Neue, eigenständige Datei `docker-compose.synology.yml`. Sie wird im Container Manager als Projekt `homedms` angelegt, ohne `.env`, ohne SSH und ohne Quellcode. Passwörter für die interne Datenbank und Suche sind fest vorgegeben (nur im internen Docker-Netz erreichbar). Der Anmelde-Schlüssel (`JWT_SECRET`) wird beim ersten Start selbst erzeugt und in einem Volume abgelegt (`JWT_SECRET_FILE`). Anleitung: [docs/Installation-Synology.md](docs/Installation-Synology.md). Ein Test sorgt dafür, dass die Datei zu `docker-compose.yml` passt.
