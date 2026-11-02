@@ -8,6 +8,8 @@ export interface SetupStatus {
   tls?: boolean;
   http_port?: number;
   https_port?: number;
+  /** Namen/Adressen, die das HTTPS-Zertifikat schon abdeckt (nur mit eigener Zertifizierungsstelle) */
+  tls_names?: string[];
   /** nur vor der Ersteinrichtung: angebotene Sprachpakete der Texterkennung */
   ocr_languages?: { code: string; name: string; installed: boolean }[];
 }

@@ -24,6 +24,7 @@ import {
   IconCircleX,
   IconCpu,
   IconDatabase,
+  IconDownload,
   IconFolder,
   IconLanguage,
   IconLock,
@@ -31,14 +32,16 @@ import {
   IconScan,
   IconSearch,
   IconServer,
+  IconTrash,
 } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import type { Schemas } from "../api/client";
-import { useDiagnostics, useSystemAction } from "../api/queries";
+import { useBackups, useCreateBackup, useDeleteBackup, useDiagnostics, useSystemAction } from "../api/queries";
 import { useUser } from "../auth/AuthContext";
-import { formatDateTime, tk } from "../lib/format";
+import { downloadBackup } from "../lib/download";
+import { formatBytes, formatDateTime, tk } from "../lib/format";
 import { notifyError, notifySuccess } from "../lib/notify";
 
 type Component = Schemas["DiagnosticComponent"];
@@ -111,6 +114,7 @@ export function DiagnosePage() {
               <ComponentCard key={c.key} component={c} />
             ))}
           </SimpleGrid>
+          <Backups />
           <Failures items={diagnostics.data.recent_failures} />
         </>
       )}
@@ -218,6 +222,122 @@ function ComponentCard({ component }: { component: Component }) {
         )}
       </Stack>
     </Card>
+  );
+}
+
+/** Datenbanksicherung aus der Anwendung: anlegen, herunterladen, loeschen (Admins). */
+function Backups() {
+  const { t } = useTranslation();
+  const backups = useBackups();
+  const create = useCreateBackup();
+  const remove = useDeleteBackup();
+
+  function confirmDelete(name: string) {
+    modals.openConfirmModal({
+      title: t("Sicherung löschen?"),
+      children: <Text size="sm">{t("Die Sicherung {{name}} wird endgültig gelöscht.", { name })}</Text>,
+      labels: { confirm: t("Löschen"), cancel: t("Abbrechen") },
+      confirmProps: { color: "red" },
+      onConfirm: () => remove.mutate(name, { onError: (e) => notifyError(e, t("Löschen nicht möglich")) }),
+    });
+  }
+
+  return (
+    <Stack gap="xs" data-testid="backups">
+      <Group justify="space-between" align="flex-start" wrap="wrap">
+        <div>
+          <Title order={4}>{t("Datenbanksicherung")}</Title>
+          <Text size="sm" c="dimmed">
+            {t(
+              "Sichert die Datenbank (Personen, Angaben zu den Dokumenten, Fristen, Einstellungen). Die Dokument-Dateien selbst liegen im Dokumente-Ordner und werden als Ordner gesichert.",
+            )}
+          </Text>
+        </div>
+        <Button
+          leftSection={<IconDatabase size={16} />}
+          loading={create.isPending}
+          disabled={backups.data?.available === false}
+          onClick={() =>
+            create.mutate(undefined, {
+              onSuccess: () => notifySuccess(t("Sicherung angelegt.")),
+              onError: (e) => notifyError(e, t("Sicherung nicht möglich")),
+            })
+          }
+        >
+          {t("Jetzt sichern")}
+        </Button>
+      </Group>
+
+      {backups.isPending ? (
+        <Loader size="sm" />
+      ) : backups.isError ? (
+        <Alert color="red">{backups.error.message}</Alert>
+      ) : (
+        <>
+          {!backups.data.available && (
+            <Alert color="yellow" icon={<IconAlertTriangle />}>
+              {t(
+                "Auf diesem Server fehlt das Programm pg_dump. Eine Sicherung geht hier nur mit den Update-Skripten (siehe Anleitung).",
+              )}
+            </Alert>
+          )}
+          <Text size="sm" c="dimmed">
+            {t("Ordner: {{folder}} · Aufbewahrt werden die neuesten {{keep}} Sicherungen.", {
+              folder: backups.data.folder,
+              keep: backups.data.keep,
+            })}
+          </Text>
+          {backups.data.items.length === 0 ? (
+            <Text size="sm">{t("Noch keine Sicherung vorhanden.")}</Text>
+          ) : (
+            <Card withBorder padding={0} radius="md">
+              <Table striped fz="sm">
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>{t("Datei")}</Table.Th>
+                    <Table.Th>{t("Erstellt")}</Table.Th>
+                    <Table.Th>{t("Größe")}</Table.Th>
+                    <Table.Th />
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {backups.data.items.map((b) => (
+                    <Table.Tr key={b.name}>
+                      <Table.Td style={{ overflowWrap: "anywhere" }}>{b.name}</Table.Td>
+                      <Table.Td style={{ whiteSpace: "nowrap" }}>{formatDateTime(b.created)}</Table.Td>
+                      <Table.Td style={{ whiteSpace: "nowrap" }}>{formatBytes(b.size)}</Table.Td>
+                      <Table.Td>
+                        <Group gap="xs" wrap="nowrap" justify="flex-end">
+                          <Button
+                            size="compact-xs"
+                            variant="light"
+                            leftSection={<IconDownload size={14} />}
+                            aria-label={`${t("Herunterladen")} ${b.name}`}
+                            onClick={() => downloadBackup(b.name).catch((e) => notifyError(e, t("Download fehlgeschlagen")))}
+                          >
+                            {t("Herunterladen")}
+                          </Button>
+                          <Button
+                            size="compact-xs"
+                            variant="subtle"
+                            color="red"
+                            leftSection={<IconTrash size={14} />}
+                            aria-label={`${t("Löschen")} ${b.name}`}
+                            onClick={() => confirmDelete(b.name)}
+                          >
+                            {t("Löschen")}
+                          </Button>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Card>
+          )}
+        </>
+      )}
+    </Stack>
   );
 }
 

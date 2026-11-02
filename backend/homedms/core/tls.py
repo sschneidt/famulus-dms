@@ -19,6 +19,7 @@ muessen also nichts neu installieren.
 """
 import ipaddress
 import logging
+import re
 import socket
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -29,6 +30,8 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
+from homedms.i18n import _
+
 logger = logging.getLogger("homedms.core.tls")
 
 CA_DAYS = 3650
@@ -36,6 +39,9 @@ SERVER_DAYS = 397
 RENEW_BEFORE = timedelta(days=30)
 CURRENT: "TlsFiles | None" = None  # vom Starter gesetzt (server.py) - fuer die Diagnose
 UNCOVERED: set[str] = set()  # aufgerufene Adressen, die das Zertifikat nicht abdeckt (cert_page.HostTracker)
+HOSTNAMES_FILE = "hostnames.txt"  # Namen/Adressen aus der Ersteinrichtung, im TLS-Ordner (zusaetzlich zu TLS_HOSTNAMES)
+RELOAD_HOOKS: list = []  # Funktionen(TlsFiles), die ein neues Zertifikat in den laufenden Server laden (server.py)
+HOST_NAME = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$")
 PRIVATE_SUFFIXES = ("local", "lan", "home", "home.arpa", "internal", "fritz.box", "ts.net", "localhost", "localdomain")
 PRIVATE_NETWORKS = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10", "127.0.0.0/8", "169.254.0.0/16")
 
@@ -181,6 +187,73 @@ def _server_names(cert: x509.Certificate) -> set[str]:
     }
 
 
+def parse_names(text: str) -> list[str]:
+    """Namen/Adressen aus einer Eingabe: durch Komma, Semikolon, Leerzeichen getrennt; eine eingefuegte
+    Browser-Adresse (https://192.168.1.10:8443/...) wird auf den Rechnernamen reduziert."""
+    names: list[str] = []
+    for raw in re.split(r"[,;\s]+", text.strip().lower()):
+        name = raw.split("://", 1)[-1].split("/", 1)[0]
+        if name.startswith("["):  # [::1]:8443
+            name = name[1:].split("]", 1)[0]
+        elif name.count(":") == 1:  # name:8443
+            name = name.split(":", 1)[0]
+        if name and name not in names:
+            names.append(name)
+    return names
+
+
+def validate_names(names: list[str]) -> None:
+    """Wirft ValueError mit lesbarer Meldung, wenn ein Name kein Rechnername/keine Adresse ist oder nicht ins
+    Heimnetz gehoert (dafuer stellt die Zertifizierungsstelle absichtlich nichts aus)."""
+    for name in names:
+        if not _is_ip(name) and not (len(name) <= 253 and HOST_NAME.match(name)):
+            raise ValueError(_("„{name}“ ist kein gültiger Rechnername und keine IP-Adresse.", name=name))
+        if not _permitted(name):
+            raise ValueError(_("„{name}“ ist keine Heimnetz-Adresse (z. B. 192.168.x.x oder name.local) - für Zugriff von außen bitte ein VPN nutzen.", name=name))
+
+
+def saved_names(directory: str | Path) -> list[str]:
+    try:
+        return parse_names((Path(directory) / HOSTNAMES_FILE).read_text(encoding="utf-8"))
+    except OSError:
+        return []
+
+
+def apply_hostnames(directory: str | Path, text: str, env_extra: str = "") -> tuple[TlsFiles, bool]:
+    """Ersteinrichtung: Namen/Adressen dauerhaft merken, Zertifikat damit neu ausstellen und in den laufenden
+    Server laden (ohne Neustart). Gibt (Dateien, CA_ersetzt) zurueck; ist die CA ersetzt, muessen Geraete, die der
+    alten schon vertrauen, die neue installieren (Hilfeseite /zertifikat). Die CA wird nur ersetzt, wenn sie einen
+    neuen Rechnernamen ohne Punkt (z. B. "nas") nicht abdeckt - Adressen und Namen mit Punkt gehen mit der alten.
+    ValueError bei ungueltigen Namen."""
+    global CURRENT
+    directory = Path(directory)
+    new = parse_names(text)
+    validate_names(new)
+    directory.mkdir(parents=True, exist_ok=True)
+    names = list(dict.fromkeys([*saved_names(directory), *new]))
+    (directory / HOSTNAMES_FILE).write_text("\n".join(names) + "\n", encoding="utf-8")
+
+    replaced = False
+    ca_path = directory / "ca.crt"
+    if ca_path.exists():
+        constraints = x509.load_pem_x509_certificate(ca_path.read_bytes()).extensions.get_extension_for_class(
+            x509.NameConstraints).value
+        allowed = {str(d.value).lower() for d in constraints.permitted_subtrees or [] if isinstance(d, x509.DNSName)}
+        if any(not _is_ip(n) and "." not in n and n not in allowed for n in new):
+            for stale in ("ca.crt", "ca.key", "server.crt", "server.key"):
+                (directory / stale).unlink(missing_ok=True)
+            replaced = True
+    files = ensure_certificates(directory, env_extra)
+    CURRENT = files
+    UNCOVERED.difference_update(files.names)
+    for hook in RELOAD_HOOKS:
+        try:
+            hook(files)
+        except Exception:  # noqa: BLE001 - das neue Zertifikat gilt spaetestens nach dem naechsten Start
+            logger.exception("Neues Zertifikat konnte nicht in den laufenden Server geladen werden")
+    return files, replaced
+
+
 def ensure_certificates(directory: str | Path, extra_names: str = "") -> TlsFiles:
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
@@ -188,7 +261,7 @@ def ensure_certificates(directory: str | Path, extra_names: str = "") -> TlsFile
         directory.chmod(0o700)
     except OSError:
         pass
-    wanted = detect_names(extra_names)
+    wanted = detect_names(",".join([extra_names, *saved_names(directory)]))
     names = [n for n in wanted if _permitted(n)]
     for skipped in (n for n in wanted if n not in names):
         logger.warning("„%s“ ist keine Heimnetz-Adresse - das HomeDMS-Zertifikat deckt sie nicht ab "

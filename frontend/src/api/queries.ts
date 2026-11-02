@@ -22,6 +22,7 @@ export const keys = {
   scanFolderInfo: ["import-sources", "scan-folder"] as const,
   users: ["users"] as const,
   diagnostics: ["system", "diagnostics"] as const,
+  backups: ["system", "backups"] as const,
   notifications: ["notifications"] as const,
   notificationSettings: ["notifications", "settings"] as const,
   mailSettings: ["tenant", "mail"] as const,
@@ -456,6 +457,27 @@ export function useSystemAction() {
       void qc.invalidateQueries({ queryKey: keys.diagnostics });
       setTimeout(() => void qc.invalidateQueries({ queryKey: keys.diagnostics }), 5000);
     },
+  });
+}
+
+/** Datenbanksicherungen (Diagnose-Seite, nur Admins). */
+export function useBackups() {
+  return useQuery({ queryKey: keys.backups, queryFn: () => call(api.GET("/api/v1/system/backups")) });
+}
+
+export function useCreateBackup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => call(api.POST("/api/v1/system/backups")),
+    onSuccess: (data) => qc.setQueryData(keys.backups, data),
+  });
+}
+
+export function useDeleteBackup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => call(api.DELETE("/api/v1/system/backups/{name}", { params: { path: { name } } })),
+    onSuccess: (data) => qc.setQueryData(keys.backups, data),
   });
 }
 

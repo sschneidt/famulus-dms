@@ -1,0 +1,166 @@
+# Famulus DMS fuer Synology (Container Manager): EINE Datei, keine .env, kein Quellcode noetig.
+# Anleitung: docs/Installation-Synology.md
+#
+# So wird sie benutzt: Container Manager > Projekt > Erstellen, Projektname "homedms", Pfad z. B.
+# /volume1/famulus/app, Quelle "docker-compose.yml erstellen" und den Inhalt dieser Datei einfuegen.
+#
+# Anzupassen ist hoechstens: liegt der Ordner "famulus" NICHT auf "volume1", ersetze "/volume1/famulus" ueberall durch
+# deinen Pfad (Suchen und Ersetzen, 6 Stellen); stimmt die Zeitzone nicht, ersetze "Europe/Berlin". Alles andere kann
+# so bleiben. Geheimnisse (Anmelde-Schluessel) erzeugt Famulus DMS beim
+# ersten Start selbst; die Datenbank und die Suche sind nur im internen Netz der Container erreichbar
+# (kein Port nach aussen), deshalb reichen dort die festen Werte.
+#
+# Diese Datei muss zu docker-compose.yml passen (gleiche Dienste und Images) - ein Test prueft das.
+name: homedms   # nicht aendern: danach heissen die Datenvolumes
+
+networks:
+  homedms:
+    driver: bridge
+
+volumes:
+  pgdata:
+  meilidata:
+  ollama_models:
+  tls:       # Zertifizierungsstelle + Server-Zertifikat (privater Schluessel!)
+  tessdata:  # Sprachpakete der Texterkennung
+  appdata:   # Anmelde-Schluessel (JWT), von API und Worker geteilt
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    networks: [homedms]
+    environment:
+      POSTGRES_USER: homedms
+      POSTGRES_PASSWORD: homedms-intern
+      POSTGRES_DB: homedms
+      TZ: Europe/Berlin
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homedms"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.10
+    restart: unless-stopped
+    networks: [homedms]
+    environment:
+      MEILI_MASTER_KEY: meili-intern-schluessel
+      MEILI_NO_ANALYTICS: "true"
+      MEILI_ENV: production
+    volumes:
+      - meilidata:/meili_data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:7700/health || wget -qO- http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    networks: [homedms]
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # Einmaliger Job: laedt beim ersten Start die KI-Modelle und beendet sich danach (Status "Beendet" ist normal).
+  ollama-init:
+    image: ollama/ollama:latest
+    restart: "no"
+    networks: [homedms]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        ollama pull "llama3.2:3b" &&
+        ollama pull "nomic-embed-text"
+
+  app-api:
+    image: ghcr.io/sschneidt/famulus-dms:latest
+    restart: unless-stopped
+    networks: [homedms]
+    depends_on:
+      db:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+    environment:
+      TZ: Europe/Berlin
+      APP_ROLE: api
+      DATABASE_URL: postgresql://homedms:homedms-intern@db:5432/homedms
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_KEY: meili-intern-schluessel
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_CHAT_MODEL: llama3.2:3b
+      OLLAMA_EMBEDDING_MODEL: nomic-embed-text
+      JWT_SECRET_FILE: /data/appdata/jwt_secret
+      DOCUMENTS_PATH: /data/documents
+      BACKUP_PATH: /data/backups
+      BACKUP_HOST_PATH: /volume1/famulus/backups
+      SCAN_HOST_PATH: /volume1/famulus/scan
+      TLS_MODE: auto
+      TLS_DIR: /data/tls
+      # Name und IP der NAS fuer das Zertifikat. Kann leer bleiben: Famulus DMS fragt es bei der Ersteinrichtung ab.
+      TLS_HOSTNAMES: ""
+      HTTPS_PORT: 8443
+      PORT: 8000
+      OCR_LANGUAGES: deu+eng
+      TESSDATA_DIR: /data/tessdata
+    volumes:
+      - /volume1/famulus/documents:/data/documents   # Dokumente
+      - /volume1/famulus/backups:/data/backups       # Datenbanksicherungen
+      - appdata:/data/appdata
+      - tls:/data/tls
+      - tessdata:/data/tessdata
+    ports:
+      - "8000:8000"   # Umleitung auf HTTPS + Zertifikat-Hilfe fuer neue Geraete
+      - "8443:8443"   # Famulus DMS (HTTPS)
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app-worker:
+    image: ghcr.io/sschneidt/famulus-dms:latest
+    restart: unless-stopped
+    networks: [homedms]
+    depends_on:
+      db:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    environment:
+      TZ: Europe/Berlin
+      APP_ROLE: worker
+      DATABASE_URL: postgresql://homedms:homedms-intern@db:5432/homedms
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_KEY: meili-intern-schluessel
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_CHAT_MODEL: llama3.2:3b
+      OLLAMA_EMBEDDING_MODEL: nomic-embed-text
+      AI_CAUTION_LEVEL: normal
+      OCR_LANGUAGES: deu+eng
+      JWT_SECRET_FILE: /data/appdata/jwt_secret
+      DOCUMENTS_PATH: /data/documents
+      SCAN_PATH: /data/scan
+      TESSDATA_DIR: /data/tessdata
+    volumes:
+      - /volume1/famulus/documents:/data/documents   # Dokumente
+      - /volume1/famulus/scan:/data/scan             # Scan-Ordner (Scanner speichert hier per SMB)
+      - appdata:/data/appdata
+      - tessdata:/data/tessdata

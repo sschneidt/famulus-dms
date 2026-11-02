@@ -1,7 +1,14 @@
 """Zentrale Konfiguration. Env-Variablen spiegeln docker-compose.yml (Repo-Root)."""
+import os
+import secrets
+import time
 from functools import lru_cache
+from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+JWT_PLACEHOLDER = "dev-only-change-me"
 
 
 class Settings(BaseSettings):
@@ -74,11 +81,32 @@ class Settings(BaseSettings):
     login_max_failures: int = 5
     login_max_lock_minutes: int = 60
 
-    jwt_secret: str = "dev-only-change-me"
+    jwt_secret: str = JWT_PLACEHOLDER
+    # Statt JWT_SECRET von Hand zu setzen: Datei, in der Famulus DMS beim ersten Start selbst einen
+    # zufaelligen Schluessel anlegt (API und Worker teilen sich dieselbe Datei, z. B. in einem Volume).
+    # Wirkt nur, solange JWT_SECRET leer oder ein Platzhalter ist.
+    jwt_secret_file: str = ""
     jwt_access_token_ttl_minutes: int = 15
     jwt_refresh_token_ttl_days: int = 30
 
+    # --- Datenbanksicherungen (core/backup.py) ----------------------------------------------------
+    # Ordner fuer die Sicherungsdateien (.dump). Im Container fest "/data/backups".
+    backup_path: str = "./backups"
+    # So viele Sicherungen bleiben erhalten; aeltere werden nach einer neuen geloescht.
+    backup_keep: int = 5
+    # Nur zur Anzeige: wo der Sicherungsordner auf dem NAS/PC liegt (im Container sieht man nur /data/backups)
+    backup_host_path: str = ""
+    # Pfad zu pg_dump(.exe), falls nicht im PATH (Windows) - leer = automatisch suchen
+    pg_dump_cmd: str = ""
+
     tz: str = "Europe/Berlin"
+
+    @model_validator(mode="after")
+    def _load_jwt_secret(self) -> "Settings":
+        placeholder = self.jwt_secret in ("", JWT_PLACEHOLDER) or "CHANGE_ME" in self.jwt_secret
+        if self.jwt_secret_file and placeholder:
+            self.jwt_secret = read_or_create_secret(Path(self.jwt_secret_file))
+        return self
 
     @property
     def sqlalchemy_database_url(self) -> str:
@@ -96,6 +124,27 @@ class Settings(BaseSettings):
         """Fuer Procrastinate/psycopg (homedms/worker.py) - psycopg versteht kein
         "+asyncpg"-Suffix im Schema."""
         return self.database_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+
+
+def read_or_create_secret(path: Path) -> str:
+    """Liest den Schluessel aus der Datei oder legt ihn an. Sicher bei gleichzeitigem Start von API
+    und Worker: Die Datei wird nur von einem Prozess angelegt (O_EXCL), der andere liest sie."""
+    for _ in range(50):
+        try:
+            value = path.read_text(encoding="utf-8").strip()
+        except OSError:
+            value = ""
+        if value:
+            return value
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        except FileExistsError:  # ein anderer Prozess schreibt gerade - gleich noch einmal lesen
+            time.sleep(0.1)
+            continue
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(secrets.token_hex(32) + "\n")
+    raise RuntimeError(f"JWT-Schluesseldatei {path} ist leer oder nicht lesbar")
 
 
 @lru_cache

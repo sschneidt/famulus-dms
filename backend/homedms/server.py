@@ -225,6 +225,16 @@ def build_servers(host: str, http_port: int) -> list:
         uvicorn.Server(uvicorn.Config(secured, port=settings.https_port, ssl_certfile=cert, ssl_keyfile=key, **common)),
         uvicorn.Server(uvicorn.Config(build_redirect_app(settings.https_port, files), port=http_port, **common)),
     ]
+    if files:
+        https_server = servers[0]
+
+        def reload_certificate(new: tls.TlsFiles) -> None:
+            """Neues Zertifikat (Ersteinrichtung: Name/Adresse ergaenzt) fuer neue Verbindungen laden - ohne Neustart."""
+            context = getattr(https_server.config, "ssl", None)
+            if context is not None:
+                context.load_cert_chain(str(new.cert), str(new.key))
+
+        tls.RELOAD_HOOKS.append(reload_certificate)
     logger.info("Famulus DMS laeuft auf https://%s:%s", shown, settings.https_port)
     if files:
         logger.info("Neues Geraet? Zuerst http://%s:%s/zertifikat oeffnen (Fingerabdruck %s...)",

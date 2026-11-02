@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from homedms.i18n import _
 from homedms.config import get_settings
-from homedms.core import login_guard, ocr_languages, setup_code
+from homedms.core import login_guard, ocr_languages, setup_code, tls
 from homedms.core.security import hash_password
 from homedms.db import get_db
 from homedms.models.document import Category
@@ -36,6 +36,8 @@ async def setup_status(db: AsyncSession = Depends(get_db)) -> dict:
     return extra | {
         "bootstrapped": bootstrapped,
         "tls": settings.tls_mode == "auto",  # eigene Zertifizierungsstelle -> Geraete muessen ihr vertrauen
+        # Namen/Adressen, die das Zertifikat schon abdeckt - fehlt die aktuelle, fragt die Einrichtung danach
+        "tls_names": list(tls.CURRENT.names) if tls.CURRENT else [],
         "http_port": int(os.environ.get("PORT", "8000")),
         "https_port": settings.https_port,
     }
@@ -51,12 +53,21 @@ async def bootstrap(payload: BootstrapRequest, request: Request, db: AsyncSessio
         login_guard.record_ip_failure(ip)
         raise HTTPException(status.HTTP_403_FORBIDDEN, _("Der Einrichtungscode stimmt nicht - er steht im Protokoll des "
                                                           "Servers und in der Datei .einrichtungscode im Dokumente-Ordner"))
+    settings = get_settings()
     existing = await db.scalar(select(func.count()).select_from(Tenant))
     if (existing or 0) > 0:
         raise HTTPException(
             status.HTTP_409_CONFLICT,
             _("Es existiert bereits ein Haushalt - Ersteinrichtung ist nur einmal moeglich."),
         )
+
+    network_names: list[str] = []
+    if tls.CURRENT is not None and payload.network_names.strip():  # nur mit eigener Zertifizierungsstelle (TLS_MODE=auto)
+        network_names = tls.parse_names(payload.network_names)
+        try:
+            tls.validate_names(network_names)
+        except ValueError as exc:  # vor dem Anlegen pruefen: ein Tippfehler soll die Einrichtung nicht halb machen
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
 
     unknown = [c for c in payload.ocr_languages if c not in ocr_languages.CATALOG]
     if unknown:
@@ -96,8 +107,18 @@ async def bootstrap(payload: BootstrapRequest, request: Request, db: AsyncSessio
     except Exception as exc:  # noqa: BLE001 - die Einrichtung selbst ist erfolgreich
         logger.warning("Sprachpakete nicht angefordert: %s", exc)
 
+    ca_replaced = False
+    if network_names:  # Zertifikat mit dem Namen/der Adresse des Servers neu ausstellen, ohne Neustart
+        try:
+            files, ca_replaced = tls.apply_hostnames(settings.tls_dir, ", ".join(network_names), settings.tls_hostnames)
+            logger.info("Zertifikat fuer die Ersteinrichtung erneuert: %s", ", ".join(files.names))
+        except Exception as exc:  # noqa: BLE001 - die Einrichtung selbst ist erfolgreich
+            logger.warning("Zertifikat konnte nicht erneuert werden: %s", exc)
+
     return BootstrapResponse(
         tenant_id=str(tenant.id),
         admin_user_id=str(admin.id),
         categories_created=len(DEFAULT_CATEGORIES),
+        tls_names=list(tls.CURRENT.names) if tls.CURRENT else [],
+        tls_ca_replaced=ca_replaced,
     )

@@ -45,3 +45,16 @@ class DiagnosticsResponse(BaseModel):
 
 class ActionResult(BaseModel):
     message: str
+
+
+class BackupItem(BaseModel):
+    name: str
+    size: int  # Bytes
+    created: datetime
+
+
+class BackupsResponse(BaseModel):
+    available: bool  # false: pg_dump fehlt, Sicherungen aus der Anwendung sind hier nicht moeglich
+    folder: str  # wo die Dateien liegen (fuer Anzeige)
+    keep: int  # so viele Sicherungen bleiben erhalten
+    items: list[BackupItem]

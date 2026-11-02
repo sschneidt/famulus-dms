@@ -8,18 +8,20 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from procrastinate.exceptions import AlreadyEnqueued
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from homedms import __version__
 from homedms.api.deps import require_admin
-from homedms.core import diagnostics
+from homedms.config import get_settings
+from homedms.core import backup, diagnostics
 from homedms.db import get_db
 from homedms.jobs import app as jobs_app
 from homedms.models.document import Document
 from homedms.models.tenant import User
-from homedms.schemas.system import ActionResult, DiagnosticsResponse
+from homedms.schemas.system import ActionResult, BackupsResponse, DiagnosticsResponse
 from homedms.i18n import _, _n
 
 logger = logging.getLogger("homedms.api.system")
@@ -107,3 +109,50 @@ async def run_action(action: str, user: User = Depends(require_admin), db: Async
         return ActionResult(message=_("Download gestartet: {codes}", codes=", ".join(queued)))
 
     raise HTTPException(status.HTTP_404_NOT_FOUND, _("Unbekannte Aktion"))
+
+
+# --- Datenbanksicherung ------------------------------------------------------------------------------
+
+
+def _backups_response() -> BackupsResponse:
+    settings = get_settings()
+    return BackupsResponse(
+        available=backup.available(),
+        folder=settings.backup_host_path or str(backup.backup_dir()),
+        keep=max(1, settings.backup_keep),
+        items=[{"name": b.name, "size": b.size, "created": b.created} for b in backup.list_backups()],
+    )
+
+
+@router.get("/backups", response_model=BackupsResponse)
+async def list_backups(user: User = Depends(require_admin)) -> BackupsResponse:
+    return _backups_response()
+
+
+@router.post("/backups", response_model=BackupsResponse, status_code=status.HTTP_201_CREATED)
+async def create_backup(user: User = Depends(require_admin)) -> BackupsResponse:
+    logger.info("Datenbanksicherung von %s gestartet", user.email)
+    try:
+        await backup.create()
+    except backup.BackupError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+    return _backups_response()
+
+
+@router.get("/backups/{name}")
+async def download_backup(name: str, user: User = Depends(require_admin)) -> FileResponse:
+    try:
+        path = backup.path_of(name)
+    except FileNotFoundError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Sicherung nicht gefunden")) from None
+    return FileResponse(path, media_type="application/octet-stream", filename=name)
+
+
+@router.delete("/backups/{name}", response_model=BackupsResponse)
+async def delete_backup(name: str, user: User = Depends(require_admin)) -> BackupsResponse:
+    try:
+        backup.delete(name)
+    except FileNotFoundError:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, _("Sicherung nicht gefunden")) from None
+    logger.info("Sicherung %s von %s gelöscht", name, user.email)
+    return _backups_response()

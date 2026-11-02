@@ -1070,6 +1070,42 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/system/backups": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List Backups */
+    get: operations["list_backups_api_v1_system_backups_get"];
+    put?: never;
+    /** Create Backup */
+    post: operations["create_backup_api_v1_system_backups_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/system/backups/{name}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Download Backup */
+    get: operations["download_backup_api_v1_system_backups__name__get"];
+    put?: never;
+    post?: never;
+    /** Delete Backup */
+    delete: operations["delete_backup_api_v1_system_backups__name__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/notifications": {
     parameters: {
       query?: never;
@@ -1272,6 +1308,29 @@ export interface components {
       /** Jobs */
       jobs: number;
     };
+    /** BackupItem */
+    BackupItem: {
+      /** Name */
+      name: string;
+      /** Size */
+      size: number;
+      /**
+       * Created
+       * Format: date-time
+       */
+      created: string;
+    };
+    /** BackupsResponse */
+    BackupsResponse: {
+      /** Available */
+      available: boolean;
+      /** Folder */
+      folder: string;
+      /** Keep */
+      keep: number;
+      /** Items */
+      items: components["schemas"]["BackupItem"][];
+    };
     /** Body_add_pages_api_v1_documents__document_id__pages_post */
     Body_add_pages_api_v1_documents__document_id__pages_post: {
       /**
@@ -1328,6 +1387,7 @@ export interface components {
     BootstrapRequest: {
       /**
        * Household Name
+       * @default Home
        * @example Familie Mustermann
        */
       household_name: string;
@@ -1364,6 +1424,12 @@ export interface components {
       admin_display_name: string;
       /** Setup Code */
       setup_code: string;
+      /**
+       * Network Names
+       * @default
+       * @example 192.168.1.10, nas.local
+       */
+      network_names: string;
     };
     /** BootstrapResponse */
     BootstrapResponse: {
@@ -1373,6 +1439,16 @@ export interface components {
       admin_user_id: string;
       /** Categories Created */
       categories_created: number;
+      /**
+       * Tls Names
+       * @default []
+       */
+      tls_names: string[];
+      /**
+       * Tls Ca Replaced
+       * @default false
+       */
+      tls_ca_replaced: boolean;
     };
     /**
      * CategoryAssignRequest
@@ -1500,6 +1576,8 @@ export interface components {
     };
     /** DiagnosticsResponse */
     DiagnosticsResponse: {
+      /** Version */
+      version: string;
       /**
        * Checked At
        * Format: date-time
@@ -4752,6 +4830,108 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ActionResult"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_backups_api_v1_system_backups_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BackupsResponse"];
+        };
+      };
+    };
+  };
+  create_backup_api_v1_system_backups_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BackupsResponse"];
+        };
+      };
+    };
+  };
+  download_backup_api_v1_system_backups__name__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_backup_api_v1_system_backups__name__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        name: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BackupsResponse"];
         };
       };
       /** @description Validation Error */

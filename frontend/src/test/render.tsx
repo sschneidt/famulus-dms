@@ -60,7 +60,7 @@ export function renderWithProviders(
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   const router = createMemoryRouter(routes ?? [{ path: "*", element: ui }], { initialEntries: [path] });
   return render(
-    <MantineProvider>
+    <MantineProvider env="test">
       <DatesProvider settings={{ locale: "de" }}>
         <QueryClientProvider client={queryClient}>
           <ModalsProvider>

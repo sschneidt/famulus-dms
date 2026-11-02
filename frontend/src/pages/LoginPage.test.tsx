@@ -55,6 +55,7 @@ describe("LoginPage", () => {
       admin_password: "geheim123",
       setup_code: "ABCD-EFGH-JKLM",
       ocr_languages: ["deu", "eng"],
+      network_names: "",
     });
     // Anmeldung als Weboberflaeche: Refresh-Token nur als HttpOnly-Cookie
     const loginCall = calls.find((c) => c.path === "/api/v1/auth/login");
@@ -119,6 +120,68 @@ describe("LoginPage", () => {
     );
   });
 
+  it("fragt bei eigener Zertifizierungsstelle nach der Adresse des Servers und schickt sie mit", async () => {
+    const { calls } = mockFetch([
+      { path: "/api/v1/setup/status", body: { bootstrapped: false, tls: true, tls_names: ["localhost"] } },
+      {
+        method: "POST",
+        path: "/api/v1/setup/bootstrap",
+        status: 201,
+        body: { tenant_id: "t1", admin_user_id: "u1", categories_created: 12, tls_names: ["192.168.1.10"], tls_ca_replaced: false },
+      },
+      {
+        method: "POST",
+        path: "/api/v1/auth/login",
+        body: { access_token: "a", refresh_token: "r", token_type: "bearer" },
+      },
+      { path: "/api/v1/auth/me", body: me },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(<LoginPage />, { path: "/login", routes });
+
+    expect(await screen.findByText("Ersteinrichtung")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Adresse dieses Servers im Heimnetz"), "192.168.1.10, nas.local");
+    await user.type(screen.getByLabelText("Einrichtungscode"), "ABCD-EFGH-JKLM");
+    await user.type(screen.getByLabelText("Ihr Name"), "Anna");
+    await user.type(screen.getByLabelText("E-Mail"), "anna@example.com");
+    await user.type(screen.getByLabelText("Passwort"), "geheim123");
+    await user.type(screen.getByLabelText("Passwort wiederholen"), "geheim123");
+    await user.click(screen.getByRole("button", { name: "Haushalt anlegen" }));
+
+    expect(await screen.findByText("Startseite")).toBeInTheDocument();
+    expect(calls.find((c) => c.path === "/api/v1/setup/bootstrap")?.body).toMatchObject({
+      network_names: "192.168.1.10, nas.local",
+    });
+  });
+
+  it("zeigt Fehler des Servers zur Adresse an und fragt ohne eigene Zertifizierungsstelle gar nicht erst", async () => {
+    mockFetch([
+      { path: "/api/v1/setup/status", body: { bootstrapped: false, tls: true, tls_names: [] } },
+      {
+        method: "POST",
+        path: "/api/v1/setup/bootstrap",
+        status: 422,
+        body: { detail: "„example.com“ ist keine Heimnetz-Adresse" },
+      },
+    ]);
+    const user = userEvent.setup();
+    const { unmount } = renderWithProviders(<LoginPage />, { path: "/login", routes });
+    expect(await screen.findByText("Ersteinrichtung")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Adresse dieses Servers im Heimnetz"), "example.com");
+    await user.type(screen.getByLabelText("Einrichtungscode"), "ABCD-EFGH-JKLM");
+    await user.type(screen.getByLabelText("Ihr Name"), "Anna");
+    await user.type(screen.getByLabelText("E-Mail"), "anna@example.com");
+    await user.type(screen.getByLabelText("Passwort"), "geheim123");
+    await user.type(screen.getByLabelText("Passwort wiederholen"), "geheim123");
+    await user.click(screen.getByRole("button", { name: "Haushalt anlegen" }));
+    expect(await screen.findByText("„example.com“ ist keine Heimnetz-Adresse")).toBeInTheDocument();
+    unmount();
+
+    mockFetch([{ path: "/api/v1/setup/status", body: { bootstrapped: false, tls: false } }]);
+    renderWithProviders(<LoginPage />, { path: "/login", routes });
+    expect(await screen.findByText("Ersteinrichtung")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Adresse dieses Servers im Heimnetz")).not.toBeInTheDocument();
+  });
   it("zeigt die Fehlermeldung des Servers bei falschem Passwort", async () => {
     mockFetch([
       { path: "/api/v1/setup/status", body: { bootstrapped: true } },

@@ -45,13 +45,15 @@ def build_redirect_app(https_port: int, files: "tls.TlsFiles | None") -> ASGIApp
     async def ca_certificate(_request: Request) -> Response:
         if files is None:
             return Response(_("Kein eigenes Zertifikat - Famulus DMS nutzt ein offizielles."), status_code=404)
-        return Response(files.ca_cert.read_bytes(), media_type="application/x-x509-ca-cert", headers={
+        current = tls.CURRENT or files  # nach der Ersteinrichtung kann die Zertifizierungsstelle neu sein
+        return Response(current.ca_cert.read_bytes(), media_type="application/x-x509-ca-cert", headers={
             "Content-Disposition": 'attachment; filename="homedms-ca.crt"', "Cache-Control": "no-store",
         })
 
     async def page(request: Request) -> Response:
         if files is None:
             return RedirectResponse(https_url(request, "/"), status_code=308)
+        files_now = tls.CURRENT or files
         port = request.url.port or 80
         download = f"http://{_host(request)}{'' if port == 80 else f':{port}'}/homedms-ca.crt"
         qr = segno.make(download, error="m").svg_data_uri(scale=4, border=2)
@@ -63,8 +65,8 @@ def build_redirect_app(https_port: int, files: "tls.TlsFiles | None") -> ASGIApp
         )
         body = (HEAD + BODIES[lang]).format(
             lang=lang, title=html.escape(TITLES[lang]), languages=languages, qr=qr,
-            fingerprint=html.escape(files.fingerprint), target=html.escape(https_url(request, "/")),
-            names=html.escape(", ".join(files.names)),
+            fingerprint=html.escape(files_now.fingerprint), target=html.escape(https_url(request, "/")),
+            names=html.escape(", ".join(files_now.names)),
         )
         return HTMLResponse(body, headers={"Content-Security-Policy": PAGE_CSP, "Cache-Control": "no-store",
                                            "X-Content-Type-Options": "nosniff"})
@@ -85,7 +87,12 @@ class HostTracker:
     (-> Browser-Warnung). Die Diagnose zeigt sie mit dem Hinweis, TLS_HOSTNAMES zu ergaenzen."""
 
     def __init__(self, app: ASGIApp, names: tuple[str, ...]) -> None:
-        self.app, self.names = app, {n.lower() for n in names}
+        self.app, self.initial_names = app, {n.lower() for n in names}
+
+    @property
+    def names(self) -> set[str]:
+        """Aktuell abgedeckte Namen (nach der Ersteinrichtung koennen welche dazugekommen sein)."""
+        return {n.lower() for n in tls.CURRENT.names} if tls.CURRENT else self.initial_names
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http":

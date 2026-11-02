@@ -426,5 +426,13 @@
  "{value} {unit}": "{value} {unit}",
  "Ältester wartender Auftrag": "Самое старое ожидающее задание",
  "Überfällig": "Просрочено",
- "über {host} als {sender}": "через {host} от {sender}"
+ "über {host} als {sender}": "через {host} от {sender}",
+ "pg_dump wurde nicht gefunden - die Sicherung aus der Anwendung ist hier nicht möglich.": "pg_dump не найден - резервное копирование из приложения здесь невозможно.",
+ "Der Sicherungsordner {folder} ist nicht beschreibbar ({reason}).": "В папку резервных копий {folder} нельзя записывать ({reason}).",
+ "pg_dump konnte nicht gestartet werden ({reason}).": "Не удалось запустить pg_dump ({reason}).",
+ "Die Sicherung ist fehlgeschlagen: {reason}": "Резервное копирование не удалось: {reason}",
+ "Die Sicherung ist unvollständig (Datei zu klein).": "Резервная копия неполная (файл слишком мал).",
+ "Sicherung nicht gefunden": "Резервная копия не найдена",
+ "„{name}“ ist kein gültiger Rechnername und keine IP-Adresse.": "«{name}» — недопустимое имя компьютера или IP-адрес.",
+ "„{name}“ ist keine Heimnetz-Adresse (z. B. 192.168.x.x oder name.local) - für Zugriff von außen bitte ein VPN nutzen.": "«{name}» — не адрес домашней сети (например, 192.168.x.x или name.local); для доступа извне используйте VPN."
 }

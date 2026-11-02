@@ -152,7 +152,7 @@ id "$SERVICE_USER" >/dev/null 2>&1 || useradd --system --home-dir "$DATA_DIR" --
 if ! runuser -u "$SERVICE_USER" -- test -r "$APP_DIR/backend/homedms/server.py"; then
   die "$(t fail_unreadable "$SERVICE_USER" "$APP_DIR")"
 fi
-mkdir -p "$DATA_DIR"/{documents,scan,logs,meilisearch,tls}
+mkdir -p "$DATA_DIR"/{documents,scan,backups,logs,meilisearch,tls}
 
 if [ ! -f "$ENV_FILE" ]; then
   step "$(t step_settings "$ENV_FILE")"
@@ -166,6 +166,7 @@ if [ ! -f "$ENV_FILE" ]; then
       -e "s|^MEILISEARCH_KEY=.*|MEILISEARCH_KEY=$(secret 40)|" \
       -e "s|^DOCUMENTS_PATH=.*|DOCUMENTS_PATH=$DATA_DIR/documents|" \
       -e "s|^SCAN_PATH=.*|SCAN_PATH=$DATA_DIR/scan|" \
+      -e "s|^BACKUP_PATH=.*|BACKUP_PATH=$DATA_DIR/backups|" \
       -e "s|^LOG_DIR=.*|LOG_DIR=$DATA_DIR/logs|" \
       -e "s|^MEILISEARCH_DATA=.*|MEILISEARCH_DATA=$DATA_DIR/meilisearch|" \
       -e "s|^TLS_DIR=.*|TLS_DIR=$DATA_DIR/tls|" \

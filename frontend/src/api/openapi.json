@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "HomeDMS API",
-    "version": "0.1.0"
+    "title": "Famulus DMS API",
+    "version": "0.2.1"
   },
   "paths": {
     "/health": {
@@ -3259,6 +3259,146 @@
         }
       }
     },
+    "/api/v1/system/backups": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "List Backups",
+        "operationId": "list_backups_api_v1_system_backups_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Create Backup",
+        "operationId": "create_backup_api_v1_system_backups_post",
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/backups/{name}": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Download Backup",
+        "operationId": "download_backup_api_v1_system_backups__name__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Delete Backup",
+        "operationId": "delete_backup_api_v1_system_backups__name__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "tags": [
@@ -3807,6 +3947,61 @@
         ],
         "title": "AnalyzeAllResponse"
       },
+      "BackupItem": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "size",
+          "created"
+        ],
+        "title": "BackupItem"
+      },
+      "BackupsResponse": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "folder": {
+            "type": "string",
+            "title": "Folder"
+          },
+          "keep": {
+            "type": "integer",
+            "title": "Keep"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BackupItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "available",
+          "folder",
+          "keep",
+          "items"
+        ],
+        "title": "BackupsResponse"
+      },
       "Body_add_pages_api_v1_documents__document_id__pages_post": {
         "properties": {
           "file": {
@@ -3917,8 +4112,8 @@
           "household_name": {
             "type": "string",
             "maxLength": 200,
-            "minLength": 1,
             "title": "Household Name",
+            "default": "Home",
             "examples": [
               "Familie Mustermann"
             ]
@@ -3980,11 +4175,19 @@
             "maxLength": 40,
             "minLength": 1,
             "title": "Setup Code"
+          },
+          "network_names": {
+            "type": "string",
+            "maxLength": 500,
+            "title": "Network Names",
+            "default": "",
+            "examples": [
+              "192.168.1.10, nas.local"
+            ]
           }
         },
         "type": "object",
         "required": [
-          "household_name",
           "admin_email",
           "admin_password",
           "admin_display_name",
@@ -4005,6 +4208,19 @@
           "categories_created": {
             "type": "integer",
             "title": "Categories Created"
+          },
+          "tls_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Tls Names",
+            "default": []
+          },
+          "tls_ca_replaced": {
+            "type": "boolean",
+            "title": "Tls Ca Replaced",
+            "default": false
           }
         },
         "type": "object",
@@ -4312,6 +4528,10 @@
       },
       "DiagnosticsResponse": {
         "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
           "checked_at": {
             "type": "string",
             "format": "date-time",
@@ -4343,6 +4563,7 @@
         },
         "type": "object",
         "required": [
+          "version",
           "checked_at",
           "overall",
           "components",

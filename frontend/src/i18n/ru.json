@@ -722,5 +722,21 @@
   "„{{title}}“ eingeordnet": "«{{title}}» классифицирован",
   "„{{title}}“ wiederhergestellt": "«{{title}}» восстановлен",
   "„{{title}}“ wird in den Papierkorb verschoben und kann dort wiederhergestellt werden.": "«{{title}}» будет перемещён в корзину, откуда его можно восстановить.",
-  "Optional. Ohne Angabe heißt der Haushalt „Home“. Der Name ist der oberste Ordner der Ablage.": "Необязательно. Без названия домохозяйство называется «Home». Название — это папка верхнего уровня в хранилище."
+  "Optional. Ohne Angabe heißt der Haushalt „Home“. Der Name ist der oberste Ordner der Ablage.": "Необязательно. Без названия домохозяйство называется «Home». Название — это папка верхнего уровня в хранилище.",
+  "Sicherung löschen?": "Удалить резервную копию?",
+  "Die Sicherung {{name}} wird endgültig gelöscht.": "Резервная копия {{name}} будет удалена безвозвратно.",
+  "Löschen nicht möglich": "Не удалось удалить",
+  "Datenbanksicherung": "Резервная копия базы данных",
+  "Sichert die Datenbank (Personen, Angaben zu den Dokumenten, Fristen, Einstellungen). Die Dokument-Dateien selbst liegen im Dokumente-Ordner und werden als Ordner gesichert.": "Сохраняет базу данных (пользователи, сведения о документах, сроки, настройки). Сами файлы документов лежат в папке документов и копируются как папка.",
+  "Sicherung angelegt.": "Резервная копия создана.",
+  "Sicherung nicht möglich": "Резервное копирование невозможно",
+  "Jetzt sichern": "Создать копию сейчас",
+  "Auf diesem Server fehlt das Programm pg_dump. Eine Sicherung geht hier nur mit den Update-Skripten (siehe Anleitung).": "На этом сервере нет программы pg_dump. Резервную копию здесь можно сделать только скриптами обновления (см. инструкцию).",
+  "Ordner: {{folder}} · Aufbewahrt werden die neuesten {{keep}} Sicherungen.": "Папка: {{folder}} · Хранятся {{keep}} последних копий.",
+  "Noch keine Sicherung vorhanden.": "Резервных копий пока нет.",
+  "Erstellt": "Создано",
+  "Größe": "Размер",
+  "Das Zertifikat wurde neu erstellt. Geräte, die dem alten schon vertrauen, installieren das neue über die Zertifikat-Hilfe.": "Сертификат создан заново. Устройства, которые уже доверяют старому, должны установить новый через страницу помощи по сертификату.",
+  "Adresse dieses Servers im Heimnetz": "Адрес этого сервера в домашней сети",
+  "Name und/oder IP-Adresse, unter der Sie Famulus DMS von Handy und PC erreichen, mehrere durch Komma getrennt (z. B. 192.168.1.10, nas.local). Das Zertifikat wird dafür ausgestellt; ohne diese Angabe warnt der Browser auf jedem Gerät.": "Имя и/или IP-адрес, по которому вы открываете Famulus DMS с телефона и компьютера, несколько через запятую (например, 192.168.1.10, nas.local). Сертификат выпускается для него; без этого браузер будет предупреждать на каждом устройстве."
 }

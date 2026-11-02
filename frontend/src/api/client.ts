@@ -175,6 +175,14 @@ export async function fetchDocumentFile(documentId: string): Promise<Blob> {
   return resp.blob();
 }
 
+/** Datenbanksicherung mit Anmeldung laden (nur Admins). */
+export async function fetchBackupFile(name: string): Promise<Blob> {
+  const resp = await authFetch(`${api_base()}/api/v1/system/backups/${encodeURIComponent(name)}`);
+  if (!resp.ok)
+    throw new ApiError(resp.status, i18n.t("Datei konnte nicht geladen werden ({{status}})", { status: resp.status }));
+  return resp.blob();
+}
+
 function api_base(): string {
   return typeof window !== "undefined" ? window.location.origin : "http://localhost";
 }

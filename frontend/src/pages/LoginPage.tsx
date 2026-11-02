@@ -226,8 +226,14 @@ function SetupForm({ onDone }: { onDone: () => void }) {
   const [ocr, setOcr] = useState<string[] | null>(null); // null = Vorschlag passend zur Sprache
   const ocrSelection = ocr ?? defaultOcr(i18n.language);
   const [error, setError] = useState<string | null>(null);
+  // Mit eigener Zertifizierungsstelle: unter welchem Namen/welcher Adresse ist der Server im Heimnetz erreichbar?
+  // Vorbelegt mit der Adresse, die gerade im Browser steht - falls das Zertifikat sie noch nicht abdeckt.
+  const askAddress = setup.data?.tls === true;
+  const here = window.location.hostname;
+  const suggestion =
+    here && !["localhost", "127.0.0.1", "[::1]"].includes(here) && !(setup.data?.tls_names ?? []).includes(here) ? here : "";
   const form = useForm({
-    initialValues: { code: "", household: "", name: "", email: "", password: "", repeat: "" },
+    initialValues: { code: "", household: "", name: "", email: "", password: "", repeat: "", network: suggestion },
     validate: {
       code: (v) => (v.trim() ? null : t("Bitte den Einrichtungscode eingeben")),
       name: (v) => (v.trim() ? null : t("Bitte Ihren Namen angeben")),
@@ -240,7 +246,7 @@ function SetupForm({ onDone }: { onDone: () => void }) {
   const submit = form.onSubmit(async (values) => {
     setError(null);
     try {
-      await call(
+      const created = await call(
         api.POST("/api/v1/setup/bootstrap", {
           body: {
             household_name: values.household.trim(),
@@ -250,9 +256,16 @@ function SetupForm({ onDone }: { onDone: () => void }) {
             admin_password: values.password,
             setup_code: values.code.trim(),
             ocr_languages: ocrSelection,
+            network_names: askAddress ? values.network.trim() : "",
           },
         }),
       );
+      if (created.tls_ca_replaced)
+        notifySuccess(
+          t(
+            "Das Zertifikat wurde neu erstellt. Geräte, die dem alten schon vertrauen, installieren das neue über die Zertifikat-Hilfe.",
+          ),
+        );
       await login(values.email.trim(), values.password);
       onDone();
     } catch (e) {
@@ -291,6 +304,17 @@ function SetupForm({ onDone }: { onDone: () => void }) {
           placeholder={t("z. B. Familie Muster")}
           {...form.getInputProps("household")}
         />
+        {askAddress && (
+          <TextInput
+            label={t("Adresse dieses Servers im Heimnetz")}
+            description={t(
+              "Name und/oder IP-Adresse, unter der Sie Famulus DMS von Handy und PC erreichen, mehrere durch Komma getrennt (z. B. 192.168.1.10, nas.local). Das Zertifikat wird dafür ausgestellt; ohne diese Angabe warnt der Browser auf jedem Gerät.",
+            )}
+            placeholder="192.168.1.10, nas.local"
+            autoComplete="off"
+            {...form.getInputProps("network")}
+          />
+        )}
         <TextInput label={t("Ihr Name")} autoComplete="name" {...form.getInputProps("name")} />
         <TextInput label={t("E-Mail")} type="email" autoComplete="username" {...form.getInputProps("email")} />
         <PasswordInput label={t("Passwort")} autoComplete="new-password" {...form.getInputProps("password")} />

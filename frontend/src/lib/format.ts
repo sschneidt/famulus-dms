@@ -15,6 +15,19 @@ export function formatDate(value?: string | null): string {
   );
 }
 
+/** Dateigroesse lesbar: 1,5 MB (Zahlenschreibweise nach Sprache der Oberflaeche). */
+export function formatBytes(bytes: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  const text = new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: unit === 0 ? 0 : 1 }).format(value);
+  return `${text} ${units[unit]}`;
+}
+
 export function formatDateTime(value?: string | null): string {
   if (!value) return "–";
   const d = dayjs(value);

@@ -172,7 +172,7 @@ if (-not $DataFolder) {
 }
 Write-Host (T 'info_data_folder' $DataFolder)
 New-Item -ItemType Directory -Force -Path $Tools, $DataFolder | Out-Null
-foreach ($sub in "documents", "scan", "logs", "meilisearch", "tls") { New-Item -ItemType Directory -Force -Path (Join-Path $DataFolder $sub) | Out-Null }
+foreach ($sub in "documents", "scan", "backups", "logs", "meilisearch", "tls") { New-Item -ItemType Directory -Force -Path (Join-Path $DataFolder $sub) | Out-Null }
 
 # --- 1. PostgreSQL -------------------------------------------------------------------------------
 Step (T 'step_postgres')
@@ -307,6 +307,7 @@ if (-not (Test-Path $EnvFile)) {
         "MEILISEARCH_KEY"  = New-Secret 40
         "DOCUMENTS_PATH"   = Slash (Join-Path $DataFolder "documents")
         "SCAN_PATH"        = Slash (Join-Path $DataFolder "scan")
+        "BACKUP_PATH"      = Slash (Join-Path $DataFolder "backups")
         "LOG_DIR"          = Slash (Join-Path $DataFolder "logs")
         "MEILISEARCH_DATA" = Slash (Join-Path $DataFolder "meilisearch")
         "TESSERACT_CMD"    = Slash $tesseract

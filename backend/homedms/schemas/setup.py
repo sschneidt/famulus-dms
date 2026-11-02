@@ -48,6 +48,9 @@ class BootstrapRequest(BaseModel):
     admin_display_name: str = Field(min_length=1, max_length=200, examples=["Max Mustermann"])
     # Einmal-Code aus dem Server-Protokoll bzw. <Dokumente-Ordner>/.einrichtungscode (core/setup_code.py)
     setup_code: str = Field(min_length=1, max_length=40)
+    # Name(n)/IP-Adresse(n) des Servers im Heimnetz, getrennt durch Komma - kommen ins HTTPS-Zertifikat
+    # (nur bei TLS_MODE=auto; sonst ignoriert). Eine eingefuegte Browser-Adresse wird auf den Namen gekuerzt.
+    network_names: str = Field(default="", max_length=500, examples=["192.168.1.10, nas.local"])
 
     @field_validator("household_name", mode="before")
     @classmethod
@@ -63,3 +66,7 @@ class BootstrapResponse(BaseModel):
     tenant_id: str
     admin_user_id: str
     categories_created: int
+    # Das Zertifikat deckt jetzt diese Namen/Adressen ab (leer ohne eigenes Zertifikat)
+    tls_names: list[str] = []
+    # true: die Zertifizierungsstelle wurde neu erstellt - Geraete, die der alten vertrauen, brauchen die neue
+    tls_ca_replaced: bool = False

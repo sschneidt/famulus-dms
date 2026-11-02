@@ -666,5 +666,21 @@
   "„{{title}}“ eingeordnet": "“{{title}}” categorised",
   "„{{title}}“ wiederhergestellt": "“{{title}}” restored",
   "„{{title}}“ wird in den Papierkorb verschoben und kann dort wiederhergestellt werden.": "“{{title}}” will be moved to the bin and can be restored from there.",
-  "Optional. Ohne Angabe heißt der Haushalt „Home“. Der Name ist der oberste Ordner der Ablage.": "Optional. Without a name the household is called “Home”. The name is the top folder of the file storage."
+  "Optional. Ohne Angabe heißt der Haushalt „Home“. Der Name ist der oberste Ordner der Ablage.": "Optional. Without a name the household is called “Home”. The name is the top folder of the file storage.",
+  "Sicherung löschen?": "Delete backup?",
+  "Die Sicherung {{name}} wird endgültig gelöscht.": "The backup {{name}} will be deleted permanently.",
+  "Löschen nicht möglich": "Could not delete",
+  "Datenbanksicherung": "Database backup",
+  "Sichert die Datenbank (Personen, Angaben zu den Dokumenten, Fristen, Einstellungen). Die Dokument-Dateien selbst liegen im Dokumente-Ordner und werden als Ordner gesichert.": "Backs up the database (people, document details, deadlines, settings). The document files themselves are in the documents folder and are backed up as a folder.",
+  "Sicherung angelegt.": "Backup created.",
+  "Sicherung nicht möglich": "Backup not possible",
+  "Jetzt sichern": "Back up now",
+  "Auf diesem Server fehlt das Programm pg_dump. Eine Sicherung geht hier nur mit den Update-Skripten (siehe Anleitung).": "The program pg_dump is missing on this server. A backup is only possible here with the update scripts (see the guide).",
+  "Ordner: {{folder}} · Aufbewahrt werden die neuesten {{keep}} Sicherungen.": "Folder: {{folder}} · The newest {{keep}} backups are kept.",
+  "Noch keine Sicherung vorhanden.": "No backup yet.",
+  "Erstellt": "Created",
+  "Größe": "Size",
+  "Das Zertifikat wurde neu erstellt. Geräte, die dem alten schon vertrauen, installieren das neue über die Zertifikat-Hilfe.": "The certificate was created anew. Devices that already trust the old one need to install the new one via the certificate help page.",
+  "Adresse dieses Servers im Heimnetz": "Address of this server on your home network",
+  "Name und/oder IP-Adresse, unter der Sie Famulus DMS von Handy und PC erreichen, mehrere durch Komma getrennt (z. B. 192.168.1.10, nas.local). Das Zertifikat wird dafür ausgestellt; ohne diese Angabe warnt der Browser auf jedem Gerät.": "Name and/or IP address you use to reach Famulus DMS from phone and PC, several separated by commas (e.g. 192.168.1.10, nas.local). The certificate is issued for it; without it the browser warns on every device."
 }

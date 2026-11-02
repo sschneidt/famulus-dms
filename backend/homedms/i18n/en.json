@@ -402,5 +402,13 @@
  "{value} {unit}": "{value} {unit}",
  "Ältester wartender Auftrag": "Oldest waiting job",
  "Überfällig": "Overdue",
- "über {host} als {sender}": "via {host} as {sender}"
+ "über {host} als {sender}": "via {host} as {sender}",
+ "pg_dump wurde nicht gefunden - die Sicherung aus der Anwendung ist hier nicht möglich.": "pg_dump was not found - backups from within the application are not possible here.",
+ "Der Sicherungsordner {folder} ist nicht beschreibbar ({reason}).": "The backup folder {folder} is not writable ({reason}).",
+ "pg_dump konnte nicht gestartet werden ({reason}).": "pg_dump could not be started ({reason}).",
+ "Die Sicherung ist fehlgeschlagen: {reason}": "The backup failed: {reason}",
+ "Die Sicherung ist unvollständig (Datei zu klein).": "The backup is incomplete (file too small).",
+ "Sicherung nicht gefunden": "Backup not found",
+ "„{name}“ ist kein gültiger Rechnername und keine IP-Adresse.": "“{name}” is not a valid host name or IP address.",
+ "„{name}“ ist keine Heimnetz-Adresse (z. B. 192.168.x.x oder name.local) - für Zugriff von außen bitte ein VPN nutzen.": "“{name}” is not a home-network address (e.g. 192.168.x.x or name.local) - please use a VPN for access from outside."
 }
