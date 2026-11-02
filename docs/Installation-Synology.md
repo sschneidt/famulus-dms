@@ -120,6 +120,24 @@ Die Docker-Volumes (Datenbank, Suchindex) werden von einer reinen Ordner-Sicheru
 Verlass dich deshalb auch auf diese SQL-Sicherungen, und starte sie bei Bedarf mit
 `sudo bash ./scripts/update.sh --backup-only`.
 
+## 7. Scanner anbinden (eigener Benutzer)
+
+Der Scanner schreibt per SMB in den Ordner `scan`. Gib ihm dafür einen eigenen Benutzer, damit er nie an deine
+Dokumente kommt:
+
+1. **Benutzer anlegen:** Systemsteuerung → Benutzer & Gruppe → Erstellen, z. B. `scanner` mit eigenem Passwort,
+   das nur im Scanner eingetragen wird.
+2. **Berechtigungen:** Bei der Freigabe, die auf `/volume1/famulus/scan` zeigt, hat `scanner` *Lesen/Schreiben*.
+   Bei allen anderen Freigaben, vor allem bei `documents`, *Kein Zugriff*.
+3. **SMB** muss aktiv sein (Systemsteuerung → Dateidienste → SMB).
+4. **Im Scanner** als Ziel `\\<nas>\<freigabename>` mit diesem Benutzer eintragen.
+
+Famulus DMS selbst braucht keinen eigenen Benutzer: Die Container laufen als `root` und holen die Dateien
+jede Minute ab. Danach verschiebt es sie nach `_imported/` bzw. `_failed/`. Diese Unterordner und
+verschobenen Dateien gehören dann `root`; der Benutzer `scanner` kann sie nicht mehr lesen, das ist unkritisch.
+Wenn du selbst in `_failed/` nachsehen oder aufräumen willst, gib deinem normalen Benutzer
+*Lesen/Schreiben* auf die `scan`-Freigabe. Falls du dort etwas nicht löschen darfst, passe die Rechte der
+Unterordner in der Dateistation an (Rechtsklick → Eigenschaften → Berechtigungen).
 ## Problemlösung
 
 | Problem | Lösung |
