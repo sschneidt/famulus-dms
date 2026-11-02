@@ -16,7 +16,7 @@ gebaut wird.
    | Ordner | Zweck |
    |---|---|
    | `/volume1/famulus/app` | Programmdateien und Einstellungen (`.env`) |
-   | `/volume1/famulus/dokumente` | die abgelegten Dokumente |
+   | `/volume1/famulus/documents` | die abgelegten Dokumente |
    | `/volume1/famulus/scan` | Scan-Ordner, in den der Scanner per SMB speichert |
 
    Den Ordner `scan` kannst du in der Systemsteuerung unter *Freigegebener Ordner* für den Scanner
@@ -50,7 +50,7 @@ Diese Werte anpassen (in `vi`: `i` zum Bearbeiten, `Esc` und dann `:wq` zum Spei
 POSTGRES_PASSWORD=<eigenes Passwort>
 MEILI_MASTER_KEY=<mindestens 16 Zeichen>
 JWT_SECRET=<lange Zufallszeichen, z. B. Ausgabe von: openssl rand -hex 32>
-DOCUMENTS_PATH=/volume1/famulus/dokumente
+DOCUMENTS_PATH=/volume1/famulus/documents
 SCAN_FOLDER_PATH=/volume1/famulus/scan
 TLS_HOSTNAMES=<nas-name>,<nas-name>.local,<IP-Adresse der NAS>
 TZ=Europe/Berlin
