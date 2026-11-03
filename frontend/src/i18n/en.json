@@ -680,7 +680,10 @@
   "Noch keine Sicherung vorhanden.": "No backup yet.",
   "Erstellt": "Created",
   "Größe": "Size",
-  "Das Zertifikat wurde neu erstellt. Geräte, die dem alten schon vertrauen, installieren das neue über die Zertifikat-Hilfe.": "The certificate was created anew. Devices that already trust the old one need to install the new one via the certificate help page.",
+  "Einrichtung abgeschlossen": "Setup complete",
+  "Für den eingegebenen Namen wurde ein neues Zertifikat erstellt. Laden Sie die Seite neu und bestätigen Sie die Browser-Warnung noch einmal, danach melden Sie sich mit dem neuen Konto an.": "A new certificate was created for the name you entered. Reload the page and confirm the browser warning once more, then sign in with the new account.",
+  "Geräte, die dem alten Zertifikat schon vertrauen, installieren das neue über <anchor>{{url}}</anchor>.": "Devices that already trust the old certificate install the new one via <anchor>{{url}}</anchor>.",
+  "Seite neu laden": "Reload page",
   "Adresse dieses Servers im Heimnetz": "Address of this server on your home network",
   "Name und/oder IP-Adresse, unter der Sie Famulus DMS von Handy und PC erreichen, mehrere durch Komma getrennt (z. B. 192.168.1.10, nas.local). Das Zertifikat wird dafür ausgestellt; ohne diese Angabe warnt der Browser auf jedem Gerät.": "Name and/or IP address you use to reach Famulus DMS from phone and PC, several separated by commas (e.g. 192.168.1.10, nas.local). The certificate is issued for it; without it the browser warns on every device."
 }

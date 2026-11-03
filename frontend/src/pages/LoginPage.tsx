@@ -22,7 +22,7 @@ import { api, call } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { Logo } from "../components/Logo";
 import { LANGUAGES, chooseLanguageBeforeLogin, currentLanguage, isLanguage } from "../i18n";
-import { insecureConnection, useSetupStatus } from "../lib/connection";
+import { certificatePageUrl, insecureConnection, useSetupStatus } from "../lib/connection";
 import { notifySuccess } from "../lib/notify";
 
 /**
@@ -226,6 +226,7 @@ function SetupForm({ onDone }: { onDone: () => void }) {
   const [ocr, setOcr] = useState<string[] | null>(null); // null = Vorschlag passend zur Sprache
   const ocrSelection = ocr ?? defaultOcr(i18n.language);
   const [error, setError] = useState<string | null>(null);
+  const [certificateRenewed, setCertificateRenewed] = useState(false);
   // Mit eigener Zertifizierungsstelle: unter welchem Namen/welcher Adresse ist der Server im Heimnetz erreichbar?
   // Vorbelegt mit der Adresse, die gerade im Browser steht - falls das Zertifikat sie noch nicht abdeckt.
   const askAddress = setup.data?.tls === true;
@@ -260,18 +261,45 @@ function SetupForm({ onDone }: { onDone: () => void }) {
           },
         }),
       );
-      if (created.tls_ca_replaced)
-        notifySuccess(
-          t(
-            "Das Zertifikat wurde neu erstellt. Geräte, die dem alten schon vertrauen, installieren das neue über die Zertifikat-Hilfe.",
-          ),
-        );
+      if (created.tls_ca_replaced) {
+        // Das Zertifikat hat gewechselt: der Browser lehnt weitere Anfragen dieser Seite ab, bis sie neu geladen ist
+        setCertificateRenewed(true);
+        return;
+      }
       await login(values.email.trim(), values.password);
       onDone();
     } catch (e) {
       setError(e instanceof Error && e.message ? e.message : t("Einrichtung fehlgeschlagen"));
     }
   });
+
+  if (certificateRenewed) {
+    const helpUrl = certificatePageUrl(setup.data);
+    return (
+      <Stack>
+        <Title order={3} ta="center">
+          {t("Einrichtung abgeschlossen")}
+        </Title>
+        <Alert color="blue" icon={<IconShieldLock />}>
+          {t(
+            "Für den eingegebenen Namen wurde ein neues Zertifikat erstellt. Laden Sie die Seite neu und bestätigen Sie die Browser-Warnung noch einmal, danach melden Sie sich mit dem neuen Konto an.",
+          )}
+        </Alert>
+        {helpUrl && (
+          <Text size="sm" c="dimmed">
+            <Trans
+              i18nKey="Geräte, die dem alten Zertifikat schon vertrauen, installieren das neue über <anchor>{{url}}</anchor>."
+              values={{ url: helpUrl }}
+              components={{ anchor: <Anchor href={helpUrl} target="_blank" rel="noreferrer" /> }}
+            />
+          </Text>
+        )}
+        <Button fullWidth onClick={() => window.location.reload()}>
+          {t("Seite neu laden")}
+        </Button>
+      </Stack>
+    );
+  }
 
   return (
     <form onSubmit={submit}>

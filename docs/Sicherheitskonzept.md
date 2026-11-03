@@ -113,7 +113,7 @@ Sprachpakete der Texterkennung lädt nur der Worker, nur auf Anweisung eines Adm
 
 Empfohlen: **VPN**, also Synology VPN Server, WireGuard (z. B. in der FRITZ!Box) oder Tailscale. Famulus DMS bleibt von außen unsichtbar; über das VPN gilt das Heimnetz-Zertifikat. Tailscale-Adressen (100.64/10, `*.ts.net`) sind in der Namensbeschränkung enthalten.
 
-Eine direkte Freigabe ins Internet ist nicht vorgesehen. Falls doch gewünscht: eigene Domain mit Let's Encrypt über den Synology-Reverse-Proxy (`TLS_MODE=off` + `APP_BIND=127.0.0.1`) und Zwei-Faktor-Anmeldung für alle Konten.
+Eine direkte Freigabe ins Internet ist nicht vorgesehen. Falls doch gewünscht: eigene Domain mit Let's Encrypt über den Synology-Reverse-Proxy (`TLS_MODE=off`, Port nur auf `127.0.0.1` gebunden, bei Docker mit `APP_BIND=127.0.0.1`) und Zwei-Faktor-Anmeldung für alle Konten. Der Server muss dann den Weiterleitungs-Headern des Proxys vertrauen (`FORWARDED_ALLOW_IPS=*`, nur bei auf `127.0.0.1` gebundenem Port!), sonst erkennt er weder `https` noch die echte Adresse des Aufrufers, und die Sperre je Gerät würde alle Aufrufer von außen als eines zählen. Schritt für Schritt für die Synology: [Installation-Synology.md](Installation-Synology.md), Abschnitt 8.
 
 ## 9. Offene Punkte
 

@@ -736,7 +736,10 @@
   "Noch keine Sicherung vorhanden.": "Резервных копий пока нет.",
   "Erstellt": "Создано",
   "Größe": "Размер",
-  "Das Zertifikat wurde neu erstellt. Geräte, die dem alten schon vertrauen, installieren das neue über die Zertifikat-Hilfe.": "Сертификат создан заново. Устройства, которые уже доверяют старому, должны установить новый через страницу помощи по сертификату.",
+  "Einrichtung abgeschlossen": "Настройка завершена",
+  "Für den eingegebenen Namen wurde ein neues Zertifikat erstellt. Laden Sie die Seite neu und bestätigen Sie die Browser-Warnung noch einmal, danach melden Sie sich mit dem neuen Konto an.": "Для введённого имени создан новый сертификат. Перезагрузите страницу и ещё раз подтвердите предупреждение браузера, затем войдите с новой учётной записью.",
+  "Geräte, die dem alten Zertifikat schon vertrauen, installieren das neue über <anchor>{{url}}</anchor>.": "Устройства, которые уже доверяют старому сертификату, устанавливают новый по адресу <anchor>{{url}}</anchor>.",
+  "Seite neu laden": "Перезагрузить страницу",
   "Adresse dieses Servers im Heimnetz": "Адрес этого сервера в домашней сети",
   "Name und/oder IP-Adresse, unter der Sie Famulus DMS von Handy und PC erreichen, mehrere durch Komma getrennt (z. B. 192.168.1.10, nas.local). Das Zertifikat wird dafür ausgestellt; ohne diese Angabe warnt der Browser auf jedem Gerät.": "Имя и/или IP-адрес, по которому вы открываете Famulus DMS с телефона и компьютера, несколько через запятую (например, 192.168.1.10, nas.local). Сертификат выпускается для него; без этого браузер будет предупреждать на каждом устройстве."
 }

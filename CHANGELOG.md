@@ -7,6 +7,12 @@ Ablauf eines Releases und eines Updates: [docs/Updates.md](docs/Updates.md).
 
 ## [Unveröffentlicht]
 
+### Behoben
+- **Ersteinrichtung mit neuem Zertifikat:** Gibt man einen Rechnernamen ohne Punkt an (z. B. `schneidt-ds`), erstellt Famulus DMS die Zertifizierungsstelle neu. Die offene Seite lief danach mit dem alten Zertifikat weiter, und fast jede Seite zeigte „Failed to fetch“, bis man sie von Hand neu lud. Jetzt endet der Assistent in diesem Fall mit einem eigenen Schritt „Einrichtung abgeschlossen“: Hinweis, Link zur Zertifikat-Hilfe und Knopf **„Seite neu laden“**; die Anmeldung erfolgt erst danach.
+
+### Geändert
+- Doku: Die Synology-Anleitung beschreibt den Zugriff von unterwegs jetzt in Abschnitt 8, zuerst über **VPN** (Tailscale, FRITZ!Box-WireGuard, Synology VPN Server) und dann, mit Warnung, direkt über das Internet (Reverse-Proxy, Let's Encrypt, `FORWARDED_ALLOW_IPS`). Neu außerdem: erlaubte Namen bei der Einrichtung (kein Unterstrich), anderer Volume-Name (`volume2`), Einrichtungscode über das Terminal des Containers, Hilfe bei „Failed to fetch“.
+
 ## [0.2.2] – 2026-11-02
 
 ### Neu
