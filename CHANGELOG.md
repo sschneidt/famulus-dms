@@ -7,6 +7,8 @@ Ablauf eines Releases und eines Updates: [docs/Updates.md](docs/Updates.md).
 
 ## [Unveröffentlicht]
 
+## [0.2.3] – 2026-11-03
+
 ### Neu
 - **Zugriffsart in der Ersteinrichtung:** Der Assistent fragt (bei eigener Zertifizierungsstelle) „Wie erreichen Sie Famulus DMS?“ mit **Nur im Heimnetz** oder **Auch von unterwegs (VPN)**. Beim VPN wählt man Tailscale, WireGuard in der FRITZ!Box oder ein anderes VPN, bekommt eine Kurzanleitung und trägt die Adresse der NAS im VPN ein, die gleich ins Zertifikat kommt.
 
