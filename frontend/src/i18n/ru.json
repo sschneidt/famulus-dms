@@ -740,6 +740,18 @@
   "Für den eingegebenen Namen wurde ein neues Zertifikat erstellt. Laden Sie die Seite neu und bestätigen Sie die Browser-Warnung noch einmal, danach melden Sie sich mit dem neuen Konto an.": "Для введённого имени создан новый сертификат. Перезагрузите страницу и ещё раз подтвердите предупреждение браузера, затем войдите с новой учётной записью.",
   "Geräte, die dem alten Zertifikat schon vertrauen, installieren das neue über <anchor>{{url}}</anchor>.": "Устройства, которые уже доверяют старому сертификату, устанавливают новый по адресу <anchor>{{url}}</anchor>.",
   "Seite neu laden": "Перезагрузить страницу",
+  "Wie erreichen Sie Famulus DMS?": "Как вы подключаетесь к Famulus DMS?",
+  "Nur im Heimnetz": "Только в домашней сети",
+  "Auch von unterwegs (VPN)": "И в дороге (VPN)",
+  "VPN-Dienst": "VPN-сервис",
+  "WireGuard in der FRITZ!Box": "WireGuard в FRITZ!Box",
+  "Anderes VPN": "Другой VPN",
+  "Adresse der NAS im VPN": "Адрес NAS в VPN",
+  "Optional, kann später in der Compose-Datei bei TLS_HOSTNAMES nachgetragen werden. Das Zertifikat wird auch dafür ausgestellt, damit der Browser im VPN nicht warnt.": "Необязательно, можно позже добавить в файле Compose в TLS_HOSTNAMES. Сертификат выпускается и для этого адреса, чтобы браузер не предупреждал в VPN.",
+  "Das VPN selbst richten Sie außerhalb von Famulus DMS ein. Der Zugriff von außen ohne VPN ist hier nicht vorgesehen.": "VPN вы настраиваете отдельно от Famulus DMS. Доступ из интернета без VPN здесь не предусмотрен.",
+  "Installieren Sie Tailscale auf der NAS (Paket von tailscale.com) und die App auf dem Handy. Die Adresse der NAS steht in der Tailscale-App, z. B. 100.101.102.103 oder name.tail1234.ts.net.": "Установите Tailscale на NAS (пакет с tailscale.com) и приложение на телефон. Адрес NAS указан в приложении Tailscale, например 100.101.102.103 или name.tail1234.ts.net.",
+  "Richten Sie WireGuard in der FRITZ!Box ein (Heimnetz → Netzwerk → Netzwerkeinstellungen → WireGuard). Mit aktivem Tunnel gilt die Heimnetz-Adresse von oben; hier ist nichts weiter einzutragen.": "Настройте WireGuard в FRITZ!Box (Домашняя сеть → Сеть → Настройки сети → WireGuard). При активном туннеле действует адрес домашней сети из поля выше; здесь больше ничего вводить не нужно.",
+  "Tragen Sie die Adresse ein, unter der die NAS im VPN erreichbar ist. Sie muss eine private Adresse sein (z. B. 10.x.x.x oder 192.168.x.x).": "Введите адрес, по которому NAS доступна в VPN. Он должен быть частным (например, 10.x.x.x или 192.168.x.x).",
   "Adresse dieses Servers im Heimnetz": "Адрес этого сервера в домашней сети",
   "Name und/oder IP-Adresse, unter der Sie Famulus DMS von Handy und PC erreichen, mehrere durch Komma getrennt (z. B. 192.168.1.10, nas.local). Das Zertifikat wird dafür ausgestellt; ohne diese Angabe warnt der Browser auf jedem Gerät.": "Имя и/или IP-адрес, по которому вы открываете Famulus DMS с телефона и компьютера, несколько через запятую (например, 192.168.1.10, nas.local). Сертификат выпускается для него; без этого браузер будет предупреждать на каждом устройстве."
 }

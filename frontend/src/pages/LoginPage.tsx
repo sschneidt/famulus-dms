@@ -8,6 +8,7 @@ import {
   Paper,
   PasswordInput,
   SegmentedControl,
+  Select,
   Stack,
   Text,
   TextInput,
@@ -218,6 +219,27 @@ function TwoFactorForm({
 const UI_TO_OCR: Record<string, string> = { de: "deu", en: "eng", ru: "rus" };
 const defaultOcr = (lang: string) => [...new Set([UI_TO_OCR[lang] ?? "deu", "deu", "eng"])];
 
+type VpnKind = "tailscale" | "fritzbox" | "other";
+
+// Kurzanleitung je VPN-Dienst (ausfuehrlich: docs/Installation-Synology.md, Abschnitt 8.1)
+const VPN_HELP: Record<VpnKind, string> = {
+  tailscale:
+    "Installieren Sie Tailscale auf der NAS (Paket von tailscale.com) und die App auf dem Handy. Die Adresse der NAS steht in der Tailscale-App, z. B. 100.101.102.103 oder name.tail1234.ts.net.",
+  fritzbox:
+    "Richten Sie WireGuard in der FRITZ!Box ein (Heimnetz → Netzwerk → Netzwerkeinstellungen → WireGuard). Mit aktivem Tunnel gilt die Heimnetz-Adresse von oben; hier ist nichts weiter einzutragen.",
+  other:
+    "Tragen Sie die Adresse ein, unter der die NAS im VPN erreichbar ist. Sie muss eine private Adresse sein (z. B. 10.x.x.x oder 192.168.x.x).",
+};
+
+/** Heimnetz-Adresse(n) und - falls gewaehlt - die Adresse im VPN, durch Komma getrennt */
+function networkNames(v: { network: string; access: string; vpn: VpnKind; vpnAddress: string }): string {
+  const vpn = v.access === "vpn" && v.vpn !== "fritzbox" ? v.vpnAddress : "";
+  return [v.network, vpn]
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
 function SetupForm({ onDone }: { onDone: () => void }) {
   const { login } = useAuth();
   const { t, i18n } = useTranslation();
@@ -234,7 +256,18 @@ function SetupForm({ onDone }: { onDone: () => void }) {
   const suggestion =
     here && !["localhost", "127.0.0.1", "[::1]"].includes(here) && !(setup.data?.tls_names ?? []).includes(here) ? here : "";
   const form = useForm({
-    initialValues: { code: "", household: "", name: "", email: "", password: "", repeat: "", network: suggestion },
+    initialValues: {
+      code: "",
+      household: "",
+      name: "",
+      email: "",
+      password: "",
+      repeat: "",
+      network: suggestion,
+      access: "home" as "home" | "vpn",
+      vpn: "tailscale" as VpnKind,
+      vpnAddress: "",
+    },
     validate: {
       code: (v) => (v.trim() ? null : t("Bitte den Einrichtungscode eingeben")),
       name: (v) => (v.trim() ? null : t("Bitte Ihren Namen angeben")),
@@ -257,7 +290,7 @@ function SetupForm({ onDone }: { onDone: () => void }) {
             admin_password: values.password,
             setup_code: values.code.trim(),
             ocr_languages: ocrSelection,
-            network_names: askAddress ? values.network.trim() : "",
+            network_names: askAddress ? networkNames(values) : "",
           },
         }),
       );
@@ -333,15 +366,63 @@ function SetupForm({ onDone }: { onDone: () => void }) {
           {...form.getInputProps("household")}
         />
         {askAddress && (
-          <TextInput
-            label={t("Adresse dieses Servers im Heimnetz")}
-            description={t(
-              "Name und/oder IP-Adresse, unter der Sie Famulus DMS von Handy und PC erreichen, mehrere durch Komma getrennt (z. B. 192.168.1.10, nas.local). Das Zertifikat wird dafür ausgestellt; ohne diese Angabe warnt der Browser auf jedem Gerät.",
+          <>
+            <TextInput
+              label={t("Adresse dieses Servers im Heimnetz")}
+              description={t(
+                "Name und/oder IP-Adresse, unter der Sie Famulus DMS von Handy und PC erreichen, mehrere durch Komma getrennt (z. B. 192.168.1.10, nas.local). Das Zertifikat wird dafür ausgestellt; ohne diese Angabe warnt der Browser auf jedem Gerät.",
+              )}
+              placeholder="192.168.1.10, nas.local"
+              autoComplete="off"
+              {...form.getInputProps("network")}
+            />
+            <div>
+              <Text size="sm" fw={500} mb={4}>
+                {t("Wie erreichen Sie Famulus DMS?")}
+              </Text>
+              <SegmentedControl
+                fullWidth
+                value={form.values.access}
+                onChange={(v) => form.setFieldValue("access", v as "home" | "vpn")}
+                data={[
+                  { value: "home", label: t("Nur im Heimnetz") },
+                  { value: "vpn", label: t("Auch von unterwegs (VPN)") },
+                ]}
+              />
+            </div>
+            {form.values.access === "vpn" && (
+              <Stack gap="xs">
+                <Select
+                  label={t("VPN-Dienst")}
+                  allowDeselect={false}
+                  data={[
+                    { value: "tailscale", label: "Tailscale" },
+                    { value: "fritzbox", label: t("WireGuard in der FRITZ!Box") },
+                    { value: "other", label: t("Anderes VPN") },
+                  ]}
+                  value={form.values.vpn}
+                  onChange={(v) => form.setFieldValue("vpn", (v ?? "tailscale") as VpnKind)}
+                />
+                <Alert color="blue" icon={<IconShieldLock />}>
+                  {t(VPN_HELP[form.values.vpn])}
+                </Alert>
+                {form.values.vpn !== "fritzbox" && (
+                  <TextInput
+                    label={t("Adresse der NAS im VPN")}
+                    description={t(
+                      "Optional, kann später in der Compose-Datei bei TLS_HOSTNAMES nachgetragen werden. Das Zertifikat wird auch dafür ausgestellt, damit der Browser im VPN nicht warnt.",
+                    )}
+                    placeholder={form.values.vpn === "tailscale" ? "100.101.102.103, name.tail1234.ts.net" : "10.8.0.1"}
+                    autoComplete="off"
+                    {...form.getInputProps("vpnAddress")}
+                  />
+                )}
+                <Text size="xs" c="dimmed">
+                  {t("Das VPN selbst richten Sie außerhalb von Famulus DMS ein. Der Zugriff von außen ohne VPN ist hier nicht vorgesehen.")}
+                </Text>
+              </Stack>
             )}
-            placeholder="192.168.1.10, nas.local"
-            autoComplete="off"
-            {...form.getInputProps("network")}
-          />
+          </>
         )}
         <TextInput label={t("Ihr Name")} autoComplete="name" {...form.getInputProps("name")} />
         <TextInput label={t("E-Mail")} type="email" autoComplete="username" {...form.getInputProps("email")} />

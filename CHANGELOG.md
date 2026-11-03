@@ -7,6 +7,9 @@ Ablauf eines Releases und eines Updates: [docs/Updates.md](docs/Updates.md).
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Zugriffsart in der Ersteinrichtung:** Der Assistent fragt (bei eigener Zertifizierungsstelle) „Wie erreichen Sie Famulus DMS?“ mit **Nur im Heimnetz** oder **Auch von unterwegs (VPN)**. Beim VPN wählt man Tailscale, WireGuard in der FRITZ!Box oder ein anderes VPN, bekommt eine Kurzanleitung und trägt die Adresse der NAS im VPN ein, die gleich ins Zertifikat kommt.
+
 ### Behoben
 - **Ersteinrichtung mit neuem Zertifikat:** Gibt man einen Rechnernamen ohne Punkt an (z. B. `schneidt-ds`), erstellt Famulus DMS die Zertifizierungsstelle neu. Die offene Seite lief danach mit dem alten Zertifikat weiter, und fast jede Seite zeigte „Failed to fetch“, bis man sie von Hand neu lud. Jetzt endet der Assistent in diesem Fall mit einem eigenen Schritt „Einrichtung abgeschlossen“: Hinweis, Link zur Zertifikat-Hilfe und Knopf **„Seite neu laden“**; die Anmeldung erfolgt erst danach.
 

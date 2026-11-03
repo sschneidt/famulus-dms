@@ -77,6 +77,11 @@ zusätzlich weitere Namen ein, unter denen du die NAS erreichst, durch Komma get
 Für diese Adressen stellt Famulus DMS das HTTPS-Zertifikat aus. Ohne die richtige Adresse warnt der Browser auf Handy und
 PC dauerhaft.
 
+**Zugriff von unterwegs:** Darunter fragt der Assistent „Wie erreichen Sie Famulus DMS?“. Bei **Auch von unterwegs (VPN)**
+wählst du Tailscale, WireGuard in der FRITZ!Box oder ein anderes VPN. Der Assistent zeigt eine Kurzanleitung und nimmt
+die Adresse der NAS im VPN gleich mit ins Zertifikat auf. Das VPN selbst richtest du außerhalb von Famulus DMS ein
+(Abschnitt 8.1).
+
 **Erlaubte Namen:** Rechnernamen bestehen aus Buchstaben, Ziffern und Bindestrich. Ein Unterstrich (`schneidt_ds`) ist
 nicht erlaubt; benenne die NAS dann um (Systemsteuerung → Info-Center → Allgemein → Servername) oder trage die
 IP-Adresse ein (im Router fest vergeben). Namen aus dem Internet (`example.com`) werden abgelehnt, für Zugriff von außen

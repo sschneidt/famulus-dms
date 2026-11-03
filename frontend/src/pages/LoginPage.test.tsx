@@ -154,6 +154,54 @@ describe("LoginPage", () => {
     });
   });
 
+  it("nimmt bei Zugriff per VPN die VPN-Adresse zu den Namen fürs Zertifikat", async () => {
+    const { calls } = mockFetch([
+      { path: "/api/v1/setup/status", body: { bootstrapped: false, tls: true, tls_names: ["localhost"] } },
+      {
+        method: "POST",
+        path: "/api/v1/setup/bootstrap",
+        status: 201,
+        body: { tenant_id: "t1", admin_user_id: "u1", categories_created: 12, tls_names: [], tls_ca_replaced: false },
+      },
+      { method: "POST", path: "/api/v1/auth/login", body: { access_token: "a", refresh_token: "r", token_type: "bearer" } },
+      { path: "/api/v1/auth/me", body: me },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(<LoginPage />, { path: "/login", routes });
+
+    expect(await screen.findByText("Ersteinrichtung")).toBeInTheDocument();
+    // Standard: nur Heimnetz, keine VPN-Felder
+    expect(screen.queryByLabelText("Adresse der NAS im VPN")).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("Adresse dieses Servers im Heimnetz"), "192.168.1.10");
+    await user.click(screen.getByText("Auch von unterwegs (VPN)"));
+    expect(screen.getByText(/Installieren Sie Tailscale/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Adresse der NAS im VPN"), "100.101.102.103");
+    await user.type(screen.getByLabelText("Einrichtungscode"), "ABCD-EFGH-JKLM");
+    await user.type(screen.getByLabelText("Ihr Name"), "Anna");
+    await user.type(screen.getByLabelText("E-Mail"), "anna@example.com");
+    await user.type(screen.getByLabelText("Passwort"), "geheim123");
+    await user.type(screen.getByLabelText("Passwort wiederholen"), "geheim123");
+    await user.click(screen.getByRole("button", { name: "Haushalt anlegen" }));
+
+    expect(await screen.findByText("Startseite")).toBeInTheDocument();
+    expect(calls.find((c) => c.path === "/api/v1/setup/bootstrap")?.body).toMatchObject({
+      network_names: "192.168.1.10, 100.101.102.103",
+    });
+  });
+
+  it("fragt bei WireGuard in der FRITZ!Box keine eigene VPN-Adresse ab", async () => {
+    mockFetch([{ path: "/api/v1/setup/status", body: { bootstrapped: false, tls: true, tls_names: [] } }]);
+    const user = userEvent.setup();
+    renderWithProviders(<LoginPage />, { path: "/login", routes });
+
+    expect(await screen.findByText("Ersteinrichtung")).toBeInTheDocument();
+    await user.click(screen.getByText("Auch von unterwegs (VPN)"));
+    await user.click(screen.getAllByLabelText("VPN-Dienst")[0]);
+    await user.click(await screen.findByRole("option", { name: "WireGuard in der FRITZ!Box" }));
+    expect(screen.getByText(/Richten Sie WireGuard in der FRITZ!Box ein/)).toBeInTheDocument();
+    expect(screen.queryByLabelText("Adresse der NAS im VPN")).not.toBeInTheDocument();
+  });
+
   it("meldet nach neuem Zertifikat nicht an, sondern bittet um Neuladen der Seite", async () => {
     const { calls } = mockFetch([
       { path: "/api/v1/setup/status", body: { bootstrapped: false, tls: true, tls_names: ["localhost"], http_port: 8000 } },
