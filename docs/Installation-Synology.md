@@ -124,7 +124,8 @@ Ordner-Sicherung **nicht** erfasst. Verlass dich deshalb auf die Sicherungen aus
 **Aktualisieren:**
 
 1. In Famulus DMS unter **Diagnose** neben der Versionsnummer auf **Auf Updates prüfen** klicken. Die Anwendung fragt
-   dann (nur auf Knopfdruck) bei GitHub nach der neuesten Version und nennt die Versionsnummer und das Image.
+   dann (nur auf Knopfdruck) bei GitHub nach der neuesten Version und nennt die Versionsnummer und das Image. (Wer
+   Abschnitt 6.1 eingerichtet hat, aktualisiert hier direkt mit **Jetzt aktualisieren** und kann die Schritte 2 bis 6 überspringen.)
 2. Eine Sicherung anlegen (siehe oben).
 3. Container Manager → **Projekt → homedms** → **Stopp**.
 4. Die Compose-Datei bearbeiten und bei **allen** Zeilen mit `ghcr.io/sschneidt/famulus-dms:` die Versionsnummer
@@ -141,6 +142,56 @@ Ordner-Sicherung **nicht** erfasst. Verlass dich deshalb auf die Sicherungen aus
 
 Die Prüfung geht nur, wenn die NAS ins Internet kommt. Abschalten kannst du sie, indem du beim Dienst `app-api` unter
 `environment` die Zeile `UPDATE_CHECK_URL: ""` ergänzt.
+
+### 6.1 Aktualisieren aus der Anwendung (Aufgabe im Aufgabenplaner)
+
+Wer nicht jedes Mal die Compose-Datei bearbeiten möchte, kann die Aktualisierung aus Famulus DMS heraus auslösen. Dann
+erscheint unter **Diagnose → Auf Updates prüfen**, sobald es eine neuere Version gibt, zusätzlich der Knopf
+**Jetzt aktualisieren**. Eingerichtet wird das einmalig mit einer Aufgabe im DSM-Aufgabenplaner.
+
+**Wie das funktioniert und warum es sicher ist:** Famulus DMS bekommt **keinen** Zugriff auf Docker, denn wer die
+Anwendung übernähme, könnte sonst die ganze NAS übernehmen. Beim Klick sichert die Anwendung die Datenbank und legt nur
+eine kleine Datei `update-request.txt` mit der Versionsnummer in den Sicherungsordner. Ein kleines Skript, das **du**
+als Aufgabe laufen lässt, schaut jede Minute dort nach. Es nimmt aus der Datei ausschließlich eine Versionsnummer der
+Form `1.2.3` und lädt nur dieses eine Image (`ghcr.io/sschneidt/famulus-dms:<Version>`). Dann trägt es die Version in
+der Compose-Datei ein (die alte bleibt als `docker-compose.yml.vorher` liegen), erstellt `app-api` und `app-worker` neu
+und wartet, bis die neue Version gesund meldet. Meldet sie sich nicht, wird die alte Compose-Datei zurückgespielt und
+die alte Version läuft wieder; die Datenbanksicherung von vor dem Update liegt im Sicherungsordner.
+
+**Einrichten:**
+
+1. Voraussetzung ist, dass im Projekt eine **feste Versionsnummer** im Image steht (Abschnitt 6, Schritt 4), nicht
+   `latest`.
+2. Das Skript herunterladen:
+   [update-agent.sh](https://github.com/sschneidt/famulus-dms/releases/latest/download/update-agent.sh). Lege es mit
+   *File Station* in den Ordner `famulus` (also `/volume1/famulus/update-agent.sh`; liegt dein Ordner auf `volume2`,
+   entsprechend dort), **nicht** in `documents`, `scan` oder `backups`. Diese Ordner sieht die Anwendung, und das Skript
+   läuft mit hohen Rechten.
+3. DSM → **Systemsteuerung → Aufgabenplaner → Erstellen → Geplante Aufgabe → Benutzerdefiniertes Skript**.
+4. Reiter **Allgemein**: Name `Famulus DMS aktualisieren`, Benutzer **root**.
+5. Reiter **Zeitplan**: *Täglich*, *Erste Ausführungszeit* `00:00`, *Häufigkeit* **Alle 1 Minute**, *Letzte
+   Ausführungszeit* `23:59`.
+6. Reiter **Aufgabeneinstellungen**, Feld *Benutzerdefiniertes Skript*:
+
+   ```bash
+   UPDATE_DIR=/volume1/famulus/backups sh /volume1/famulus/update-agent.sh
+   ```
+
+   Anpassen: `UPDATE_DIR` ist der Sicherungsordner aus der Compose-Datei (`BACKUP_HOST_PATH`). Meldet das Skript später
+   „Compose-Datei nicht gefunden“, ergänze davor `COMPOSE_FILE=/volume1/docker/homedms/docker-compose.yml` mit dem Pfad,
+   unter dem das Projekt im Container Manager liegt.
+7. **OK** und die Aufgabe aktivieren. Nach etwa einer Minute erkennt Famulus DMS das Skript: Unter **Diagnose → Auf
+   Updates prüfen** erscheint bei einer neueren Version der Knopf **Jetzt aktualisieren**.
+
+**Ablauf beim Aktualisieren:** Klick auf **Jetzt aktualisieren**, Bestätigen, dann zeigt die Seite den Fortschritt
+(Herunterladen, Neustart, Warten auf die neue Version). Famulus DMS ist dabei etwa eine Minute nicht erreichbar. Zum
+Schluss erscheint **Seite neu laden**. Ein Update, das nicht anläuft, zeigt die Seite als fehlgeschlagen an, mit dem
+Hinweis des Skripts.
+
+Beachte: Das Skript tauscht nur die Versionsnummer des Famulus-DMS-Images aus. Ändert eine neue Version die Compose-Datei
+selbst (steht dann im [Änderungsprotokoll](../CHANGELOG.md)), musst du das wie bisher von Hand einarbeiten. Wer die
+Aufgabe nicht mehr möchte, deaktiviert sie im Aufgabenplaner; Famulus DMS zeigt den Knopf dann nach wenigen Minuten
+nicht mehr an.
 
 ## 7. Scanner anbinden (eigener Benutzer)
 

@@ -189,6 +189,101 @@ describe("DiagnosePage", () => {
     expect(within(section).queryByRole("link")).not.toBeInTheDocument();
   });
 
+  it("zeigt „Jetzt aktualisieren“ nur mit Update-Helfer, fragt nach und zeigt den Fortschritt", async () => {
+    tokenStore.set("a");
+    let state: Schemas["UpdaterStatus"] = { available: true, state: null, version: null, detail: "" };
+    const update = {
+      current: "0.2.3",
+      latest: "0.2.4",
+      available: true,
+      url: "https://github.com/sschneidt/famulus-dms/releases/tag/v0.2.4",
+      checked_at: "2026-11-05T10:01:00Z",
+    };
+    const { calls } = mockFetch([
+      { path: "/api/v1/auth/me", body: me },
+      { path: "/api/v1/system/diagnostics", body: diagnostics },
+      { path: "/api/v1/system/backups", body: noBackups },
+      { method: "POST", path: "/api/v1/system/updates/check", body: update },
+      { method: "GET", path: "/api/v1/system/updates/installer", body: () => state },
+      {
+        method: "POST",
+        path: "/api/v1/system/updates/installer",
+        status: 202,
+        body: () => (state = { available: true, state: "requested", version: "0.2.4", detail: "" }),
+      },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(
+      <RequireAuth>
+        <DiagnosePage />
+      </RequireAuth>,
+    );
+    const section = await screen.findByTestId("updates");
+    await user.click(within(section).getByRole("button", { name: "Auf Updates prüfen" }));
+    await user.click(await within(section).findByRole("button", { name: "Jetzt aktualisieren" }));
+    expect(calls.some((c) => c.method === "POST" && c.path === "/api/v1/system/updates/installer")).toBe(false);
+    expect(await screen.findByText("Auf Version 0.2.4 aktualisieren?")).toBeInTheDocument();
+    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Jetzt aktualisieren" }));
+    await waitFor(() =>
+      expect(calls.some((c) => c.method === "POST" && c.path === "/api/v1/system/updates/installer")).toBe(true),
+    );
+    expect(await within(section).findByTestId("update-progress")).toHaveTextContent("Update angefordert");
+    expect(within(section).getByRole("button", { name: "Jetzt aktualisieren" })).toBeDisabled();
+  });
+
+  it("bietet ohne Update-Helfer keinen Aktualisieren-Knopf an, sondern die Anleitung", async () => {
+    tokenStore.set("a");
+    mockFetch([
+      { path: "/api/v1/auth/me", body: me },
+      { path: "/api/v1/system/diagnostics", body: diagnostics },
+      { path: "/api/v1/system/backups", body: noBackups },
+      { method: "GET", path: "/api/v1/system/updates/installer", body: { available: false, state: null, version: null, detail: "" } },
+      {
+        method: "POST",
+        path: "/api/v1/system/updates/check",
+        body: { current: "0.2.3", latest: "0.2.4", available: true, url: "", checked_at: "2026-11-05T10:01:00Z" },
+      },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(
+      <RequireAuth>
+        <DiagnosePage />
+      </RequireAuth>,
+    );
+    const section = await screen.findByTestId("updates");
+    await user.click(within(section).getByRole("button", { name: "Auf Updates prüfen" }));
+    expect(await within(section).findByText(/ghcr\.io\/sschneidt\/famulus-dms:0\.2\.4/)).toBeInTheDocument();
+    expect(within(section).queryByRole("button", { name: "Jetzt aktualisieren" })).not.toBeInTheDocument();
+  });
+
+  it("meldet ein gescheitertes Update und das Ende eines gelungenen", async () => {
+    tokenStore.set("a");
+    let state: Schemas["UpdaterStatus"] = { available: true, state: "rolled_back", version: "0.2.4", detail: "nicht gesund" };
+    mockFetch([
+      { path: "/api/v1/auth/me", body: me },
+      { path: "/api/v1/system/diagnostics", body: diagnostics },
+      { path: "/api/v1/system/backups", body: noBackups },
+      { method: "GET", path: "/api/v1/system/updates/installer", body: () => state },
+    ]);
+    const { unmount } = renderWithProviders(
+      <RequireAuth>
+        <DiagnosePage />
+      </RequireAuth>,
+    );
+    const failed = await screen.findByTestId("update-failed");
+    expect(within(failed).getByText(/alte läuft wieder/)).toBeInTheDocument();
+    expect(within(failed).getByText(/nicht gesund/)).toBeInTheDocument();
+    unmount();
+
+    state = { available: true, state: "done", version: "0.2.4", detail: "" };
+    renderWithProviders(
+      <RequireAuth>
+        <DiagnosePage />
+      </RequireAuth>,
+    );
+    expect(await screen.findByText("Aktualisiert auf Version 0.2.4")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Seite neu laden" })).toBeInTheDocument();
+  });
   it("zeigt einen Hinweis und sperrt den Knopf, wenn pg_dump fehlt", async () => {
     tokenStore.set("a");
     mockFetch([

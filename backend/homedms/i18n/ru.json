@@ -438,5 +438,15 @@
  "Die Prüfung auf Updates ist abgeschaltet (UPDATE_CHECK_URL ist leer).": "Проверка обновлений отключена (UPDATE_CHECK_URL пуст).",
  "Die Update-Seite antwortet mit Fehler {code}.": "Сайт обновлений ответил ошибкой {code}.",
  "Die Update-Seite ist nicht erreichbar. Hat der Server Zugang zum Internet?": "Сайт обновлений недоступен. Есть ли у сервера доступ в интернет?",
- "Die Antwort der Update-Seite ist nicht lesbar.": "Ответ сайта обновлений не удалось прочитать."
+ "Die Antwort der Update-Seite ist nicht lesbar.": "Ответ сайта обновлений не удалось прочитать.",
+ "Ungültige Versionsnummer.": "Недопустимый номер версии.",
+ "Version {version} ist nicht neuer als die installierte {current}.": "Версия {version} не новее установленной {current}.",
+ "Es läuft kein Update-Helfer. Siehe Installationsanleitung, Abschnitt „Aktualisieren aus der Anwendung“.": "Помощник обновления не запущен. См. руководство по установке, раздел «Обновление из приложения».",
+ "Ein Update läuft bereits.": "Обновление уже выполняется.",
+ "Ohne Datenbanksicherung wird nicht aktualisiert, und pg_dump wurde nicht gefunden.": "Без резервной копии базы данных обновление не выполняется, а pg_dump не найден.",
+ "Vor dem Update konnte die Datenbank nicht gesichert werden: {reason}": "Перед обновлением не удалось создать резервную копию базы данных: {reason}",
+ "Der Sicherungsordner ist nicht beschreibbar ({reason}).": "Папка резервных копий недоступна для записи ({reason}).",
+ "Bitte Straße, Postleitzahl und Ort zusammen angeben oder alle drei leer lassen": "Укажите улицу, индекс и город вместе или оставьте все три поля пустыми",
+ "Ein Objekt mit diesem Namen gibt es schon": "Объект с таким названием уже существует",
+ "Für diese Adresse gibt es schon das Objekt „{name}“": "Для этого адреса уже есть объект «{name}»"
 }

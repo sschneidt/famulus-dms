@@ -45,7 +45,10 @@ import {
   useCreateBackup,
   useDeleteBackup,
   useDiagnostics,
+  useInstallUpdate,
   useSystemAction,
+  useUpdaterStatus,
+  UPDATE_ACTIVE,
 } from "../api/queries";
 import { useUser } from "../auth/AuthContext";
 import { downloadBackup } from "../lib/download";
@@ -238,10 +241,35 @@ function ComponentCard({ component }: { component: Component }) {
  * Installierte Version und "Auf Updates pruefen" (nur auf Knopfdruck; der Server fragt dann GitHub).
  * Aktualisiert wird nicht von hier aus: das Ergebnis nennt den Weg dorthin.
  */
+const UPDATE_STEP: Record<string, string> = {
+  requested: tk("Update angefordert – der Update-Helfer holt es gleich ab …"),
+  checking: tk("Update wird vorbereitet …"),
+  pulling: tk("Neue Version wird heruntergeladen …"),
+  restarting: tk("Famulus DMS wird neu gestartet – die Seite ist kurz nicht erreichbar …"),
+  health: tk("Warten, bis die neue Version bereit ist …"),
+};
+
 function Updates({ version }: { version: string }) {
   const { t } = useTranslation();
   const check = useCheckUpdates();
   const result = check.data;
+  const updater = useUpdaterStatus();
+  const install = useInstallUpdate();
+  const agent = updater.data;
+  const busy = !!agent?.state && UPDATE_ACTIVE.includes(agent.state);
+
+  function confirmInstall(latest: string) {
+    modals.openConfirmModal({
+      title: t("Auf Version {{version}} aktualisieren?", { version: latest }),
+      children: (
+        <Text size="sm">
+          {t("Vorher wird die Datenbank gesichert. Während des Neustarts ist Famulus DMS für etwa eine Minute nicht erreichbar.")}
+        </Text>
+      ),
+      labels: { confirm: t("Jetzt aktualisieren"), cancel: t("Abbrechen") },
+      onConfirm: () => install.mutate(latest, { onError: (e) => notifyError(e, t("Aktualisierung nicht möglich")) }),
+    });
+  }
 
   return (
     <Stack gap={6} mt={6} data-testid="updates">
@@ -266,11 +294,25 @@ function Updates({ version }: { version: string }) {
                   current: result.current,
                 })}
               </Text>
-              <Text size="sm">
-                {t("Bei Docker: In der Compose-Datei das Image auf {{image}} setzen und das Projekt neu erstellen.", {
-                  image: `ghcr.io/sschneidt/famulus-dms:${result.latest}`,
-                })}
-              </Text>
+              {agent?.available ? (
+                <Group>
+                  <Button
+                    size="xs"
+                    leftSection={<IconCloudDownload size={14} />}
+                    loading={install.isPending}
+                    disabled={busy}
+                    onClick={() => confirmInstall(result.latest)}
+                  >
+                    {t("Jetzt aktualisieren")}
+                  </Button>
+                </Group>
+              ) : (
+                <Text size="sm">
+                  {t("Bei Docker: In der Compose-Datei das Image auf {{image}} setzen und das Projekt neu erstellen.", {
+                    image: `ghcr.io/sschneidt/famulus-dms:${result.latest}`,
+                  })}
+                </Text>
+              )}
               <Group gap="md">
                 {result.url && (
                   <Anchor size="sm" href={result.url} target="_blank" rel="noreferrer">
@@ -293,6 +335,39 @@ function Updates({ version }: { version: string }) {
             {t("Sie nutzen die neueste Version ({{version}}).", { version: result.current })}
           </Text>
         ))}
+      {agent?.state && busy && (
+        <Alert color="blue" icon={<Loader size={16} />} data-testid="update-progress">
+          <Text size="sm">{t(UPDATE_STEP[agent.state] ?? "")}</Text>
+        </Alert>
+      )}
+      {agent?.state === "done" && agent.version !== version && (
+        <Alert color="green" icon={<IconCircleCheck />} title={t("Aktualisiert auf Version {{version}}", { version: agent.version })}>
+          <Stack gap={6} align="flex-start">
+            <Text size="sm">{t("Laden Sie die Seite neu, um die neue Version zu verwenden.")}</Text>
+            <Button size="xs" onClick={() => window.location.reload()}>
+              {t("Seite neu laden")}
+            </Button>
+          </Stack>
+        </Alert>
+      )}
+      {(agent?.state === "failed" || agent?.state === "rolled_back") && (
+        <Alert color="red" icon={<IconAlertTriangle />} title={t("Das Update ist fehlgeschlagen")} data-testid="update-failed">
+          <Stack gap={4}>
+            <Text size="sm">
+              {agent.state === "rolled_back"
+                ? t("Die neue Version ist nicht gestartet, die alte läuft wieder. Die Datenbanksicherung von vor dem Update finden Sie unter „Datenbanksicherung“.")
+                : agent.detail === "not_picked_up"
+                  ? t("Der Update-Helfer hat die Anforderung nicht abgeholt. Läuft er noch?")
+                  : t("Es wurde nichts verändert.")}
+            </Text>
+            {agent.detail && agent.detail !== "not_picked_up" && (
+              <Text size="xs" c="dimmed">
+                {t("Meldung des Update-Helfers: {{detail}}", { detail: agent.detail })}
+              </Text>
+            )}
+          </Stack>
+        </Alert>
+      )}
     </Stack>
   );
 }

@@ -23,6 +23,7 @@ export const keys = {
   users: ["users"] as const,
   diagnostics: ["system", "diagnostics"] as const,
   backups: ["system", "backups"] as const,
+  updater: ["system", "updater"] as const,
   notifications: ["notifications"] as const,
   notificationSettings: ["notifications", "settings"] as const,
   mailSettings: ["tenant", "mail"] as const,
@@ -307,6 +308,16 @@ function usePropertyMutation<T>(fn: (vars: T) => Promise<unknown>) {
   });
 }
 
+/** Legt ein Objekt von Hand an; liefert das neue Objekt (mit id). */
+export function useCreateProperty() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { name: string; street?: string; postal_code?: string; city?: string }) =>
+      call(api.POST("/api/v1/properties", { body })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.properties }),
+  });
+}
+
 export function useRenameProperty() {
   return usePropertyMutation(({ id, name }: { id: string; name: string }) =>
     call(api.PATCH("/api/v1/properties/{property_id}", { params: { path: { property_id: id } }, body: { name } })),
@@ -476,6 +487,28 @@ export function useCreateBackup() {
 /** Fragt (nur auf Knopfdruck) nach dem neuesten Release; das Ergebnis liefert die Mutation (data). */
 export function useCheckUpdates() {
   return useMutation({ mutationFn: () => call(api.POST("/api/v1/system/updates/check")) });
+}
+
+/** Zustaende, in denen ein Update noch laeuft. */
+export const UPDATE_ACTIVE: string[] = ["requested", "checking", "pulling", "restarting", "health"];
+
+/** Update-Helfer vorhanden? Fortschritt eines angeforderten Updates. Fragt alle 3 s nach, solange ein Update laeuft
+ *  (auch waehrend die Anwendung neu startet: ein Fehler ueberspringt die Abfrage, die letzte Antwort bleibt stehen). */
+export function useUpdaterStatus() {
+  return useQuery({
+    queryKey: keys.updater,
+    queryFn: () => call(api.GET("/api/v1/system/updates/installer")),
+    refetchInterval: (query) => (UPDATE_ACTIVE.includes(query.state.data?.state ?? "") ? 3000 : false),
+    retry: false,
+  });
+}
+
+export function useInstallUpdate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (version: string) => call(api.POST("/api/v1/system/updates/installer", { body: { version } })),
+    onSuccess: (data) => qc.setQueryData(keys.updater, data),
+  });
 }
 
 export function useDeleteBackup() {

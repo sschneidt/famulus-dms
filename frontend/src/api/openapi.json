@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Famulus DMS API",
-    "version": "0.2.3"
+    "version": "0.2.4"
   },
   "paths": {
     "/health": {
@@ -2818,6 +2818,51 @@
             "HTTPBearer": []
           }
         ]
+      },
+      "post": {
+        "tags": [
+          "properties"
+        ],
+        "summary": "Create Property",
+        "description": "Objekt von Hand anlegen (Seite \"Objekte\" oder beim Zuordnen im Dokument). Ohne Adresse erkennt die KI es nicht\nvon selbst wieder - mit Adresse schon: dieselbe Adresse in einem Dokument landet dann in diesem Objekt.",
+        "operationId": "create_property_api_v1_properties_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/properties/{property_id}": {
@@ -3274,6 +3319,78 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UpdateStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/updates/installer": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Updater Status",
+        "description": "Gibt es einen Update-Helfer, und wie weit ist ein angefordertes Update.",
+        "operationId": "updater_status_api_v1_system_updates_installer_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdaterStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Install Update",
+        "description": "Sichert die Datenbank und fordert beim Update-Helfer die Installation der Version an.",
+        "operationId": "install_update_api_v1_system_updates_installer_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstallRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdaterStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -5653,6 +5770,19 @@
         "type": "object",
         "title": "ImportSourceUpdate"
       },
+      "InstallRequest": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "title": "InstallRequest"
+      },
       "LoginRequest": {
         "properties": {
           "email": {
@@ -6246,6 +6376,40 @@
         },
         "type": "object",
         "title": "ProfileUpdate"
+      },
+      "PropertyCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "street": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Street",
+            "default": ""
+          },
+          "postal_code": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Postal Code",
+            "default": ""
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "City",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PropertyCreate",
+        "description": "Objekt von Hand anlegen. Die Adresse ist freiwillig; wenn angegeben, dann komplett."
       },
       "PropertyMerge": {
         "properties": {
@@ -7241,6 +7405,56 @@
           "checked_at"
         ],
         "title": "UpdateStatus"
+      },
+      "UpdaterStatus": {
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "requested",
+                  "checking",
+                  "pulling",
+                  "restarting",
+                  "health",
+                  "done",
+                  "failed",
+                  "rolled_back"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "available"
+        ],
+        "title": "UpdaterStatus"
       },
       "UserCreate": {
         "properties": {

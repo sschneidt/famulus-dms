@@ -56,6 +56,13 @@ class UpdateStatus(BaseModel):
     checked_at: datetime
 
 
+class UpdaterStatus(BaseModel):
+    available: bool  # ein Update-Helfer ist erreichbar (sonst zeigt die Oberflaeche keinen Aktualisieren-Knopf)
+    state: Literal["requested", "checking", "pulling", "restarting", "health", "done", "failed", "rolled_back"] | None = None
+    version: str | None = None  # Zielversion des laufenden bzw. letzten Updates
+    detail: str = ""
+
+
 class BackupItem(BaseModel):
     name: str
     size: int  # Bytes

@@ -1,0 +1,29 @@
+# Update-Helfer als Container: macht das in der Anwendung angeforderte Update (Diagnose > "Jetzt aktualisieren").
+# Nicht dokumentiert, nur fuer Eingeweihte. Der Helfer braucht Zugriff auf den Docker-Dienst - das heisst: Wer ihn
+# uebernimmt, kann die ganze NAS uebernehmen. Die Anwendung selbst bekommt diesen Zugriff NICHT; sie legt nur eine
+# Datei im Sicherungsordner ab (siehe scripts/update-agent.sh).
+#
+# Einbinden (zusaetzlich zur Hauptdatei):
+#   HOMEDMS_PROJECT_DIR=/volume1/docker/homedms BACKUP_FOLDER=/volume1/famulus/backups \
+#   docker compose -f docker-compose.synology.yml -f docker-compose.updater.yml up -d
+# Voraussetzung: die Hauptdatei nennt das Image mit fester Version (famulus-dms:0.2.4), nicht mit Variablen.
+#
+# HOMEDMS_PROJECT_DIR: Ordner mit der Compose-Datei des Projekts. Er wird unter DEMSELBEN Pfad eingebunden, damit die
+# Pfade aus den Docker-Etiketten im Helfer gelten. BACKUP_FOLDER: derselbe Ordner wie fuer die Datenbanksicherungen.
+services:
+  app-updater:
+    image: ghcr.io/sschneidt/famulus-dms-updater:latest
+    restart: unless-stopped
+    network_mode: none   # braucht kein Netz: laedt ueber den Docker-Dienst der NAS
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      COMPOSE_PROJECT: homedms
+      COMPOSE_FILE: ${HOMEDMS_PROJECT_DIR:?HOMEDMS_PROJECT_DIR setzen}/docker-compose.yml
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${BACKUP_FOLDER:?BACKUP_FOLDER setzen}:/backups
+      - ${HOMEDMS_PROJECT_DIR}:${HOMEDMS_PROJECT_DIR}
+    tmpfs:
+      - /tmp

@@ -60,6 +60,23 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # Kleines Zusatz-Image fuer den Update-Helfer (updater/Dockerfile), gleiche Versionsnummern
+      - id: meta_updater
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/famulus-dms-updater
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: updater/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta_updater.outputs.tags }}
+          labels: ${{ steps.meta_updater.outputs.labels }}
 
   release:
     name: GitHub-Release anlegen
@@ -79,4 +96,6 @@ jobs:
         with:
           body_path: notes.md
           # Die eine Datei fuer den Container Manager der Synology (docs/Installation-Synology.md)
-          files: docker-compose.synology.yml
+          files: |
+            docker-compose.synology.yml
+            scripts/update-agent.sh

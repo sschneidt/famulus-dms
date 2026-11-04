@@ -7,6 +7,12 @@ Ablauf eines Releases und eines Updates: [docs/Updates.md](docs/Updates.md).
 
 ## [Unveröffentlicht]
 
+## [0.3.0] – 2026-11-04
+
+### Neu
+- **Aktualisieren aus der Anwendung:** Läuft der Update-Helfer (`scripts/update-agent.sh`, auf der Synology als Aufgabe im Aufgabenplaner, siehe [docs/Installation-Synology.md](docs/Installation-Synology.md) Abschnitt 6.1), erscheint unter *Diagnose* bei einer neueren Version der Knopf **„Jetzt aktualisieren“**. Famulus DMS sichert zuerst die Datenbank, der Helfer lädt dann genau die angeforderte Version, tauscht sie in der Compose-Datei, startet neu und wartet, bis die neue Version gesund ist; sonst läuft die alte wieder. Die Seite zeigt den Fortschritt. Die Anwendung selbst bekommt **keinen** Zugriff auf Docker; sie legt nur eine Anforderungsdatei im Sicherungsordner ab.
+- **Objekte von Hand anlegen:** Auf der Seite *Objekte* gibt es den Knopf **„Objekt anlegen“** (Name, Adresse freiwillig). Mit Adresse ordnet Famulus DMS neue Dokumente derselben Adresse diesem Objekt zu. Im Dokument unter *Angaben → Objekt* legt das Eintippen eines noch unbekannten Namens („…“ neu anlegen) beim Speichern ein neues Objekt an und ordnet es dem Dokument zu.
+
 ## [0.2.4] – 2026-11-04
 
 ### Neu

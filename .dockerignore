@@ -16,6 +16,7 @@ backend/data/
 .gitignore
 docs/
 scripts/
+!scripts/update-agent.sh
 docker-compose*.yml
 init/
 

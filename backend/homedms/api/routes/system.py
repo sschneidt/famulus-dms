@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from procrastinate.exceptions import AlreadyEnqueued
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,12 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from homedms import __version__
 from homedms.api.deps import require_admin
 from homedms.config import get_settings
-from homedms.core import backup, diagnostics, updates
+from homedms.core import backup, diagnostics, updater, updates
 from homedms.db import get_db
 from homedms.jobs import app as jobs_app
 from homedms.models.document import Document
 from homedms.models.tenant import User
-from homedms.schemas.system import ActionResult, BackupsResponse, DiagnosticsResponse, UpdateStatus
+from homedms.schemas.system import ActionResult, BackupsResponse, DiagnosticsResponse, UpdaterStatus, UpdateStatus
 from homedms.i18n import _, _n
 
 logger = logging.getLogger("homedms.api.system")
@@ -124,6 +125,26 @@ async def check_updates(user: User = Depends(require_admin)) -> UpdateStatus:
     logger.info("Update-Prüfung von %s: installiert %s, neueste %s", user.email, info.current, info.latest)
     return UpdateStatus(**info.__dict__)
 
+
+class InstallRequest(BaseModel):
+    version: str
+
+
+@router.get("/updates/installer", response_model=UpdaterStatus)
+async def updater_status(user: User = Depends(require_admin)) -> UpdaterStatus:
+    """Gibt es einen Update-Helfer, und wie weit ist ein angefordertes Update."""
+    return UpdaterStatus(**updater.status().__dict__)
+
+
+@router.post("/updates/installer", response_model=UpdaterStatus, status_code=status.HTTP_202_ACCEPTED)
+async def install_update(body: InstallRequest, user: User = Depends(require_admin)) -> UpdaterStatus:
+    """Sichert die Datenbank und fordert beim Update-Helfer die Installation der Version an."""
+    logger.info("Update auf %s von %s angefordert", body.version, user.email)
+    try:
+        result = await updater.request(body.version)
+    except updater.UpdaterError as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    return UpdaterStatus(**result.__dict__)
 
 # --- Datenbanksicherung ------------------------------------------------------------------------------
 

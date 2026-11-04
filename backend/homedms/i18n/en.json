@@ -414,5 +414,15 @@
  "Die Prüfung auf Updates ist abgeschaltet (UPDATE_CHECK_URL ist leer).": "The update check is switched off (UPDATE_CHECK_URL is empty).",
  "Die Update-Seite antwortet mit Fehler {code}.": "The update site answered with error {code}.",
  "Die Update-Seite ist nicht erreichbar. Hat der Server Zugang zum Internet?": "The update site cannot be reached. Does the server have internet access?",
- "Die Antwort der Update-Seite ist nicht lesbar.": "The answer of the update site cannot be read."
+ "Die Antwort der Update-Seite ist nicht lesbar.": "The answer of the update site cannot be read.",
+ "Ungültige Versionsnummer.": "Invalid version number.",
+ "Version {version} ist nicht neuer als die installierte {current}.": "Version {version} is not newer than the installed {current}.",
+ "Es läuft kein Update-Helfer. Siehe Installationsanleitung, Abschnitt „Aktualisieren aus der Anwendung“.": "No update helper is running. See the installation guide, section “Updating from the application”.",
+ "Ein Update läuft bereits.": "An update is already running.",
+ "Ohne Datenbanksicherung wird nicht aktualisiert, und pg_dump wurde nicht gefunden.": "Without a database backup nothing is updated, and pg_dump was not found.",
+ "Vor dem Update konnte die Datenbank nicht gesichert werden: {reason}": "The database could not be backed up before the update: {reason}",
+ "Der Sicherungsordner ist nicht beschreibbar ({reason}).": "The backup folder is not writable ({reason}).",
+ "Bitte Straße, Postleitzahl und Ort zusammen angeben oder alle drei leer lassen": "Please give street, postal code and city together, or leave all three empty",
+ "Ein Objekt mit diesem Namen gibt es schon": "A property with this name already exists",
+ "Für diese Adresse gibt es schon das Objekt „{name}“": "The property “{name}” already exists for this address"
 }

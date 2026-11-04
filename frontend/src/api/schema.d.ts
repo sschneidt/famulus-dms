@@ -914,7 +914,12 @@ export interface paths {
     /** List Properties */
     get: operations["list_properties_api_v1_properties_get"];
     put?: never;
-    post?: never;
+    /**
+     * Create Property
+     * @description Objekt von Hand anlegen (Seite "Objekte" oder beim Zuordnen im Dokument). Ohne Adresse erkennt die KI es nicht
+     *     von selbst wieder - mit Adresse schon: dieselbe Adresse in einem Dokument landet dann in diesem Objekt.
+     */
+    post: operations["create_property_api_v1_properties_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1084,6 +1089,30 @@ export interface paths {
      * @description Fragt (nur auf Knopfdruck) nach dem neuesten Release. Aktualisiert wird nicht von hier aus.
      */
     post: operations["check_updates_api_v1_system_updates_check_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/system/updates/installer": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Updater Status
+     * @description Gibt es einen Update-Helfer, und wie weit ist ein angefordertes Update.
+     */
+    get: operations["updater_status_api_v1_system_updates_installer_get"];
+    put?: never;
+    /**
+     * Install Update
+     * @description Sichert die Datenbank und fordert beim Update-Helfer die Installation der Version an.
+     */
+    post: operations["install_update_api_v1_system_updates_installer_post"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1950,6 +1979,11 @@ export interface components {
       /** Is Active */
       is_active?: boolean | null;
     };
+    /** InstallRequest */
+    InstallRequest: {
+      /** Version */
+      version: string;
+    };
     /** LoginRequest */
     LoginRequest: {
       /**
@@ -2206,6 +2240,29 @@ export interface components {
       display_name?: string | null;
       /** Locale */
       locale?: ("de" | "en" | "ru") | null;
+    };
+    /**
+     * PropertyCreate
+     * @description Objekt von Hand anlegen. Die Adresse ist freiwillig; wenn angegeben, dann komplett.
+     */
+    PropertyCreate: {
+      /** Name */
+      name: string;
+      /**
+       * Street
+       * @default
+       */
+      street: string;
+      /**
+       * Postal Code
+       * @default
+       */
+      postal_code: string;
+      /**
+       * City
+       * @default
+       */
+      city: string;
     };
     /**
      * PropertyMerge
@@ -2591,6 +2648,20 @@ export interface components {
        * Format: date-time
        */
       checked_at: string;
+    };
+    /** UpdaterStatus */
+    UpdaterStatus: {
+      /** Available */
+      available: boolean;
+      /** State */
+      state?: ("requested" | "checking" | "pulling" | "restarting" | "health" | "done" | "failed" | "rolled_back") | null;
+      /** Version */
+      version?: string | null;
+      /**
+       * Detail
+       * @default
+       */
+      detail: string;
     };
     /** UserCreate */
     UserCreate: {
@@ -4590,6 +4661,39 @@ export interface operations {
       };
     };
   };
+  create_property_api_v1_properties_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PropertyCreate"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PropertyResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
   delete_property_api_v1_properties__property_id__delete: {
     parameters: {
       query?: never;
@@ -4897,6 +5001,59 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["UpdateStatus"];
+        };
+      };
+    };
+  };
+  updater_status_api_v1_system_updates_installer_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UpdaterStatus"];
+        };
+      };
+    };
+  };
+  install_update_api_v1_system_updates_installer_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InstallRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UpdaterStatus"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
         };
       };
     };

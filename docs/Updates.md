@@ -51,7 +51,9 @@ Das Skript sichert die **Datenbank**, nicht die Dokumente-Dateien. Die liegen im
 
 ### Auf Updates prüfen (aus der Anwendung)
 
-**Diagnose → Auf Updates prüfen** (neben der Versionsnummer, nur Administratoren) fragt bei GitHub nach dem neuesten Release und zeigt, ob eine neuere Version vorliegt, mit Link zu den Änderungen und dem Image, das einzutragen ist. Es wird **nur auf Knopfdruck** gefragt, nie von selbst, und es werden keine Daten über dich oder deine Dokumente gesendet (die Anfrage nennt nur `famulus-dms/<Version>` als Programmnamen). Mit `UPDATE_CHECK_URL=` (leer) ist die Prüfung abgeschaltet. Installiert wird nicht aus der Anwendung heraus: das geschieht wie oben mit dem Update-Skript bzw. auf der Synology im Container Manager.
+**Diagnose → Auf Updates prüfen** (neben der Versionsnummer, nur Administratoren) fragt bei GitHub nach dem neuesten Release und zeigt, ob eine neuere Version vorliegt, mit Link zu den Änderungen und dem Image, das einzutragen ist. Es wird **nur auf Knopfdruck** gefragt, nie von selbst, und es werden keine Daten über dich oder deine Dokumente gesendet (die Anfrage nennt nur `famulus-dms/<Version>` als Programmnamen). Mit `UPDATE_CHECK_URL=` (leer) ist die Prüfung abgeschaltet. Installiert wird standardmäßig nicht aus der Anwendung heraus: das geschieht wie oben mit dem Update-Skript bzw. auf der Synology im Container Manager.
+
+**Jetzt aktualisieren (optional):** Läuft zusätzlich der Update-Helfer `scripts/update-agent.sh` (auf der Synology als Aufgabe im Aufgabenplaner, siehe [Installation-Synology.md](Installation-Synology.md), Abschnitt 6.1), erscheint neben der neuen Version der Knopf **Jetzt aktualisieren**. Die Anwendung sichert dann die Datenbank und legt eine Anforderung (`update-request.txt`) im Sicherungsordner ab; der Helfer holt sie ab, lädt genau dieses Image, tauscht die Versionsnummer in der Compose-Datei, startet `app-api` und `app-worker` neu und spielt die alte Compose-Datei zurück, falls die neue Version nicht gesund wird. Die Anwendung selbst hat dabei keinen Zugriff auf Docker.
 
 ### Sicherung aus der Anwendung
 
