@@ -1,6 +1,6 @@
 """Objekte (Haus/Wohnung) - Ablage pro Adresse, siehe homedms/core/addresses.py.
 
-Objekte entstehen automatisch, wenn die KI eine neue Adresse erkennt. Hier lassen sie sich
+Objekte entstehen automatisch, wenn die KI eine neue Adresse erkennt, oder von Hand (POST). Hier lassen sie sich
 umbenennen (= Ordnername auf dem NAS), doppelt erkannte zusammenfuehren oder loeschen. Jede
 Aenderung zieht die Ablage der betroffenen Dokumente nach. Objekte gehoeren dem ganzen Haushalt -
 jedes Mitglied darf sie pflegen.
@@ -16,7 +16,8 @@ from homedms.db import get_db
 from homedms.jobs import app as jobs_app
 from homedms.models.document import Document, Property
 from homedms.models.tenant import User
-from homedms.schemas.property import PropertyMerge, PropertyResponse, PropertyUpdate
+from homedms.core.addresses import Address, normalize_street
+from homedms.schemas.property import PropertyCreate, PropertyMerge, PropertyResponse, PropertyUpdate
 from homedms.tasks.filing import defer_filing
 from homedms.i18n import _
 
@@ -66,6 +67,31 @@ async def list_properties(user: User = Depends(get_current_user), db: AsyncSessi
         )
     ).all()
     return [PropertyResponse.model_validate(p).model_copy(update={"document_count": n}) for p, n in rows]
+
+
+@router.post("", response_model=PropertyResponse, status_code=status.HTTP_201_CREATED)
+async def create_property(
+    payload: PropertyCreate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+) -> PropertyResponse:
+    """Objekt von Hand anlegen (Seite "Objekte" oder beim Zuordnen im Dokument). Ohne Adresse erkennt die KI es nicht
+    von selbst wieder - mit Adresse schon: dieselbe Adresse in einem Dokument landet dann in diesem Objekt."""
+    name = payload.name.strip()
+    street, postal_code, city = payload.street.strip(), payload.postal_code.strip(), payload.city.strip()
+    if not name:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Name darf nicht leer sein"))
+    if any((street, postal_code, city)) and not all((street, postal_code, city)):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, _("Bitte Straße, Postleitzahl und Ort zusammen angeben oder alle drei leer lassen"))
+    if await db.scalar(select(Property.id).where(Property.tenant_id == user.tenant_id, func.lower(Property.name) == name.lower())):
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Ein Objekt mit diesem Namen gibt es schon"))
+    key = Address(street, postal_code, city).match_key if street else f"name|{normalize_street(name)}"
+    twin = await db.scalar(select(Property).where(Property.tenant_id == user.tenant_id, Property.match_key == key))
+    if twin is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, _("Für diese Adresse gibt es schon das Objekt „{name}“", name=twin.name))
+    prop = Property(tenant_id=user.tenant_id, name=name, street=street, postal_code=postal_code, city=city, match_key=key)
+    db.add(prop)
+    await db.commit()
+    await db.refresh(prop)
+    return await _response(db, prop)
 
 
 @router.patch("/{property_id}", response_model=PropertyResponse)

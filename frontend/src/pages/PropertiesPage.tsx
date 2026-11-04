@@ -15,11 +15,17 @@ import {
   Title,
 } from "@mantine/core";
 import { modals } from "@mantine/modals";
-import { IconArrowMerge, IconDots, IconEdit, IconHome, IconTrash } from "@tabler/icons-react";
+import { IconArrowMerge, IconDots, IconEdit, IconHome, IconPlus, IconTrash } from "@tabler/icons-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Property } from "../api/client";
-import { useDeleteProperty, useMergeProperty, useProperties, useRenameProperty } from "../api/queries";
+import {
+  useCreateProperty,
+  useDeleteProperty,
+  useMergeProperty,
+  useProperties,
+  useRenameProperty,
+} from "../api/queries";
 import { notifyError, notifySuccess } from "../lib/notify";
 
 /**
@@ -30,6 +36,7 @@ export function PropertiesPage() {
   const { t } = useTranslation();
   const properties = useProperties();
   const remove = useDeleteProperty();
+  const [creating, setCreating] = useState(false);
   const [renaming, setRenaming] = useState<Property | null>(null);
   const [merging, setMerging] = useState<Property | null>(null);
 
@@ -53,14 +60,19 @@ export function PropertiesPage() {
 
   return (
     <Stack>
-      <div>
-        <Title order={2}>{t("Objekte")}</Title>
-        <Text c="dimmed" size="sm" maw={680}>
-          {t(
-            "Häuser und Wohnungen, die in Ihren Dokumenten vorkommen. Rechnungen von Handwerkern, Nebenkosten und Gebäudeversicherungen werden auf dem NAS je Objekt in einem eigenen Ordner abgelegt. Neue Adressen erkennt die KI automatisch – hier können Sie Objekte umbenennen oder doppelt erkannte zusammenführen.",
-          )}
-        </Text>
-      </div>
+      <Group justify="space-between" align="flex-start" wrap="nowrap">
+        <div>
+          <Title order={2}>{t("Objekte")}</Title>
+          <Text c="dimmed" size="sm" maw={680}>
+            {t(
+              "Häuser und Wohnungen, die in Ihren Dokumenten vorkommen. Rechnungen von Handwerkern, Nebenkosten und Gebäudeversicherungen werden auf dem NAS je Objekt in einem eigenen Ordner abgelegt. Neue Adressen erkennt die KI automatisch, Sie können Objekte aber auch selbst anlegen, umbenennen oder doppelt erkannte zusammenführen.",
+            )}
+          </Text>
+        </div>
+        <Button leftSection={<IconPlus size={16} />} onClick={() => setCreating(true)} style={{ flexShrink: 0 }}>
+          {t("Objekt anlegen")}
+        </Button>
+      </Group>
       {properties.isPending ? (
         <Center py="xl">
           <Loader />
@@ -73,7 +85,7 @@ export function PropertiesPage() {
             <IconHome size={40} color="var(--mantine-color-dimmed)" />
             <Text c="dimmed" ta="center" maw={420}>
               {t(
-                "Noch keine Objekte. Sobald eine Handwerker-Rechnung oder Nebenkostenabrechnung mit Adresse hochgeladen wird, erscheint das Objekt hier.",
+                "Noch keine Objekte. Legen Sie eines selbst an, oder warten Sie, bis eine Handwerker-Rechnung oder Nebenkostenabrechnung mit Adresse hochgeladen wird.",
               )}
             </Text>
           </Stack>
@@ -90,7 +102,8 @@ export function PropertiesPage() {
                       {p.name}
                     </Text>
                     <Text size="sm" c="dimmed">
-                      {p.street}, {p.postal_code} {p.city} · {t("{{count}} Dokumente", { count: p.document_count })}
+                      {p.street ? `${p.street}, ${p.postal_code} ${p.city} · ` : ""}
+                      {t("{{count}} Dokumente", { count: p.document_count })}
                     </Text>
                   </div>
                 </Group>
@@ -127,9 +140,75 @@ export function PropertiesPage() {
           ))}
         </Stack>
       )}
+      <CreateModal opened={creating} onClose={() => setCreating(false)} />
       <RenameModal property={renaming} onClose={() => setRenaming(null)} />
       <MergeModal property={merging} all={properties.data ?? []} onClose={() => setMerging(null)} />
     </Stack>
+  );
+}
+
+function CreateModal({ opened, onClose }: { opened: boolean; onClose(): void }) {
+  const { t } = useTranslation();
+  const create = useCreateProperty();
+  const [name, setName] = useState("");
+  const [street, setStreet] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
+  const anyAddress = !!(street.trim() || postalCode.trim() || city.trim());
+  const addressComplete = !!(street.trim() && postalCode.trim() && city.trim());
+
+  async function save() {
+    if (!name.trim() || (anyAddress && !addressComplete)) return;
+    try {
+      await create.mutateAsync({ name: name.trim(), street: street.trim(), postal_code: postalCode.trim(), city: city.trim() });
+      notifySuccess(t("Objekt angelegt"));
+      setName("");
+      setStreet("");
+      setPostalCode("");
+      setCity("");
+      onClose();
+    } catch (e) {
+      notifyError(e, t("Anlegen fehlgeschlagen"));
+    }
+  }
+
+  return (
+    <Modal opened={opened} onClose={onClose} title={t("Objekt anlegen")}>
+      <Stack>
+        <TextInput
+          label={t("Name (= Ordnername)")}
+          description={t("z. B. „Ferienwohnung Meersburg“")}
+          value={name}
+          onChange={(e) => setName(e.currentTarget.value)}
+          data-autofocus
+        />
+        <Text size="sm" c="dimmed">
+          {t("Mit Adresse erkennt Famulus DMS das Objekt in neuen Dokumenten von selbst wieder. Die Adresse ist freiwillig.")}
+        </Text>
+        <TextInput label={t("Straße und Hausnummer")} value={street} onChange={(e) => setStreet(e.currentTarget.value)} />
+        <Group grow align="flex-start">
+          <TextInput label={t("Postleitzahl")} value={postalCode} onChange={(e) => setPostalCode(e.currentTarget.value)} />
+          <TextInput label={t("Ort")} value={city} onChange={(e) => setCity(e.currentTarget.value)} />
+        </Group>
+        {anyAddress && !addressComplete && (
+          <Text size="sm" c="red">
+            {t("Bitte Straße, Postleitzahl und Ort ausfüllen oder alle drei leer lassen.")}
+          </Text>
+        )}
+        <Group justify="flex-end">
+          <Button variant="default" onClick={onClose}>
+            {t("Abbrechen")}
+          </Button>
+          <Button
+            onClick={() => void save()}
+            loading={create.isPending}
+            disabled={!name.trim() || (anyAddress && !addressComplete)}
+          >
+            {t("Anlegen")}
+          </Button>
+        </Group>
+      </Stack>
+    </Modal>
   );
 }
 

@@ -19,13 +19,16 @@ import {
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import { IconCheck, IconCopy, IconFolder, IconWand } from "@tabler/icons-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DocumentDetail, Schemas } from "../../api/client";
-import { usePatchDocument, useProperties, useUpdateDocument } from "../../api/queries";
+import { useCreateProperty, usePatchDocument, useProperties, useUpdateDocument } from "../../api/queries";
 import { dateInputFormat, numberSeparators } from "../../i18n";
 import { notifyError, notifySuccess } from "../../lib/notify";
 import { ExtractionHint } from "../StatusBadge";
+
+/** Vorsatz fuer den Wert eines Objekts, das erst beim Speichern angelegt wird. */
+const NEW_PROPERTY = "new:";
 
 interface Values {
   title: string;
@@ -60,6 +63,8 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
   const update = useUpdateDocument(doc.id);
   const setInvoice = usePatchDocument();
   const properties = useProperties();
+  const createProperty = useCreateProperty();
+  const [propertySearch, setPropertySearch] = useState("");
   const form = useForm<Values>({
     initialValues: valuesOf(doc),
     validate: {
@@ -85,7 +90,18 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
     if (form.isDirty("document_date")) body.document_date = values.document_date || null;
     if (form.isDirty("issuer")) body.issuer = values.issuer.trim() || null;
     if (form.isDirty("amount")) body.amount = values.amount === "" ? null : Number(values.amount);
-    if (form.isDirty("property_id")) body.property_id = values.property_id;
+    if (form.isDirty("property_id")) {
+      body.property_id = values.property_id;
+      if (values.property_id?.startsWith(NEW_PROPERTY)) {
+        // Neuer, noch nicht vorhandener Name: das Objekt wird beim Speichern angelegt
+        try {
+          body.property_id = (await createProperty.mutateAsync({ name: values.property_id.slice(NEW_PROPERTY.length) })).id;
+        } catch (e) {
+          notifyError(e, t("Objekt konnte nicht angelegt werden"));
+          return;
+        }
+      }
+    }
     if (form.isDirty("original_present") || form.isDirty("original_location")) {
       body.original_present = values.original_present;
       body.original_location = values.original_present === "ja" ? values.original_location.trim() || null : null;
@@ -112,6 +128,19 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
 
   const path = doc.files[0]?.path;
   const propertyOptions = (properties.data ?? []).map((p) => ({ value: p.id, label: p.name }));
+  // Ein getippter, noch unbekannter Name wird als "neu anlegen" angeboten (und beim Speichern angelegt)
+  const pending = form.values.property_id?.startsWith(NEW_PROPERTY) ? form.values.property_id : null;
+  const typed = propertySearch.trim();
+  const known = [...propertyOptions.map((o) => o.label), ...(pending ? [pending.slice(NEW_PROPERTY.length)] : [])];
+  const suggestion =
+    typed && !known.some((label) => label.toLowerCase() === typed.toLowerCase())
+      ? { value: NEW_PROPERTY + typed, label: t("„{{name}}“ neu anlegen", { name: typed }) }
+      : null;
+  const propertyChoices = [
+    ...propertyOptions,
+    ...(pending ? [{ value: pending, label: pending.slice(NEW_PROPERTY.length) }] : []),
+    ...(suggestion && suggestion.value !== pending ? [suggestion] : []),
+  ];
 
   return (
     <Paper withBorder p="md" radius="md">
@@ -214,13 +243,14 @@ export function MetadataPanel({ doc, readOnly = false }: { doc: DocumentDetail; 
           />
           <Select
             label={t("Objekt")}
-            description={t("Haus oder Wohnung, zu der das Dokument gehört")}
+            description={t("Haus oder Wohnung, zu der das Dokument gehört. Einen neuen Namen eintippen legt ein neues Objekt an.")}
             placeholder={t("keinem Objekt zugeordnet")}
-            data={propertyOptions}
+            data={propertyChoices}
             clearable
             searchable
             disabled={readOnly}
-            nothingFoundMessage={t("Objekte entstehen automatisch aus erkannten Adressen")}
+            onSearchChange={setPropertySearch}
+            nothingFoundMessage={t("Tippen Sie einen Namen, um ein neues Objekt anzulegen")}
             {...form.getInputProps("property_id")}
           />
           <div>

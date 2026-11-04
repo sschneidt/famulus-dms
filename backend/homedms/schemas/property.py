@@ -15,6 +15,15 @@ class PropertyResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PropertyCreate(BaseModel):
+    """Objekt von Hand anlegen. Die Adresse ist freiwillig; wenn angegeben, dann komplett."""
+
+    name: str = Field(min_length=1, max_length=200)
+    street: str = Field(default="", max_length=200)
+    postal_code: str = Field(default="", max_length=10)
+    city: str = Field(default="", max_length=100)
+
+
 class PropertyUpdate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
 
