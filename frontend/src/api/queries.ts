@@ -313,7 +313,8 @@ export function useCreateProperty() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body: { name: string; street?: string; postal_code?: string; city?: string }) =>
-      call(api.POST("/api/v1/properties", { body })),
+      // Die Adresse ist freiwillig (Standard "" im Backend); die erzeugten Typen markieren sie trotzdem als Pflicht
+      call(api.POST("/api/v1/properties", { body: body as Schemas["PropertyCreate"] })),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.properties }),
   });
 }
