@@ -47,6 +47,15 @@ class ActionResult(BaseModel):
     message: str
 
 
+class UpdateStatus(BaseModel):
+    current: str  # installierte Version
+    latest: str  # neueste veroeffentlichte Version
+    available: bool  # latest ist neuer als current
+    url: str  # Release-Seite mit den Aenderungen
+    published_at: datetime | None = None
+    checked_at: datetime
+
+
 class BackupItem(BaseModel):
     name: str
     size: int  # Bytes

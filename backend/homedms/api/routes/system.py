@@ -16,12 +16,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from homedms import __version__
 from homedms.api.deps import require_admin
 from homedms.config import get_settings
-from homedms.core import backup, diagnostics
+from homedms.core import backup, diagnostics, updates
 from homedms.db import get_db
 from homedms.jobs import app as jobs_app
 from homedms.models.document import Document
 from homedms.models.tenant import User
-from homedms.schemas.system import ActionResult, BackupsResponse, DiagnosticsResponse
+from homedms.schemas.system import ActionResult, BackupsResponse, DiagnosticsResponse, UpdateStatus
 from homedms.i18n import _, _n
 
 logger = logging.getLogger("homedms.api.system")
@@ -109,6 +109,20 @@ async def run_action(action: str, user: User = Depends(require_admin), db: Async
         return ActionResult(message=_("Download gestartet: {codes}", codes=", ".join(queued)))
 
     raise HTTPException(status.HTTP_404_NOT_FOUND, _("Unbekannte Aktion"))
+
+
+# --- Updates -----------------------------------------------------------------------------------------
+
+
+@router.post("/updates/check", response_model=UpdateStatus)
+async def check_updates(user: User = Depends(require_admin)) -> UpdateStatus:
+    """Fragt (nur auf Knopfdruck) nach dem neuesten Release. Aktualisiert wird nicht von hier aus."""
+    try:
+        info = await updates.check(force=True)
+    except updates.UpdateCheckError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+    logger.info("Update-Prüfung von %s: installiert %s, neueste %s", user.email, info.current, info.latest)
+    return UpdateStatus(**info.__dict__)
 
 
 # --- Datenbanksicherung ------------------------------------------------------------------------------

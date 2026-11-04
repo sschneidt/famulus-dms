@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Famulus DMS API",
-    "version": "0.2.1"
+    "version": "0.2.3"
   },
   "paths": {
     "/health": {
@@ -3257,6 +3257,33 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/system/updates/check": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Check Updates",
+        "description": "Fragt (nur auf Knopfdruck) nach dem neuesten Release. Aktualisiert wird nicht von hier aus.",
+        "operationId": "check_updates_api_v1_system_updates_check_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateStatus"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/api/v1/system/backups": {
@@ -7168,6 +7195,52 @@
         ],
         "title": "UnpaidListResponse",
         "description": "GET /documents/unpaid - unbezahlte Rechnungen, die naechste Zahlungsfrist zuerst."
+      },
+      "UpdateStatus": {
+        "properties": {
+          "current": {
+            "type": "string",
+            "title": "Current"
+          },
+          "latest": {
+            "type": "string",
+            "title": "Latest"
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "checked_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Checked At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current",
+          "latest",
+          "available",
+          "url",
+          "checked_at"
+        ],
+        "title": "UpdateStatus"
       },
       "UserCreate": {
         "properties": {

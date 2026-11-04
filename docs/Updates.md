@@ -49,6 +49,10 @@ Optionen: `-BackupOnly` / `--backup-only` (deutsch: `-NurSichern` / `--nur-siche
 
 Das Skript sichert die **Datenbank**, nicht die Dokumente-Dateien. Die liegen im Ordner `DOCUMENTS_PATH` und gehören zusätzlich in deine normale Datensicherung (Synology: Hyper Backup, siehe Anforderungsdokument 4.6). Ohne beides lässt sich ein Haushalt nicht vollständig wiederherstellen.
 
+### Auf Updates prüfen (aus der Anwendung)
+
+**Diagnose → Auf Updates prüfen** (neben der Versionsnummer, nur Administratoren) fragt bei GitHub nach dem neuesten Release und zeigt, ob eine neuere Version vorliegt, mit Link zu den Änderungen und dem Image, das einzutragen ist. Es wird **nur auf Knopfdruck** gefragt, nie von selbst, und es werden keine Daten über dich oder deine Dokumente gesendet (die Anfrage nennt nur `famulus-dms/<Version>` als Programmnamen). Mit `UPDATE_CHECK_URL=` (leer) ist die Prüfung abgeschaltet. Installiert wird nicht aus der Anwendung heraus: das geschieht wie oben mit dem Update-Skript bzw. auf der Synology im Container Manager.
+
 ### Sicherung aus der Anwendung
 
 Ohne Skript geht es auch in Famulus DMS selbst: **Diagnose → Datenbanksicherung → Jetzt sichern** (nur Administratoren). Die Datei `homedms-<Version>-<Datum>.dump` entsteht im Sicherungsordner (`BACKUP_FOLDER_PATH`, Standard `./backups`, auf der Synology `famulus/backups`) und lässt sich dort herunterladen oder löschen; die letzten 5 bleiben liegen (`BACKUP_KEEP`). Es ist dasselbe Format wie bei den Skripten, die Wiederherstellung unten gilt also für beide. Das Docker-Image bringt dafür `pg_dump` mit; bei einer Installation ohne Docker muss PostgreSQL (mit `pg_dump`) installiert sein, sonst bleibt der Knopf gesperrt.

@@ -1070,6 +1070,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/system/updates/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Check Updates
+     * @description Fragt (nur auf Knopfdruck) nach dem neuesten Release. Aktualisiert wird nicht von hier aus.
+     */
+    post: operations["check_updates_api_v1_system_updates_check_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/system/backups": {
     parameters: {
       query?: never;
@@ -2553,6 +2573,24 @@ export interface components {
       total: number;
       /** Total Amount */
       total_amount: number;
+    };
+    /** UpdateStatus */
+    UpdateStatus: {
+      /** Current */
+      current: string;
+      /** Latest */
+      latest: string;
+      /** Available */
+      available: boolean;
+      /** Url */
+      url: string;
+      /** Published At */
+      published_at?: string | null;
+      /**
+       * Checked At
+       * Format: date-time
+       */
+      checked_at: string;
     };
     /** UserCreate */
     UserCreate: {
@@ -4839,6 +4877,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  check_updates_api_v1_system_updates_check_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UpdateStatus"];
         };
       };
     };

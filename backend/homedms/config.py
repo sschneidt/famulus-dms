@@ -98,6 +98,8 @@ class Settings(BaseSettings):
     backup_host_path: str = ""
     # Pfad zu pg_dump(.exe), falls nicht im PATH (Windows) - leer = automatisch suchen
     pg_dump_cmd: str = ""
+    # Woher "Auf Updates pruefen" (Diagnose) das neueste Release holt; leer = Pruefung aus. Nur auf Knopfdruck.
+    update_check_url: str = "https://api.github.com/repos/sschneidt/famulus-dms/releases/latest"
 
     tz: str = "Europe/Berlin"
 

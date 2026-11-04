@@ -22,6 +22,7 @@ import {
   IconCircleCheck,
   IconCircleMinus,
   IconCircleX,
+  IconCloudDownload,
   IconCpu,
   IconDatabase,
   IconDownload,
@@ -38,7 +39,14 @@ import type { ReactNode } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import type { Schemas } from "../api/client";
-import { useBackups, useCreateBackup, useDeleteBackup, useDiagnostics, useSystemAction } from "../api/queries";
+import {
+  useBackups,
+  useCheckUpdates,
+  useCreateBackup,
+  useDeleteBackup,
+  useDiagnostics,
+  useSystemAction,
+} from "../api/queries";
 import { useUser } from "../auth/AuthContext";
 import { downloadBackup } from "../lib/download";
 import { formatBytes, formatDateTime, tk } from "../lib/format";
@@ -87,6 +95,7 @@ export function DiagnosePage() {
             {t("Zustand aller Bausteine von Famulus DMS")}
             {diagnostics.data && ` · ${t("geprüft {{date}}", { date: formatDateTime(diagnostics.data.checked_at) })}`}
           </Text>
+          {diagnostics.data && <Updates version={diagnostics.data.version} />}
         </div>
         <Button
           variant="light"
@@ -222,6 +231,69 @@ function ComponentCard({ component }: { component: Component }) {
         )}
       </Stack>
     </Card>
+  );
+}
+
+/**
+ * Installierte Version und "Auf Updates pruefen" (nur auf Knopfdruck; der Server fragt dann GitHub).
+ * Aktualisiert wird nicht von hier aus: das Ergebnis nennt den Weg dorthin.
+ */
+function Updates({ version }: { version: string }) {
+  const { t } = useTranslation();
+  const check = useCheckUpdates();
+  const result = check.data;
+
+  return (
+    <Stack gap={6} mt={6} data-testid="updates">
+      <Group gap="xs">
+        <Text size="sm">{t("Version {{version}}", { version })}</Text>
+        <Button
+          size="compact-xs"
+          variant="light"
+          leftSection={<IconCloudDownload size={14} />}
+          loading={check.isPending}
+          onClick={() => check.mutate(undefined, { onError: (e) => notifyError(e, t("Update-Prüfung nicht möglich")) })}
+        >
+          {t("Auf Updates prüfen")}
+        </Button>
+      </Group>
+      {result &&
+        (result.available ? (
+          <Alert color="blue" icon={<IconCloudDownload />} title={t("Version {{latest}} ist verfügbar", { latest: result.latest })}>
+            <Stack gap={4}>
+              <Text size="sm">
+                {t("Installiert ist {{current}}. Sichern Sie vor dem Aktualisieren die Datenbank (Abschnitt „Datenbanksicherung“ unten).", {
+                  current: result.current,
+                })}
+              </Text>
+              <Text size="sm">
+                {t("Bei Docker: In der Compose-Datei das Image auf {{image}} setzen und das Projekt neu erstellen.", {
+                  image: `ghcr.io/sschneidt/famulus-dms:${result.latest}`,
+                })}
+              </Text>
+              <Group gap="md">
+                {result.url && (
+                  <Anchor size="sm" href={result.url} target="_blank" rel="noreferrer">
+                    {t("Änderungen ansehen")}
+                  </Anchor>
+                )}
+                <Anchor
+                  size="sm"
+                  href="https://github.com/sschneidt/famulus-dms/blob/main/docs/Updates.md"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("Anleitung zum Aktualisieren")}
+                </Anchor>
+              </Group>
+            </Stack>
+          </Alert>
+        ) : (
+          <Text size="sm" c="green">
+            {t("Sie nutzen die neueste Version ({{version}}).", { version: result.current })}
+          </Text>
+        ))}
+    </Stack>
   );
 }
 

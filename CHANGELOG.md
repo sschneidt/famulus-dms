@@ -7,6 +7,14 @@ Ablauf eines Releases und eines Updates: [docs/Updates.md](docs/Updates.md).
 
 ## [Unveröffentlicht]
 
+## [0.2.4] – 2026-11-04
+
+### Neu
+- **Auf Updates prüfen:** Auf der Seite *Diagnose* gibt es neben der Versionsnummer den Knopf **„Auf Updates prüfen“** (nur Administratoren). Er fragt auf Knopfdruck bei GitHub nach dem neuesten Release und zeigt, ob eine neuere Version vorliegt, mit Link zu den Änderungen und dem Image, das in der Compose-Datei einzutragen ist. Es wird nie von selbst gefragt; abschalten mit `UPDATE_CHECK_URL=` (leer).
+
+### Geändert
+- Doku: Update auf der Synology jetzt mit fester Versionsnummer im Image (`famulus-dms:0.2.4`) statt `latest`. Der Container Manager lud bei `latest` kein neueres Image nach.
+
 ## [0.2.3] – 2026-11-03
 
 ### Neu

@@ -434,5 +434,9 @@
  "Die Sicherung ist unvollständig (Datei zu klein).": "Резервная копия неполная (файл слишком мал).",
  "Sicherung nicht gefunden": "Резервная копия не найдена",
  "„{name}“ ist kein gültiger Rechnername und keine IP-Adresse.": "«{name}» — недопустимое имя компьютера или IP-адрес.",
- "„{name}“ ist keine Heimnetz-Adresse (z. B. 192.168.x.x oder name.local) - für Zugriff von außen bitte ein VPN nutzen.": "«{name}» — не адрес домашней сети (например, 192.168.x.x или name.local); для доступа извне используйте VPN."
+ "„{name}“ ist keine Heimnetz-Adresse (z. B. 192.168.x.x oder name.local) - für Zugriff von außen bitte ein VPN nutzen.": "«{name}» — не адрес домашней сети (например, 192.168.x.x или name.local); для доступа извне используйте VPN.",
+ "Die Prüfung auf Updates ist abgeschaltet (UPDATE_CHECK_URL ist leer).": "Проверка обновлений отключена (UPDATE_CHECK_URL пуст).",
+ "Die Update-Seite antwortet mit Fehler {code}.": "Сайт обновлений ответил ошибкой {code}.",
+ "Die Update-Seite ist nicht erreichbar. Hat der Server Zugang zum Internet?": "Сайт обновлений недоступен. Есть ли у сервера доступ в интернет?",
+ "Die Antwort der Update-Seite ist nicht lesbar.": "Ответ сайта обновлений не удалось прочитать."
 }

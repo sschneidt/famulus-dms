@@ -8,6 +8,7 @@ import { mockFetch, renderWithProviders } from "../test/render";
 import { DiagnosePage } from "./DiagnosePage";
 
 const diagnostics = {
+  version: "0.2.3",
   checked_at: "2026-10-03T10:00:00Z",
   overall: "error",
   components: [
@@ -129,6 +130,63 @@ describe("DiagnosePage", () => {
     await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Löschen" }));
     await waitFor(() => expect(calls.some((c) => c.method === "DELETE")).toBe(true));
     expect(await within(section).findByText("Noch keine Sicherung vorhanden.")).toBeInTheDocument();
+  });
+
+  it("prüft auf Knopfdruck auf Updates und zeigt den Weg zur neuen Version", async () => {
+    tokenStore.set("a");
+    const update = {
+      current: "0.2.3",
+      latest: "0.2.4",
+      available: true,
+      url: "https://github.com/sschneidt/famulus-dms/releases/tag/v0.2.4",
+      published_at: "2026-11-05T10:00:00Z",
+      checked_at: "2026-11-05T10:01:00Z",
+    };
+    const { calls } = mockFetch([
+      { path: "/api/v1/auth/me", body: me },
+      { path: "/api/v1/system/diagnostics", body: diagnostics },
+      { path: "/api/v1/system/backups", body: noBackups },
+      { method: "POST", path: "/api/v1/system/updates/check", body: update },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(
+      <RequireAuth>
+        <DiagnosePage />
+      </RequireAuth>,
+    );
+    const section = await screen.findByTestId("updates");
+    expect(within(section).getByText("Version 0.2.3")).toBeInTheDocument();
+    // Von selbst wird nie gefragt
+    expect(calls.some((c) => c.path === "/api/v1/system/updates/check")).toBe(false);
+
+    await user.click(within(section).getByRole("button", { name: "Auf Updates prüfen" }));
+    expect(await within(section).findByText("Version 0.2.4 ist verfügbar")).toBeInTheDocument();
+    expect(within(section).getByText(/ghcr\.io\/sschneidt\/famulus-dms:0\.2\.4/)).toBeInTheDocument();
+    expect(within(section).getByRole("link", { name: "Änderungen ansehen" })).toHaveAttribute("href", update.url);
+  });
+
+  it("meldet, wenn die neueste Version schon läuft", async () => {
+    tokenStore.set("a");
+    mockFetch([
+      { path: "/api/v1/auth/me", body: me },
+      { path: "/api/v1/system/diagnostics", body: diagnostics },
+      { path: "/api/v1/system/backups", body: noBackups },
+      {
+        method: "POST",
+        path: "/api/v1/system/updates/check",
+        body: { current: "0.2.3", latest: "0.2.3", available: false, url: "", checked_at: "2026-11-05T10:01:00Z" },
+      },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(
+      <RequireAuth>
+        <DiagnosePage />
+      </RequireAuth>,
+    );
+    const section = await screen.findByTestId("updates");
+    await user.click(within(section).getByRole("button", { name: "Auf Updates prüfen" }));
+    expect(await within(section).findByText("Sie nutzen die neueste Version (0.2.3).")).toBeInTheDocument();
+    expect(within(section).queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("zeigt einen Hinweis und sperrt den Knopf, wenn pg_dump fehlt", async () => {

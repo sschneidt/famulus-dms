@@ -473,6 +473,11 @@ export function useCreateBackup() {
   });
 }
 
+/** Fragt (nur auf Knopfdruck) nach dem neuesten Release; das Ergebnis liefert die Mutation (data). */
+export function useCheckUpdates() {
+  return useMutation({ mutationFn: () => call(api.POST("/api/v1/system/updates/check")) });
+}
+
 export function useDeleteBackup() {
   const qc = useQueryClient();
   return useMutation({

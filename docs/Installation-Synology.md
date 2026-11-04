@@ -123,13 +123,24 @@ Ordner-Sicherung **nicht** erfasst. Verlass dich deshalb auf die Sicherungen aus
 
 **Aktualisieren:**
 
-1. Erst eine Sicherung anlegen (siehe oben).
-2. Container Manager → **Projekt → homedms** → **Aktion → Erstellen** (englisch: *Build*). Das lädt die neueren Images
-   und startet die Container neu. Datenbankänderungen laufen dabei automatisch.
-3. Was sich geändert hat, steht im [Änderungsprotokoll](../CHANGELOG.md).
+1. In Famulus DMS unter **Diagnose** neben der Versionsnummer auf **Auf Updates prüfen** klicken. Die Anwendung fragt
+   dann (nur auf Knopfdruck) bei GitHub nach der neuesten Version und nennt die Versionsnummer und das Image.
+2. Eine Sicherung anlegen (siehe oben).
+3. Container Manager → **Projekt → homedms** → **Stopp**.
+4. Die Compose-Datei bearbeiten und bei **allen** Zeilen mit `ghcr.io/sschneidt/famulus-dms:` die Versionsnummer
+   eintragen, z. B. `ghcr.io/sschneidt/famulus-dms:0.2.4`.
+5. Speichern und **Erstellen** (englisch: *Build*), danach **Starten**. Weil dieses Image lokal noch nicht existiert,
+   lädt es der Container Manager herunter. Datenbankänderungen laufen beim Start automatisch.
+6. Unter **Diagnose** prüfen, dass die neue Version angezeigt wird. Was sich geändert hat, steht im
+   [Änderungsprotokoll](../CHANGELOG.md).
 
-Möchtest du nur bewusst eine bestimmte Version, ersetze in der Compose-Datei `famulus-dms:latest` durch die
-Versionsnummer, z. B. `famulus-dms:0.2.2`.
+> **Warum nicht einfach bei `latest` bleiben?** Der Container Manager behält ein schon geladenes Image mit dem Namen
+> `latest` und holt beim Erstellen keine neuere Fassung. Eine feste Versionsnummer, die du bei jedem Update änderst,
+> ist deshalb zuverlässiger. Wer trotzdem bei `latest` bleibt, muss vor dem Erstellen das alte Image unter
+> *Image* entfernen (das Projekt vorher stoppen).
+
+Die Prüfung geht nur, wenn die NAS ins Internet kommt. Abschalten kannst du sie, indem du beim Dienst `app-api` unter
+`environment` die Zeile `UPDATE_CHECK_URL: ""` ergänzt.
 
 ## 7. Scanner anbinden (eigener Benutzer)
 
